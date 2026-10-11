@@ -105,6 +105,7 @@ def generate_exchange_sessions(name: str, start: date, end: date) -> list[Sessio
             closed = datetime.combine(day.date(), time(16, 0), tzinfo=ny).astimezone(tz)
         else:
             opened, closed = row["open"].tz_convert(zone), row["close"].tz_convert(zone)
+            closed = closed + timedelta(minutes=CLOSING_AUCTION_MINUTES.get(name, 0))
         rows.append((day.date(), opened.strftime("%H:%M"), closed.strftime("%H:%M")))
     usual = {}
     for year in {d.year for d, _, _ in rows}:
@@ -513,12 +514,12 @@ EXCHANGES: "dict[str, tuple[str, str]]" = {
     "mexico_city": ("XMEX", "America/Mexico_City"),
 }
 DAILY_SESSIONS.update({
-    "sydney": ("Australia/Sydney", (10, 0), (16, 0)),
+    "sydney": ("Australia/Sydney", (10, 0), (16, 10)),
     "tokyo": ("Asia/Tokyo", (9, 0), (15, 30)),
     "seoul": ("Asia/Seoul", (9, 0), (15, 30)),
     "taipei": ("Asia/Taipei", (9, 0), (13, 30)),
     "shanghai": ("Asia/Shanghai", (9, 30), (15, 0)),
-    "hong_kong": ("Asia/Hong_Kong", (9, 30), (16, 0)),
+    "hong_kong": ("Asia/Hong_Kong", (9, 30), (16, 10)),
     "mumbai": ("Asia/Kolkata", (9, 15), (15, 30)),
     "frankfurt": ("Europe/Berlin", (9, 0), (17, 30)),
     "london": ("Europe/London", (8, 0), (16, 30)),
@@ -532,6 +533,10 @@ DAILY_SESSIONS.update({
 })
 # The days a market is shut every week, where it is not Saturday and Sunday.
 WEEKEND_DAYS: "dict[str, tuple[int, ...]]" = {"riyadh": (4, 5)}
+# A closing auction after the library's close that sets the official close, and
+# that Yahoo serves as a bar of its own: Sydney's and Hong Kong's, 16:00-16:10,
+# a bar at 16:00 on each of the 59 days to 2026-10-09.
+CLOSING_AUCTION_MINUTES: "dict[str, int]" = {"sydney": 10, "hong_kong": 10}
 
 
 def exchange_table_path(name: str) -> str:

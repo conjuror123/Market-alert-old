@@ -396,3 +396,11 @@ def test_the_exchange_tables_with_the_real_calendar_library():
     # A calendar whose holidays are known only so far ahead stops there.
     assert sessions.generate_exchange_sessions("shanghai", date(2027, 1, 4),
                                                date(2027, 2, 1)) == []
+
+
+def test_the_closing_auction_is_in_hong_kongs_and_sydneys_session():
+    # 16:00-16:10 local sets the official close, and Yahoo serves it as a bar of
+    # its own: 08:00 UTC in Hong Kong, 05:00 UTC in Sydney's winter.
+    assert sessions.daily_session_of(_utc(2026, 10, 8, 8), "hong_kong") == date(2026, 10, 8)
+    assert sessions.daily_session_of(_utc(2026, 6, 16, 6), "sydney") == date(2026, 6, 16)
+    assert sessions.daily_session_of(_utc(2026, 6, 16, 7), "sydney") is None

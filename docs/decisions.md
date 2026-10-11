@@ -340,7 +340,9 @@ its days and hours from `exchange_calendars`, Mexico's on New York's clock, and 
 whole when it runs from the table's trading day before: a closure of any length is a gap,
 a trading day without bars is not. Where the library and Yahoo's bars disagree the wider
 session is kept, since an empty hour is skipped and a cut one is lost: São Paulo to 18:00
-(Yahoo's bars end at 17:00 all year).
+(Yahoo's bars end at 17:00 all year). Sydney's and Hong Kong's run ten minutes past the
+library's close, for the closing auction that sets the official close and that Yahoo
+serves as a bar of its own at 16:00 (each of the 59 days to 2026-10-09).
 
 **A provider down is that provider's, not the run's.** The run goes red only when the fetch
 got nothing at all. A red run for one dark provider said nothing the health chat had not

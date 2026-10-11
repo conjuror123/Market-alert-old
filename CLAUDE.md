@@ -1,6 +1,6 @@
 # How an agent works here
 
-Jump is an hourly Telegram bot on GitHub Actions that writes when one of 173 market
+Jump is an hourly Telegram bot on GitHub Actions that writes when one of 58 market
 instruments moves unusually for itself. `README.md` says what it is and maps the files;
 `docs/manual.md` says how every part works; `docs/decisions.md` says why, and what not to
 reopen.
@@ -61,7 +61,7 @@ was made, `docs/decisions.md` (why), in the same commit.
 - **A regression test must fail without the fix.** One that passes either way looks like
   cover and is not.
 - **A rewrite claiming to be exact is checked against the old code on real data.**
-- **Run the tests alone:** `pytest -q`, about 830 tests in 2 minutes. Several load large
+- **Run the tests alone:** `pytest -q`, about 855 tests in 2 minutes. Several load large
   parquet files, and concurrent runs thrash.
 
 ## What cannot be self-reported

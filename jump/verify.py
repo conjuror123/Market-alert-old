@@ -226,7 +226,7 @@ def _exchange(name: str) -> "Callable[[Asset], str | None]":
 # keeps a vote KEEP_DAYS, and the store's LME bars before 2026-07-08 (tin) and
 # -15 are Wallstreetcn's own, where it would be no voter (SUPPLIED) - 79 days
 # back from 2026-10-09 is 07-22. Never Tiingo, SiftingIO or Twelve Data, whose
-# allowances the live run uses, nor Google, one session deep.
+# allowances the live run uses.
 SOURCES: "dict[str, tuple[Source, ...]]" = {
     "fx": (
         Source("yahoo", "Yahoo", 729, "1h", lambda a: _pair(a) + "=X"),
@@ -283,7 +283,7 @@ _CLASS = {"fx_continuous": "fx", "b3_fx": "fx",
 # What the channel calls each provider: the sources, and the stores' own.
 LABELS = {**{s.name: s.label for group in SOURCES.values() for s in group},
           "binance": "Binance", "sifting": "SiftingIO", "tiingo": "Tiingo",
-          "alpaca": "Alpaca_IEX", "twelvedata": "Twelve Data", "google": "Google",
+          "alpaca": "Alpaca_IEX", "twelvedata": "Twelve Data",
           # named in the record by the history check before the vote
           "dukascopy": "Dukascopy", "bitstamp": "Bitstamp", "bitfinex": "Bitfinex"}
 

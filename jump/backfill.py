@@ -7,8 +7,7 @@ THE HOURLY PATH asks each instrument only for what it can be missing: the walk
 starts at its newest stored bar minus three hours, and an instrument whose market
 has been shut since that bar is not asked at all (see nothing_can_have_appeared).
 Providers are chosen per instrument by `provider` in config/basket.yaml (Tiingo,
-Alpaca, Twelve Data, Yahoo, Sina, SiftingIO, Binance, Google Finance for TUR;
-docs/manual.md, "Data in"), and only Twelve Data is paced, because only its free
+Alpaca, Twelve Data, Yahoo, Sina, SiftingIO, Binance; docs/manual.md, "Data in"), and only Twelve Data is paced, because only its free
 tier enforces a per-minute limit. After the fetch, the other sources vote on
 the far moves (jump.verify).
 
@@ -43,8 +42,8 @@ from jump import atomic, bars, cboe, corporate_actions, fred, futures, quality, 
 from jump import sessions as _sessions
 from jump.basket import Asset, Basket, load_basket
 from jump.usage import Usage
-from price_monitor import (alpaca, binance, dukascopy, google, sifting, sina,
-                           tiingo, twelvedata, wallstreetcn, yahoo)
+from price_monitor import (alpaca, binance, dukascopy, sifting, sina, tiingo,
+                           twelvedata, wallstreetcn, yahoo)
 from price_monitor.models import UNANSWERED_IN_A_ROW, ExchangeError, KeyRefused, Unreachable
 from price_monitor.notifier import quote, send_health
 
@@ -323,12 +322,6 @@ def fetch_missing(asset: Asset, path: str, since: date, api_key: str,
     elif provider == "sina" and asset.session_template == "lme":
         # An LME metal: its last 1,023 hourly bars, about three months.
         candles = sina.fetch_bars(asset.ticker, session, url=sina.GLOBAL_URL)
-    elif provider == "google":
-        # The latest session, whatever `days` asks: the page holds no more.
-        candles = google.fetch_full_history(
-            symbol=asset.ticker, interval=asset.fetch_interval, days=days,
-            session=session, end=end,
-        )
     else:
         raise ExchangeError(f"{asset.asset_id}: unknown provider '{provider}'")
 

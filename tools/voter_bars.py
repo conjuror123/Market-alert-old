@@ -4,7 +4,7 @@ change to the vote would decide, on the same bars for both sides.
     python -m tools.voter_bars OUT [--days 35] [--instruments A,B]
 
 Each source the live vote asks (jump.verify.sources_for - never Tiingo,
-SiftingIO, Twelve Data or Google; Alpaca's tape only where its keys are set)
+SiftingIO or Twelve Data; Alpaca's tape only where its keys are set)
 is fetched as the vote fetches it (verify.fetch_verifier), over `days` or its
 own reach if shorter, and written to OUT/<source>/<file_stem>.parquet. A source
 that fails is listed in OUT/failed.txt; a run with lines there is partial. The

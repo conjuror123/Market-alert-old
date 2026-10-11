@@ -237,8 +237,8 @@ the channel gives it; a source added there is asked from the next run.
 | LME tin, nickel, aluminium, copper (Sina) | Wallstreetcn, hourly (`price_monitor/wallstreetcn.py`, about 170 days back, counted again for 79 days, as the softs) |
 | the stock indices abroad (16, Yahoo, `sessions.EXCHANGES`) | MarketWatch (`marketwatch.INDICES`, 9 days back), Wallstreetcn (`wallstreetcn.INDICES`), the FT (`ft.INDICES`, by xid) and for the CSI 300 Sina's A-share hourly bars (`sina.fetch_cn_bars`, back to 2025-09, each filed under the hour its last minute falls in): only sources at 0.90 or more against Yahoo's folded bars; none yet for the KOSPI, the TAIEX or the JSE Top 40 |
 
-**Rule.** Never Tiingo, SiftingIO, Twelve Data or Google: the live run needs their
-allowances, and Google is one session deep. A test pins it.
+**Rule.** Never Tiingo, SiftingIO or Twelve Data: the live run needs their allowances. A
+test pins it.
 
 **Rule.** A source is no voter on a move whose bars it supplied to the store: its word
 there is the store's (`verify.SUPPLIED`, `supplied`). Only a hand-mend inside the live

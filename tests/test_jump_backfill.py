@@ -609,7 +609,7 @@ def _repair_case(tmp_path, monkeypatch, served_shift=0, served_scale=1.0):
                      c * served_scale, c * served_scale, 90.0, h + served_shift + HOUR)
               for h, c in zip(hours, close)]
     monkeypatch.setattr(backfill.yahoo, "fetch_full_history", lambda *a, **k: served)
-    asset = Asset(ticker="TUR", source="twelvedata", provider="google", block="equity",
+    asset = Asset(ticker="TUR", source="twelvedata", provider="tiingo", block="equity",
                   has_volume=True, tick_size=0.01, session_template="us_equity",
                   fetch_interval="30min", label="TUR", in_basket=True)
     return backfill, asset, str(path), _table(days)
@@ -1484,25 +1484,6 @@ def test_the_fetch_asks_sifting_for_a_sifting_pair(tmp_path, monkeypatch):
                            date(2021, 1, 1), "td", requests.Session(),
                            sifting_key="sk")
     assert seen["symbol"] == "USD/MXN" and seen["api_key"] == "sk"
-
-
-def test_the_fetch_asks_google_for_a_google_fund(tmp_path, monkeypatch):
-    from jump import backfill
-
-    seen = {}
-
-    def fake(**kwargs):
-        seen.update(kwargs)
-        return []
-
-    monkeypatch.setattr(backfill.google, "fetch_full_history", fake)
-    asset = Asset(ticker="TUR", source="twelvedata", provider="google", 
-                  block="equity", has_volume=True, tick_size=0.01,
-                  session_template="us_equity", fetch_interval="30min",
-                  label="TUR", in_basket=True)
-    backfill.fetch_missing(asset, str(tmp_path / "p"), date(2021, 1, 1), "td",
-                           requests.Session())
-    assert seen["symbol"] == "TUR" and seen["interval"] == "30min"
 
 
 # --- Alpaca deepening ---------------------------------------------------------

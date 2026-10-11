@@ -157,7 +157,7 @@ def test_the_supplier_of_a_moves_bars_is_not_asked_about_it(monkeypatch, tmp_pat
 
 def test_no_source_spends_an_allowance_the_live_run_needs():
     names = {src.name for group in verify.SOURCES.values() for src in group}
-    assert not names & {"tiingo", "sifting", "twelvedata", "google"}
+    assert not names & {"tiingo", "sifting", "twelvedata"}
 
 
 def test_a_wick_on_binance_alone_is_unconfirmed():

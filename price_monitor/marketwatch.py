@@ -25,7 +25,7 @@ the KOSPI, TAIEX, CSI 300, JSE Top 40 and Bovespa (keys tried 2026-10-11).
 AND THE STANDING RISK. An undocumented endpoint that wants the access token
 MarketWatch's own pages send with every chart: public, in their page, not a
 secret of this project. Reading it from a script sits in the same grey area as
-Google Finance's page (price_monitor/google.py). Should it change or close, it
+reading another site's chart data. Should it change or close, it
 is an outage in every vote it is in, left out of the count: live cattle is
 voted by the FT alone.
 """

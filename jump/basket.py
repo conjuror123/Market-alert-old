@@ -42,8 +42,7 @@ SOURCES = ("twelvedata", "binance", "yahoo", "sina")
 
 # Who can be asked for bars. Wider than SOURCES because a provider may serve an
 # instrument whose history came from somewhere else.
-PROVIDERS = ("twelvedata", "binance", "tiingo", "alpaca", "yahoo", "sifting", "google",
-             "sina")
+PROVIDERS = ("twelvedata", "binance", "tiingo", "alpaca", "yahoo", "sifting", "sina")
 FETCH_INTERVALS = ("15min", "30min", "1h")
 
 

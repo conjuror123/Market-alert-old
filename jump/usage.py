@@ -22,7 +22,6 @@ PROVIDERS = {
     "data.alpaca.markets": "alpaca",
     "query1.finance.yahoo.com": "yahoo",
     "data-api.binance.vision": "binance",
-    "www.google.com": "google",
     "finance.sina.com.cn": "sina",
     "stock.finance.sina.com.cn": "sina",
     "gu.sina.cn": "sina",

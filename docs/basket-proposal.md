@@ -175,14 +175,15 @@ user's first wish is the ladder the detector started with on 2026-09-28, **3.9 /
 volume (29.1 messages a week at 3.9 against 9.0, the delivery replayed over the year to
 2026-10-01). The ladder is researched again (task 9) and chosen at gate D.
 
-**Stage 1: 58 instruments.** The 30 kept; 8 funds standing in for the futures not yet
-built - BNO (Brent), SHY, IEF, TLT (Treasuries), CORN, WEAT, SOYB, CANE (grains, sugar) -
-so nothing goes blind over the pause; 20 new: the 16 indices, LME copper, and XAU/USD,
-XAG/USD, XPT/USD (GLD, SLV, PPLT stay if no round-the-clock source passes). 134 of
-today's go; their stored bars stay on disk.
+**Stage 1: 58 instruments.** The 30 kept; 9 funds standing in for what is not built yet -
+BNO (Brent), SHY, IEF, TLT (Treasuries), CORN, WEAT, SOYB, CANE (grains, sugar), PPLT
+(platinum, gate B) - so nothing goes blind over the pause; 19 new: the 16 indices, LME
+copper, and XAU/USD, XAG/USD (GLD and SLV stay if no round-the-clock source passes). 133
+of today's go; their stored bars stay on disk.
 
 **Stage 2, after the pause**: the 11 futures (Brent, 2-, 10- and 30-year Treasuries,
-corn, wheat, soybeans, sugar, Bund, JGB, gilt) and TTF, in place of their stand-ins.
+corn, wheat, soybeans, sugar, Bund, JGB, gilt), platinum's futures and TTF, in place of
+their stand-ins.
 
 All of it is built and measured on the development branch; nothing reaches the channel
 before the measured before/after and the user's go.
@@ -195,9 +196,9 @@ before the measured before/after and the user's go.
 | 3 | sessions for the 16 markets (`jump/sessions.py`, `DAILY_SESSIONS`): trading-day tables from `exchange_calendars` so a long closure is a gap, not a source out; Tadawul's Sunday-Thursday week; hours that change by date (Tokyo's close 15:00 → 15:30 on 2024-11-05, B3 with US daylight saving) | |
 | 4 | the indices from Yahoo: live at 30 minutes (15 for Nifty) folded onto the round hour (`jump/bars.py`, `to_hourly`); 1-hour history, the :30 and :45 markets' bars labelled by the hour they end in, checked against 59 days of folded 30-minute bars | |
 | 5 | LME copper: Sina's, Wallstreetcn's UKCA.OTC as voter and history below | |
-| 6 | gold, silver, platinum round the clock: a provider by the four questions (SiftingIO first, from its docs, no quota spent probing; the 7 pairs leave it about 3,600 of 10,000 calls a month, the metals would add about 1,600); history from Dukascopy | |
+| 6 | gold and silver round the clock: a provider by the four questions, from a keyed probe of SiftingIO and Twelve Data (gate B; about ten requests - the 7 pairs leave SiftingIO about 3,600 of 10,000 calls a month, the two metals would add about 1,000); history from Dukascopy | |
 | 7 | voters: an `indices` class and a round-the-clock metals class in `jump/verify.py`; copper joins `lme` | B: each new instrument has bars and a voter, or is named |
-| 8 | `config/basket.yaml`: 134 out, 20 in, one commit | |
+| 8 | `config/basket.yaml`: 133 out, 19 in, one commit | |
 | 9 | the levels thought through again: search the web (the jump test's own critical values, how alerting systems set thresholds, how traders read sigma moves) and propose a ladder with reasons; candidates at least the first 3.9 / 5.5 / 7.8 / 11.0, a 5σ ladder and today's 6 / 8.5 / 12 / 17 | |
 | 10 | delivery read with the new instruments; a cold rebuild on the development branch for measuring only - not committed, the live run rebuilds after the merge; the new instruments' open month comes from the first live fetch (`tools/hot_bars.sh`); a cold first run of 58 inside the hourly job's 20 minutes | |
 | 11 | measured before/after: today (172 at 6σ) against stage 1 at each candidate ladder, by block, with windows | D: the user's go and ladder |
@@ -229,6 +230,15 @@ store, with the vote and delivery, holds 247) - so compare within the table only
 A lower ladder raises the round-the-clock markets most, as they have the most hours: at
 4σ the four coins push 74 times in the year to 2026-10-05, today's sixteen 68; the seven
 pairs 74, today's seventeen 47. The 20 new instruments are not in these numbers.
+
+### Gate B: bars and voters for the new instruments (answered 2026-10-11)
+
+| | state | the user's answer |
+|---|---|---|
+| the 16 indices | Yahoo's bars: 12 back to 2024-10; the CSI 300, BIST 100, TSX and IPC 58 days, their older hours having failed the import gate; voters for 13 | the KOSPI, TAIEX and JSE Top 40 without a voter: fine for now |
+| LME copper | Sina's bars, Wallstreetcn's below them back to 2026-04-23; Wallstreetcn votes | |
+| gold and silver | no round-the-clock source measured: Dukascopy has their history, Wallstreetcn a voter's bars; SiftingIO's catalogue lists XAUUSD and XAGUSD, Twelve Data XAU/USD and XAG/USD, both behind keys | a keyed probe of the two, about ten requests: yes |
+| platinum | no round-the-clock source: Dukascopy and Wallstreetcn have no spot platinum, Yahoo only the futures | to stage 2, PPLT standing in: yes |
 
 ## Sources
 

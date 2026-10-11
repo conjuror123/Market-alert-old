@@ -166,6 +166,42 @@ USD/TRY otherwise flags on the lira's managed crawl: most of its other 6σ hours
 - **The measured before/after** of version 5, for the user's go.
 - **The standing risk**: undocumented endpoints carry most of it, as they do today.
 
+## Stage 1: the build (planned 2026-10-11)
+
+Version 5 will not all be built before the user's long pause, so it comes in two stages,
+with the levels back at **4 / 5.657 / 8 / 11.314σ** (4σ and √2 steps; now 6 / 8.5 / 12 /
+17) - the user's, since version 5 pushes about a quarter of today's volume.
+
+**Stage 1: 58 instruments.** The 30 kept; 8 funds standing in for the futures not yet
+built - BNO (Brent), SHY, IEF, TLT (Treasuries), CORN, WEAT, SOYB, CANE (grains, sugar) -
+so nothing goes blind over the pause; 20 new: the 16 indices, LME copper, and XAU/USD,
+XAG/USD, XPT/USD (GLD, SLV, PPLT stay if no round-the-clock source passes). 134 of
+today's go; their stored bars stay on disk.
+
+**Stage 2, after the pause**: the 11 futures (Brent, 2-, 10- and 30-year Treasuries,
+corn, wheat, soybeans, sugar, Bund, JGB, gilt) and TTF, in place of their stand-ins.
+
+All of it is built and measured on the development branch; nothing reaches the channel
+before the measured before/after and the user's go.
+
+| | task | gate |
+|---|---|---|
+| 0 | this record | |
+| 1 | baseline: `tools/stage_report.py` on today's 172 at today's levels | |
+| 2 | the 38 existing instruments of stage 1 at both ladders (a scratch worktree with an edited, uncommitted basket: the report reads `config/basket.yaml`) | A: shown to the user |
+| 3 | sessions for the 16 markets (`jump/sessions.py`, `DAILY_SESSIONS`): trading-day tables from `exchange_calendars` so a long closure is a gap, not a source out; Tadawul's Sunday-Thursday week; hours that change by date (Tokyo's close 15:00 → 15:30 on 2024-11-05, B3 with US daylight saving) | |
+| 4 | the indices from Yahoo: live at 30 minutes (15 for Nifty) folded onto the round hour (`jump/bars.py`, `to_hourly`); 1-hour history, the :30 and :45 markets' bars labelled by the hour they end in, checked against 59 days of folded 30-minute bars | |
+| 5 | LME copper: Sina's, Wallstreetcn's UKCA.OTC as voter and history below | |
+| 6 | gold, silver, platinum round the clock: a provider by the four questions (SiftingIO first, from its docs, no quota spent probing; the 7 pairs leave it about 3,600 of 10,000 calls a month, the metals would add about 1,600); history from Dukascopy | |
+| 7 | voters: an `indices` class and a round-the-clock metals class in `jump/verify.py`; copper joins `lme` | B: each new instrument has bars and a voter, or is named |
+| 8 | `config/basket.yaml`: 134 out, 20 in, one commit | |
+| 9 | `detector.levels` to the new ladder, a commit of its own; the vote's candidates and its 40-request budget checked | |
+| 10 | delivery read with the new instruments; a cold rebuild on the development branch for measuring only - not committed, the live run rebuilds after the merge; the new instruments' open month comes from the first live fetch (`tools/hot_bars.sh`); a cold first run of 58 inside the hourly job's 20 minutes | |
+| 11 | measured before/after: today (172 at 6σ), stage 1 at 6σ and at 4σ, by block, with windows | D: the user's go and ladder |
+| 12 | docs: manual, decisions, README | |
+| 13 | `pytest -q`, alone | |
+| 14 | the live branch, on the user's go only; a week of watching | |
+
 ## Sources
 
 - StockCharts, intermarket relationships (Murphy):

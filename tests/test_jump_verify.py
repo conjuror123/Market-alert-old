@@ -56,18 +56,18 @@ def _asked(asset):
 
 def test_every_instrument_is_asked_of_every_source_of_its_class_but_its_own(basket):
     # The pairs: Yahoo, MarketWatch for the hours Yahoo lacks, and
-    # Wallstreetcn - all but USD/KRW, which it does not carry.
-    assert _asked(basket["USD/INR"]) == [
-        ("yahoo", "USDINR=X", "1h"), ("marketwatch", "CURRENCY/US/XTUP/USDINR", "1h"),
-        ("wallstreetcn", "USDINR.OTC", "1h")]
-    assert _asked(basket["USD/BRL"])[1] == ("marketwatch", "CURRENCY/US/XTUP/USDBRL", "1h")
-    assert [n for n, _, _ in _asked(basket["USD/KRW"])] == ["yahoo", "marketwatch"]
+    # Wallstreetcn.
+    assert _asked(basket["EUR/USD"]) == [
+        ("yahoo", "EURUSD=X", "1h"), ("marketwatch", "CURRENCY/US/XTUP/EURUSD", "1h"),
+        ("wallstreetcn", "EURUSD.OTC", "1h")]
+    for pair in (a for a in basket.values() if a.block == "FX"):
+        assert [n for n, _, _ in _asked(pair)] == ["yahoo", "marketwatch", "wallstreetcn"]
     # A fund: Yahoo's, Sina's and MarketWatch's bars, less its own provider.
     for fund in (a for a in basket.values() if a.session_template == "us_equity"):
         names = [n for n, _, _ in _asked(fund)]
         assert names == [n for n in ("yahoo", "sina", "marketwatch") if n != fund.fetched_from]
-    assert _asked(basket["LMBS"]) == [("yahoo", "LMBS", "30min"), ("sina", "LMBS", "30min"),
-                                      ("marketwatch", "FUND/US/XNAS/LMBS", "1h")]
+    assert _asked(basket["TLT"]) == [("yahoo", "TLT", "30min"), ("sina", "TLT", "30min"),
+                                     ("marketwatch", "FUND/US/XNAS/TLT", "1h")]
     # The softs Yahoo serves: Sina's global futures, hourly, and Wallstreetcn's
     # cocoa and cotton (not coffee), each with its own rolls.
     # Coffee: Sina's and the FT's continuous series (Wallstreetcn has none).
@@ -75,7 +75,7 @@ def test_every_instrument_is_asked_of_every_source_of_its_class_but_its_own(bask
     assert _asked(basket["CT=F"]) == [("sina", "CT", "1h"), ("wallstreetcn", "USCT.OTC", "1h")]
     assert _asked(basket["CC=F"])[1] == ("wallstreetcn", "USCC.OTC", "1h")
     assert all(src.own_rolls for src in verify.sources_for(basket["CC=F"]))
-    assert verify.recount_days(basket["CC=F"]) == 79 and verify.recount_days(basket["USD/INR"]) == 9
+    assert verify.recount_days(basket["CC=F"]) == 79 and verify.recount_days(basket["EUR/USD"]) == 9
     assert verify.recount_days(basket["KC=F"]) == 30                 # the FT's reach
     # Live cattle: MarketWatch's continuous contract, and the FT's of the
     # contract the store holds today, with its own rolls.
@@ -85,10 +85,9 @@ def test_every_instrument_is_asked_of_every_source_of_its_class_but_its_own(bask
                                       ("ft", "LC" + held[2:5], "1h")]
     assert verify.sources_for(basket["LE=F"])[1].own_rolls
     assert verify.recount_days(basket["LE=F"]) == 9
-    # The coins: two other exchanges' dollar pairs, Kraken naming BTC and
-    # DOGE its own way.
+    # The coins: two other exchanges' dollar pairs, Kraken naming BTC its own
+    # way.
     assert _asked(basket["BTC/USDT"]) == [("coinbase", "BTC-USD", "1h"), ("kraken", "XBTUSD", "1h")]
-    assert _asked(basket["DOGE/USDT"])[1] == ("kraken", "XDGUSD", "1h")
     for asset in basket.values():
         if asset.session_template == "crypto_24_7":
             assert [n for n, _, _ in _asked(asset)] == ["coinbase", "kraken"]
@@ -97,15 +96,17 @@ def test_every_instrument_is_asked_of_every_source_of_its_class_but_its_own(bask
         [("wallstreetcn", "UKSN.OTC", "1h")], [("wallstreetcn", "UKNI.OTC", "1h")],
         [("wallstreetcn", "UKAH.OTC", "1h")]]
     assert verify.recount_days(basket["SND"]) == 79 < verify.KEEP_DAYS
-    # Every instrument has a source to ask.
-    assert all(verify.sources_for(a) for a in basket.values())
+    # Every instrument has a source to ask, but the three indices none was
+    # found for (docs/basket-proposal.md, gate B).
+    assert {a.ticker for a in basket.values() if not verify.sources_for(a)} == {
+        "^KS11", "^TWII", "^J200.JO"}
 
 
 def test_alpacas_tape_votes_on_every_fund_with_its_keys_and_is_no_voter_without(
         monkeypatch, basket):
     # Its consolidated tape is every exchange's trades: another source than
-    # the IEX feed the store has 30 funds from, so it votes on those too.
-    fund = next(a for a in basket.values() if a.fetched_from == "alpaca")
+    # the IEX feeds the store's funds come from, so it votes on those too.
+    fund = next(a for a in basket.values() if a.session_template == "us_equity")
     assert "alpaca_sip" not in [n for n, _, _ in _asked(fund)]       # no keys here
     monkeypatch.setenv("ALPACA_KEY_ID", "k")
     monkeypatch.setenv("ALPACA_SECRET_KEY", "s")
@@ -127,22 +128,23 @@ def test_alpacas_tape_is_asked_fifteen_minutes_back(monkeypatch):
     assert asked[0][1] <= now - timedelta(minutes=15)
 
 
-def test_a_source_is_no_voter_on_the_bars_it_supplied(basket):
+def test_a_source_is_no_voter_on_the_bars_it_supplied(monkeypatch, basket):
     s = verify.supplied
     c = lambda h, check="close": {"hour": ts(h), "prev_hour": ts(h) - HOUR, "check": check}
-    # TUR's holes of 2026-10-01 and -02, mended from Yahoo; the seam's day
-    # either side is left out too.
-    assert s("yahoo", basket["TUR"], c("2026-10-01 15:00"))
-    assert s("yahoo", basket["TUR"], c("2026-10-03 15:00"))
-    assert not s("yahoo", basket["TUR"], c("2026-10-06 15:00"))
+    # Holes of 2026-10-01 and -02 mended from Yahoo, as TUR's were; the seam's
+    # day either side is left out too.
+    monkeypatch.setitem(verify.SUPPLIED, "yahoo", ((("TIP",), "2026-10-01", "2026-10-03"),))
+    assert s("yahoo", basket["TIP"], c("2026-10-01 15:00"))
+    assert s("yahoo", basket["TIP"], c("2026-10-03 15:00"))
+    assert not s("yahoo", basket["TIP"], c("2026-10-06 15:00"))
     assert not s("yahoo", basket["SPY"], c("2026-10-01 15:00"))
-    assert not s("sina", basket["TUR"], c("2026-10-01 15:00"))
+    assert not s("sina", basket["TIP"], c("2026-10-01 15:00"))
 
 
 def test_the_supplier_of_a_moves_bars_is_not_asked_about_it(monkeypatch, tmp_path, basket):
     asset, hours, bad, frame, market = _inr_store(tmp_path, basket)
     day = datetime.fromtimestamp(int(hours[bad]), timezone.utc).date()
-    monkeypatch.setitem(verify.SUPPLIED, "yahoo", ((("USD/INR",), str(day), str(day)),))
+    monkeypatch.setitem(verify.SUPPLIED, "yahoo", ((("EUR/USD",), str(day), str(day)),))
     monkeypatch.setattr(verify, "fetch_verifier", lambda *a, **k: market)
     now = datetime.fromtimestamp(int(hours[bad]) + 2 * HOUR + 300, timezone.utc)
     path = str(tmp_path / "verified.csv")
@@ -332,9 +334,9 @@ def test_the_move_reported_is_the_second_sources_over_the_same_hours():
 # --- which bars -------------------------------------------------------------------
 
 def _fund_store(basket, days=120, gap_day=None, gap=0.0, first_hour=0.0):
-    """A Yahoo-served fund's bars, quiet: 0.1% hours, 0.3% nights."""
+    """A fund's bars, quiet: 0.1% hours, 0.3% nights."""
     asset = next(a for a in basket.values()
-                 if a.session_template == "us_equity" and a.fetched_from == "alpaca")
+                 if a.session_template == "us_equity" and a.fetched_from == "tiingo")
     from jump import sessions
     table = sessions.load_sessions()
     rng = np.random.default_rng(7)
@@ -382,7 +384,7 @@ def test_a_pairs_weekend_gap_is_asked_about_at_its_open_and_from_fridays_close(
     # The detector judges a pair's weekend gap at its open (jumps.found_times),
     # so it is asked about then - and the source is fetched from before
     # Friday's close, the price the gap starts at.
-    asset = basket["USD/INR"]
+    asset = basket["EUR/USD"]
     hours = ts("2026-08-03 00:00") + HOUR * np.arange(24 * 7 * 9)
     rng = np.random.default_rng(2)
     closes = 84.0 * np.exp(np.cumsum(rng.normal(0, 0.0003, len(hours))))
@@ -416,10 +418,10 @@ def test_a_pairs_weekend_gap_is_asked_about_at_its_open_and_from_fridays_close(
 # --- a pass, and what it leaves out -----------------------------------------------
 
 def _inr_store(tmp_path, basket, bad_share=0.995):
-    """Two months of USD/INR hours to a bad print's week - enough for the
+    """Two months of EUR/USD hours to a bad print's week - enough for the
     detector's smallest window; the gate drops the weekends - and a tape that
     never went there."""
-    asset = basket["USD/INR"]
+    asset = basket["EUR/USD"]
     hours = ts("2026-08-03 00:00") + HOUR * np.arange(24 * 7 * 8 + 80)
     rng = np.random.default_rng(1)
     closes = 84.0 * np.exp(np.cumsum(rng.normal(0, 0.0003, len(hours))))
@@ -447,8 +449,8 @@ def test_a_reading_is_voted_when_found_and_loses_its_vote_when_it_heals(
     now = datetime.fromtimestamp(int(hours[bad + 5]) + 300, timezone.utc)
     path = str(tmp_path / "verified.csv")
     verify.verify([asset], str(tmp_path / "bars"), None, now=now, path=path)
-    assert asked == [("yahoo", "USDINR=X"), ("marketwatch", "CURRENCY/US/XTUP/USDINR"),
-                     ("wallstreetcn", "USDINR.OTC")]
+    assert asked == [("yahoo", "EURUSD=X"), ("marketwatch", "CURRENCY/US/XTUP/EURUSD"),
+                     ("wallstreetcn", "EURUSD.OTC")]
     # The bad print, and the hour back from it, which did not happen either.
     unseen = {(asset.asset_id, int(hours[bad]), "close"),
               (asset.asset_id, int(hours[bad + 1]), "close")}
@@ -469,7 +471,7 @@ def test_a_reading_is_voted_when_found_and_loses_its_vote_when_it_heals(
 
 def test_a_vote_is_taken_again_at_each_session_end_while_its_closest_source_serves_it(
         monkeypatch, tmp_path, basket):
-    # USD/INR's bad print, a Wednesday 22:00. A pair's session ends at 00:00
+    # EUR/USD's bad print, a Wednesday 22:00. A pair's session ends at 00:00
     # UTC: voted when found at 23:05, again at 00:05 - an hour later, but
     # past the end - and not again that day. Its closest source is
     # MarketWatch, nine days deep: past that, the vote stands.
@@ -612,7 +614,7 @@ def test_a_move_a_source_prints_an_hour_late_counts_against_until_it_does():
 
 def test_a_busy_hour_asks_the_not_yet_judged_first(monkeypatch, tmp_path, basket):
     asset, hours, bad, frame, market = _inr_store(tmp_path, basket)
-    other = basket["USD/TRY"]
+    other = basket["GBP/USD"]
     bars.write(bars.store_path(str(tmp_path / "bars"), other.file_stem), frame)
     asked = []
 
@@ -631,10 +633,10 @@ def test_a_busy_hour_asks_the_not_yet_judged_first(monkeypatch, tmp_path, basket
     monkeypatch.setattr(verify, "MAX_REQUESTS", 3)
     verify.verify([asset, other], str(tmp_path / "bars"), None, now=now, path=path)
     verify.verify([asset, other], str(tmp_path / "bars"), None, now=now, path=path)
-    # USD/INR comes first in the basket and was judged the first run: the
-    # second run's requests go to USD/TRY, which was not.
-    assert asked == ["USDINR=X", "CURRENCY/US/XTUP/USDINR", "USDINR.OTC",
-                     "USDTRY=X", "CURRENCY/US/XTUP/USDTRY", "USDTRY.OTC"]
+    # EUR/USD comes first in the basket and was judged the first run: the
+    # second run's requests go to GBP/USD, which was not.
+    assert asked == ["EURUSD=X", "CURRENCY/US/XTUP/EURUSD", "EURUSD.OTC",
+                     "GBPUSD=X", "CURRENCY/US/XTUP/GBPUSD", "GBPUSD.OTC"]
 
 
 def test_the_sources_vote_and_the_store_is_one_vote_that_saw_it():
@@ -718,7 +720,7 @@ def test_a_source_that_fails_is_an_outage_left_out_of_the_count(monkeypatch, tmp
 
     def fetch(name, symbol, interval, days, session, now):
         if name == "yahoo":
-            raise ExchangeError("USDINR=X: no response")
+            raise ExchangeError("EURUSD=X: no response")
         return frame.drop(columns="n_src") if name == "wallstreetcn" else market
 
     monkeypatch.setattr(verify, "fetch_verifier", fetch)
@@ -734,7 +736,7 @@ def test_a_source_that_fails_is_an_outage_left_out_of_the_count(monkeypatch, tmp
 def test_a_rate_limit_stops_that_source_only(monkeypatch, tmp_path, basket):
     from price_monitor.models import ExchangeError
     asset, hours, bad, frame, market = _inr_store(tmp_path, basket)
-    other = basket["USD/TRY"]
+    other = basket["GBP/USD"]
     bars.write(bars.store_path(str(tmp_path / "bars"), other.file_stem), frame)
     asked = []
 
@@ -755,7 +757,7 @@ def test_a_source_that_does_not_answer_twice_in_a_row_is_stopped(monkeypatch, tm
                                                                   basket):
     from price_monitor.models import Unreachable
     asset, hours, bad, frame, market = _inr_store(tmp_path, basket)
-    others = [basket["USD/TRY"], basket["USD/MXN"]]
+    others = [basket["GBP/USD"], basket["AUD/USD"]]
     for other in others:
         bars.write(bars.store_path(str(tmp_path / "bars"), other.file_stem), frame)
     asked = []
@@ -909,13 +911,13 @@ def test_a_broken_bar_from_a_second_source_costs_only_its_instrument(
     # A source's zero or missing price is not a price. It must not take
     # the pass down with it: every other instrument is still judged.
     asset, hours, bad, frame, market = _inr_store(tmp_path, basket)
-    other = basket["USD/TRY"]
+    other = basket["GBP/USD"]
     bars.write(bars.store_path(str(tmp_path / "bars"), other.file_stem), frame)
     broken = market.copy()
     broken.loc[bad - 1, ["open", "close"]] = 0.0
 
     def fetch(name, symbol, interval, days, session, now):
-        return broken if "INR" in symbol else market
+        return broken if "EURUSD" in symbol else market
 
     monkeypatch.setattr(verify, "fetch_verifier", fetch)
     now = datetime.fromtimestamp(int(hours[bad + 5]) + 300, timezone.utc)

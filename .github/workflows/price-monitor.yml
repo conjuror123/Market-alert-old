@@ -13,7 +13,7 @@ on:
       # Yahoo's bars agree with the store (jump.backfill --repair). Here and
       # not in the history workflow: only this run may save the open months.
       repair:
-        description: "Funds to repair from Yahoo, comma-separated (e.g. TUR)"
+        description: "Funds to repair from Yahoo, comma-separated (e.g. HYG)"
         required: false
         default: ""
 

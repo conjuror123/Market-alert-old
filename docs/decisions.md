@@ -148,6 +148,19 @@ rewards delay.
 
 ## Data and providers
 
+**The basket of stage 1: each market in its own hours, each story told once** (the user's,
+2026-10-10/11, `docs/basket-proposal.md`). The basket of 172 came from a paper and a round
+of additions. It saw the world through 132 New York funds, so the Nikkei's worst day since
+1987 (2024-08-05) reached it at New York's open. It was crowded by coins and by
+look-alikes: 62 funds in 21 groups holding nearly the same thing. Stage 1 holds 58: 16
+stock indices, each in its own exchange's hours, beside SPY and IWM; four sectors; LME
+copper beside tin, nickel and aluminium; seven pairs; four coins. **Funds stand in** where
+the futures are not built yet: BNO for Brent, SHY, IEF and TLT for the Treasuries, CORN,
+WEAT, SOYB and CANE for the grains and sugar, PPLT for platinum, and GLD and SLV for gold
+and silver until a round-the-clock source passes. So nothing goes blind over the user's
+pause. The 134 that went (133 of the basket, and DBC outside it) keep their stored bars on
+disk.
+
 **One provider per instrument, chosen by measurement**, against the stored bars hour by
 hour, in basis points, beside an hourly σ of 20–40 bp. A feed a few bp off on a thin fund
 sends alerts for moves that did not happen.
@@ -162,8 +175,8 @@ miss by far.
 
 **Documented APIs first, undocumented endpoints last, no quota past about 85%**, leaving
 room for tests and backfills. Sina and Yahoo alternate within each block, so an outage of
-either leaves every block reporting. TUR is on Google Finance, the only free feed matching
-the tape on it.
+either leaves every block reporting. TUR, until stage 1, was on Google Finance, the only free
+feed matching the tape on it.
 
 **The store is unadjusted; corporate actions are declared.** Adjusted series change
 retroactively with every dividend. Payouts and splits are read as declared - Yahoo's every
@@ -625,7 +638,7 @@ it was taken and returned the one after (USD/TRY's history flipped four votes ev
 | live cattle | MarketWatch continuous; the FT's bars of the store's contract | MarketWatch hourly correlation 0.92; the FT 2.3 bp off |
 | coins | Coinbase and Kraken | other exchanges' dollar pairs: hourly moves correlate 0.988–1.000 with Binance's (300 hours to 2026-09-25); a year of checks found 4 moves not seen, all Binance's own on 2025-10-10's liquidations |
 | LME metals | Wallstreetcn | the only feed found that a runner reaches: 0 bp off at the median, hourly correlation 0.96–0.99, in part Sina's upstream |
-| stock indices abroad (stage 1, not in the basket yet) | MarketWatch (11), Wallstreetcn (4), the FT (5), Sina for the CSI 300 | each source at 0.90 or more against Yahoo's folded bars hour by hour, 2026-08 to 10: MarketWatch 0.96–1.00 at 0 bp (Yahoo's upstream to the cent); Wallstreetcn 0.91–0.99; the FT 0.92–0.98 for Europe and the Americas, while it lags Asia (Nikkei 0.80, Hang Seng 0.86, ASX 200 0.06); Sina's CSI 300 0.90. India's two are the Sensex, not the Nifty (0.99, 0.91). Left out below 0.90: Wallstreetcn's ASX 200 (0.80), KOSPI (0.89), Euro Stoxx 50 (0.86); its index futures change contract on their own days. No voter yet for the KOSPI, the TAIEX or the JSE Top 40 |
+| stock indices abroad (16, stage 1) | MarketWatch (11), Wallstreetcn (4), the FT (5), Sina for the CSI 300 | each source at 0.90 or more against Yahoo's folded bars hour by hour, 2026-08 to 10: MarketWatch 0.96–1.00 at 0 bp (Yahoo's upstream to the cent); Wallstreetcn 0.91–0.99; the FT 0.92–0.98 for Europe and the Americas, while it lags Asia (Nikkei 0.80, Hang Seng 0.86, ASX 200 0.06); Sina's CSI 300 0.90. India's two are the Sensex, not the Nifty (0.99, 0.91). Left out below 0.90: Wallstreetcn's ASX 200 (0.80), KOSPI (0.89), Euro Stoxx 50 (0.86); its index futures change contract on their own days. No voter yet for the KOSPI, the TAIEX or the JSE Top 40 |
 
 ---
 
@@ -717,14 +730,14 @@ Known and left alone on purpose.
 that day's mend of the funds' first bars; 903 MiB that morning), mostly
 superseded Parquet in history; GitHub warns at 1 GB. To act: a history rewrite, which force-pushes the live branch irreversibly.
 
-**Undocumented endpoints carry most of the basket** (Yahoo, Sina, Google Finance,
-MarketWatch, Wallstreetcn, the FT). A changed shape raises and the health chat names the provider. To act: paid
+**Undocumented endpoints carry most of the basket** (Yahoo, Sina, MarketWatch,
+Wallstreetcn, the FT). A changed shape raises and the health chat names the provider. To act: paid
 feeds.
 
 **What else Wallstreetcn carries**, hourly, about 170 days back, without volume (its rank
 lists, 2026-10-10), none of it in the basket: sugar (USYO.OTC), lean hogs (LHC.OTC), wheat,
-corn, soybeans and soybean oil (USZW, USZC, USZS, USZL), the LME's copper, lead and zinc
-(UKCA, UKPB, UKZS), 38 stock indices and index futures (US500, JP225, DE30, VIX, ...) and 52
+corn, soybeans and soybean oil (USZW, USZC, USZS, USZL), the LME's lead and zinc (UKPB,
+UKZS), 38 stock indices and index futures (US500, JP225, DE30, VIX, ...) and 52
 government bond yields (US10YR, DE10YR, JP10YR, ...). To add one: an entry in
 `config/basket.yaml` with its session, a fetch in `jump.backfill`, and its history -
 170 days from Wallstreetcn alone, so its half-year yardstick is young for its first months,

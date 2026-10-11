@@ -1,8 +1,8 @@
 # A new basket: proposal
 
-A working proposal, under discussion with the user since 2026-10-10. Nothing here is in
-`config/basket.yaml` yet. Before it goes in: a source for each new instrument, then the
-whole basket's measured before/after for the user's go, and one cold rebuild.
+A working proposal, under discussion with the user since 2026-10-10. Its stage 1 (below)
+is in `config/basket.yaml` on the development branch since 2026-10-11; before it goes
+live: the whole basket's measured before/after for the user's go, and one cold rebuild.
 
 ## Why change it
 
@@ -198,7 +198,7 @@ before the measured before/after and the user's go.
 | 5 | LME copper: Sina's, Wallstreetcn's UKCA.OTC as voter and history below | |
 | 6 | gold and silver round the clock: a provider by the four questions, from a keyed probe of SiftingIO and Twelve Data (gate B; about ten requests - the 7 pairs leave SiftingIO about 3,600 of 10,000 calls a month, the two metals would add about 1,000); history from Dukascopy | |
 | 7 | voters: an `indices` class and a round-the-clock metals class in `jump/verify.py`; copper joins `lme` | B: each new instrument has bars and a voter, or is named |
-| 8 | `config/basket.yaml`: 133 out, 19 in, one commit | |
+| 8 | `config/basket.yaml`: 133 out (and DBC, outside it), 17 in - the indices and copper; gold and silver in place of GLD and SLV with task 6 | |
 | 9 | the levels thought through again: search the web (the jump test's own critical values, how alerting systems set thresholds, how traders read sigma moves) and propose a ladder with reasons; candidates at least the first 3.9 / 5.5 / 7.8 / 11.0, a 5σ ladder and today's 6 / 8.5 / 12 / 17 | |
 | 10 | delivery read with the new instruments; a cold rebuild on the development branch for measuring only - not committed, the live run rebuilds after the merge; the new instruments' open month comes from the first live fetch (`tools/hot_bars.sh`); a cold first run of 58 inside the hourly job's 20 minutes | |
 | 11 | measured before/after: today (172 at 6σ) against stage 1 at each candidate ladder, by block, with windows | D: the user's go and ladder |

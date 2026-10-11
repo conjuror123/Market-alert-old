@@ -277,7 +277,7 @@ SOURCES: "dict[str, tuple[Source, ...]]" = {
         Source("kraken", "Kraken", 29, "1h", _exchange("kraken")),
     ),
 }
-_CLASS = {"fx_continuous": "fx", "b3_fx": "fx",
+_CLASS = {"fx_continuous": "fx",
           "ice_coffee": "softs", "ice_cocoa": "softs", "ice_cotton": "softs",
           **{name: "indices" for name in sessions.EXCHANGES}}
 # What the channel calls each provider: the sources, and the stores' own.

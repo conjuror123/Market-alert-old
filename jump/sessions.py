@@ -31,9 +31,6 @@ from functools import lru_cache
 
 HOUR = 3600
 DEFAULT_SESSIONS_PATH = os.path.join("data", "jump", "sessions", "nyse.csv")
-# B3's trading days, for USD/BRL's session (b3_fx): built and extended like the
-# NYSE table, one date a row.
-B3_DAYS_PATH = os.path.join("data", "jump", "sessions", "b3.csv")
 
 REFERENCE_OPEN_HOUR = 17   # Sunday, anchor exchange local time
 REFERENCE_CLOSE_HOUR = 17  # Friday
@@ -113,60 +110,6 @@ def generate_exchange_sessions(name: str, start: date, end: date) -> list[Sessio
         usual[year] = max(set(closes), key=closes.count)
     return [Session(day=d, local_open=o, local_close=c, is_early_close=c < usual[d.year])
             for d, o, c in rows]
-
-
-def generate_b3_days(start: date, end: date) -> "list[date]":
-    """B3's trading days from the exchange_calendars library (BVMF): the
-    exchange's own holidays, São Paulo's city ones among them, are absent."""
-    import exchange_calendars as xcals  # local import: generation only
-
-    calendar = xcals.get_calendar("BVMF", start=str(start), end=str(end))
-    return [d.date() for d in calendar.sessions]
-
-
-def write_days(path: str, days: "list[date]") -> None:
-    from jump import atomic
-
-    def _write(tmp: str) -> None:
-        with open(tmp, "w", encoding="utf-8", newline="") as f:
-            f.write("date\n")
-            for d in sorted(days):
-                f.write(d.isoformat() + "\n")
-
-    atomic.write_replacing(path, _write)
-
-
-@lru_cache(maxsize=4)
-def _b3_days(path: str = B3_DAYS_PATH) -> "tuple[frozenset, date | None, date | None]":
-    """(trading days, first, last) of the B3 table; empty without one."""
-    if not os.path.exists(path):
-        return frozenset(), None, None
-    with open(path, "r", encoding="utf-8", newline="") as f:
-        days = frozenset(date.fromisoformat(row["date"]) for row in csv.DictReader(f))
-    return days, min(days, default=None), max(days, default=None)
-
-
-def b3_holiday(day: date, path: str = B3_DAYS_PATH) -> bool:
-    """A weekday B3 is shut, inside the table's span. Outside it nothing is
-    known, and the day counts as open, as before the table."""
-    days, first, last = _b3_days(path)
-    return first is not None and first <= day <= last and day.weekday() < 5 \
-        and day not in days
-
-
-def extend_b3_days(path: str = B3_DAYS_PATH, until: "date | None" = None,
-                   generate=None) -> int:
-    """Appends B3's trading days after the table's last row through `until`;
-    the rows already there stay as they are (the NYSE table's rule)."""
-    days, _, last = _b3_days(path)
-    if last is None or until is None or last >= until:
-        return 0
-    new = [d for d in (generate or generate_b3_days)(last + timedelta(days=1), until)
-           if d > last]
-    if new:
-        write_days(path, list(days) + new)
-        _b3_days.cache_clear()
-    return len(new)
 
 
 def write_sessions(path: str, sessions: list[Session]) -> None:
@@ -428,10 +371,8 @@ def main(argv: list[str] | None = None) -> int:
         added = extend_sessions(args.out)
         print(f"{args.out}: {added} trading days appended" if added
               else f"{args.out}: reaches far enough, nothing appended")
-        # B3's table and the markets abroad to the same last day as the NYSE's.
+        # The markets abroad to the same last day as the NYSE's.
         until = max(load_sessions(args.out))
-        b3 = extend_b3_days(until=until)
-        print(f"{B3_DAYS_PATH}: {b3} trading days appended")
         for name in EXCHANGES:
             n = extend_exchange_table(name, until)
             print(f"{exchange_table_path(name)}: {n} trading days appended")
@@ -463,27 +404,19 @@ def main(argv: list[str] | None = None) -> int:
 # is later than its close starts the evening before: cotton's Monday runs from
 # Sunday 21:00 New York. Holidays are not listed: the source has no bars on them,
 # so the close before one is simply longer, and its gap is judged with the other
-# closes of that length (jump.jumps.gap_kinds). Except b3_fx's: SiftingIO quotes
-# USD/BRL on B3's holidays too - flat, or thin offshore quotes moving up to 23 bp
-# an hour against 14 bp on a trading day (2019-09 to 2026-10) - so B3's trading
-# days are listed (B3_DAYS_PATH) and its holidays are outside the session.
+# closes of that length (jump.jumps.gap_kinds).
 #
 #   lme          tin, nickel and aluminium on LMEselect, 01:00-19:00 London
 #   ice_coffee   ICE arabica, 04:15-13:30 New York
 #   ice_cocoa    ICE cocoa, 04:45-13:30 New York
 #   ice_cotton   ICE cotton No. 2, 21:00-14:20 New York
 #   cme_cattle   CME live cattle, 08:30-13:05 Chicago
-#   b3_fx        the Brazilian real, 09:00-18:00 Sao Paulo: on a whole session
-#                of hourly bars, 94-98% of the hours from 12:00 to 21:00 UTC move
-#                and carry 9-31 bp each, the rest under 3.5 bp - the offshore
-#                quote before the onshore market opens
 DAILY_SESSIONS: "dict[str, tuple[str, tuple[int, int], tuple[int, int]]]" = {
     "lme": ("Europe/London", (1, 0), (19, 0)),
     "ice_coffee": ("America/New_York", (4, 15), (13, 30)),
     "ice_cocoa": ("America/New_York", (4, 45), (13, 30)),
     "ice_cotton": ("America/New_York", (21, 0), (14, 20)),
     "cme_cattle": ("America/Chicago", (8, 30), (13, 5)),
-    "b3_fx": ("America/Sao_Paulo", (9, 0), (18, 0)),
 }
 
 # THE MARKETS ABROAD: a stock index each, on its own exchange's days and hours,
@@ -559,15 +492,13 @@ def is_exchange_template(name: str) -> bool:
 def trades_on(day: date, name: str) -> bool:
     """Whether a daily-session market trades on `day`. A market abroad by its
     table, and past the table's span by its usual week; the rest Monday to
-    Friday, USD/BRL without B3's holidays."""
+    Friday."""
     if name in EXCHANGES:
         table, first, last = _exchange_table(exchange_table_path(name))
         if first is not None and first <= day <= last:
             return day in table
         return day.weekday() not in WEEKEND_DAYS.get(name, (5, 6))
-    if day.weekday() >= 5:
-        return False
-    return not (name == "b3_fx" and b3_holiday(day))
+    return day.weekday() < 5
 
 
 def previous_trading_day(day: date, name: str) -> "date | None":

@@ -164,7 +164,7 @@ left out of the dividend check and the vote; the health chat names it
 its own thread. An instrument with no new bar for longer than its calendar allows,
 answered with nothing new or refused by Yahoo run after run, is named on the health chat
 on the run it passes its limit, then once a day, and only on a run its count moved, so not through the night (`stale_hours`): 3 session hours for a coin, 6 for a pair, 7 for a fund, two sessions for a
-daily-session market (whose calendars, B3's aside, don't know holidays).
+daily-session market (whose calendars, but the markets abroad's, don't know holidays).
 
 **Requests** (`jump/usage.py`): every answer the fetch, the vote and the VIX get, a 429
 included, is counted by provider on its HTTP session and logged once at the end of the fetch, with the quota left
@@ -183,10 +183,8 @@ only its latest session (filled with 242 overlapping hours, correlation 0.9976, 
 funds, comma-separated. That run repairs first, then makes the ordinary hourly pass.
 
 **Sessions** (`jump/sessions.py`): the NYSE table (`data/jump/sessions/nyse.csv`),
-the FX week, and each daily-session market's hours (LME, ICE, CME, B3). B3's trading days
-(`data/jump/sessions/b3.csv`) take its holidays out of USD/BRL's session: SiftingIO quotes
-on them, flat or thin (USD/BRL is out of the basket since stage 1). The markets abroad (`EXCHANGES`: Sydney, Tokyo, Seoul, Taipei,
-Shanghai, Hong Kong, Mumbai, Frankfurt, London, Zurich, Istanbul, Riyadh, Johannesburg,
+the FX week, and each daily-session market's hours (LME, ICE, CME). The markets abroad
+(`EXCHANGES`: Sydney, Tokyo, Seoul, Taipei, Shanghai, Hong Kong, Mumbai, Frankfurt, London, Zurich, Istanbul, Riyadh, Johannesburg,
 Toronto, São Paulo, Mexico City) each have a table of their own in the NYSE table's format
 (`data/jump/sessions/<exchange code>.csv`, from `exchange_calendars`): the days they trade
 and their hours that day - Tokyo's close moved to 15:30 on 2024-11-05, Riyadh trades
@@ -382,8 +380,7 @@ fetch brings them back. The night after each is unscored.
   bar before the close, or a missing first hour: from a late first bar the "night" would
   span hours of trading. A market abroad opening on the half hour may have its first bar at
   the next hour, as Yahoo's history files a bar under the hour it ends in. A pair's weekend that opens exactly at Friday's close is no
-  measurement (a stitched open, or no quote) and is left unscored too, and so is a USD/BRL
-  night that opens exactly at the previous close. **A stock index's night runs to its first
+  measurement (a stitched open, or no quote) and is left unscored too. **A stock index's night runs to its first
   bar's close**, and that bar has no `r` of its own: an index's first value is computed
   from its stocks' last closes before most of them trade, so it sits at the previous
   close and the night's move comes in during the first hour (FTSE 100, the year to
@@ -601,7 +598,7 @@ topped up daily from the live feed.
 | `data/economic_calendar/` | release archive | every run |
 | `data/jump/corporate_actions.csv`, `dividend_checks.csv` | payouts, how far each fund is confirmed | every run |
 | `data/jump/verified.csv` | the sources' votes | every run |
-| `data/jump/sessions/nyse.csv`, `b3.csv`, `<exchange code>.csv` | NYSE schedule, B3's trading days, the markets abroad's | when extended |
+| `data/jump/sessions/nyse.csv`, `<exchange code>.csv` | NYSE schedule, the markets abroad's | when extended |
 | `data/jump/bars/*/YYYY-MM.csv`, `YYYY.parquet` | settled bars | when a month or year settles |
 | `data/jump/bars/*/YYYY-MM.open.csv` | open months | no: release `bars-live-<branch>`; the backfill reads the default branch's |
 | `data/jump/vix/` | daily VIX | Saturday 04:00 UTC |

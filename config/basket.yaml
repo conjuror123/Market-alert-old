@@ -93,10 +93,6 @@ session_templates:
     exchange: CME
     tz: America/Chicago
     description: "08:30-13:05 Chicago on weekdays"
-  b3_fx:
-    exchange: B3
-    tz: America/Sao_Paulo
-    description: "09:00-18:00 Sao Paulo on weekdays, the onshore dollar market"
   # The stock markets abroad (jump/sessions.py EXCHANGES): each day's hours from
   # its exchange's own calendar (data/jump/sessions/<code>.csv, from
   # exchange_calendars), so a holiday or a half day is the exchange's; nominal

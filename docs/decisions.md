@@ -363,7 +363,8 @@ Tiingo or SiftingIO budget is still told every run: that is a quota gone.
 moves are under 3.5 bp an hour. B3's holidays are outside it too: on them SiftingIO's
 quote sits flat, or moves up to 23 bp an hour on thin offshore quotes, against 14 bp on a
 trading day (2019-09 to 2026-10). Scored, they made a session of their own and a night
-after it.
+after it. Until stage 1: USD/BRL left the basket, and its session and B3's table went with
+it.
 
 **A market abroad keeps its exchange's own calendar** (for the basket's stage 1,
 `docs/basket-proposal.md`; 2026-10-11). Fixed hours and "a long closure is the source

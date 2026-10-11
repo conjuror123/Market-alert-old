@@ -69,13 +69,6 @@ def test_an_overnight_session_starts_the_evening_before():
     assert sessions.daily_session_of(ny(2026, 3, 6, 21), "ice_cotton") is None   # Friday night
 
 
-def test_the_real_trades_twelve_to_twenty_one_utc():
-    utc = lambda h: int(datetime(2026, 3, 4, h, tzinfo=ZoneInfo("UTC")).timestamp())  # noqa: E731
-    inside = [h for h in range(24) if sessions.daily_session_of(utc(h), "b3_fx")]
-    assert inside == list(range(12, 21))
-    assert sessions.daily_bars_per_day("b3_fx") == 9
-
-
 def _future(ticker="KC=F", template="ice_coffee"):
     return Asset(ticker=ticker, source="yahoo", block="agriculture",
                  has_volume=True, tick_size=0.05, session_template=template,

@@ -160,7 +160,7 @@ session_templates:
   sao_paulo:
     exchange: BVMF
     tz: America/Sao_Paulo
-    description: "10:00-18:00 Sao Paulo, moving with US daylight saving"
+    description: "10:00-18:00 Sao Paulo by its calendar; Yahoo's bars end at 17:00"
   mexico_city:
     exchange: XMEX
     tz: America/Mexico_City

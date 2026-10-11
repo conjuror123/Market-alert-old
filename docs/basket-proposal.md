@@ -310,6 +310,65 @@ Gate A already puts the first ladder near that volume before the 19 new instrume
 copper, gold and silver are in, and 4.5 or 5 near it. That is a guess until task 11
 measures it.
 
+### Gate D: the measured before/after (2026-10-11)
+
+By the stage report's own scoring and 24-hour events (`tools/stage_report.py`), pushes at
+`high` and up (`routing.PUSH_TIERS`); young readings counted, as live delivers them; no
+vote. Today is the basket of 172 at 6σ, recomputed by the same method. Stage 1 is the 58
+of `config/basket.yaml`, with GLD and SLV still standing in for gold and silver (task 6):
+round-the-clock gold and silver will add some moves. Each cell is the year to 2026-10-05,
+then the year to 2025-10-05 (the year of 2025-04's crash).
+
+**Two faults in the indices, found here.**
+- *Their open is yesterday's close.* An index's first value of the day is computed before
+  most of its stocks have traded. So the night (last close to first price) reads small,
+  and the first hour carries the gap, judged against quiet intraday hours. FTSE 100,
+  2026-03-03: the night +0.08%, the first hour −2.27% at −13σ. Over the year to
+  2026-10-05, 15 of FTSE's 16 events were its first hour. Medians over that year: FTSE's
+  night 5.8 bp, its first hour 28 bp, its other hours 11 bp (SPY, which opens on a real
+  trade: 31, 17 and 12). The fix: an index's night runs to its first hour's close, and that
+  hour is not scored on its own. Gaps are then read against their own kind, as everywhere
+  else; FTSE's 2026-03-03 is a −2.19% night at −5.4σ.
+- *Hang Seng and Nifty had no nights in their history.* Yahoo's hourly history files a bar
+  under the hour it ends in. A market opening on the half hour then has its first bar an
+  hour after the open, and the rule that a night must end at the session's first hour
+  turned every one away: Hang Seng scored 39 nights of 490 sessions (only the last 58
+  days, filed live). Its −9.6% Monday, 2025-04-07, was never scored. The fix: a half-hour
+  open's first bar may sit at the next hour (486 of 490 scored).
+
+| | pushes a week | note rows a week | busiest week's pushes | indices' pushes in the year |
+|---|---|---|---|---|
+| today's 172 at 6σ | 4.0 / 7.1 | 10.8 / 10.8 | 22 / 151 | - |
+| **stage 1, indices as now** | | | | |
+| at 3.9 / 5.5 / 7.8 / 11.0 | 7.8 / 7.4 | 16.4 / 10.6 | 24 / 87 | 109 / 84 |
+| at 4.5 / 6.4 / 9.0 / 12.7 | 4.6 / 5.0 | 10.8 / 7.2 | 15 / 73 | 67 / 56 |
+| at 5 / 7.1 / 10 / 14.1 | 3.2 / 3.9 | 7.6 / 5.5 | 13 / 63 | 50 / 51 |
+| at 6 / 8.5 / 12 / 17 | 1.7 / 2.5 | 3.7 / 3.4 | 7 / 48 | 28 / 37 |
+| **stage 1, both index faults fixed** | | | | |
+| at 3.9 / 5.5 / 7.8 / 11.0 | 6.5 / 6.6 | 15.4 / 9.3 | 21 / 79 | 44 / 39 |
+| at 4.5 / 6.4 / 9.0 / 12.7 | 3.7 / 4.5 | 9.9 / 6.3 | 14 / 66 | 21 / 30 |
+| at 5 / 7.1 / 10 / 14.1 | 2.4 / 3.4 | 6.8 / 5.0 | 12 / 56 | 12 / 25 |
+| at 6 / 8.5 / 12 / 17 | 1.3 / 2.1 | 3.1 / 3.2 | 6 / 38 | 5 / 18 |
+
+By block, the year to 2026-10-05, pushes and note rows: today's 172 at 6σ against stage 1
+at 4.5 with the fixes - equity 28 + 125 against 29 + 119; rates 14 + 38 against 9 + 30;
+credit 10 + 60 against 4 + 27; energy 13 + 28 against 9 + 11; precious metals 15 + 28
+against 16 + 24; industrial metals 4 + 13 against 5 + 27; agriculture 12 + 19 against
+25 + 71; FX 47 + 118 against 55 + 110; coins 68 + 135 against 40 + 100.
+
+**Read back: 2025-04-07, at 4.5 with the fixes.** The crash is seen in each market's own
+hours, before New York's open at 13:00 UTC: Tadawul's Sunday −5.5% (extreme); at 00:00-04:00
+UTC on Monday, the ASX 200 −5.9% (major), Nikkei −7.3% (high), TAIEX −10.2% (major), Hang
+Seng −9.6% (high), Nifty −4.4% (high), KOSPI −5.1% (noticeable); Europe at 07:00, the SMI
+−6.6% (extreme), FTSE −5.2% and Euro Stoxx −6.6% (major). Today's basket saw it first at
+New York's open, in the funds.
+
+**The recommendation: 4.5 / 6.4 / 9.0 / 12.7, with both index faults fixed** - the lowest
+bottom at or below today's volume in both years (task 9's rule): 3.7 pushes and 9.9 note
+rows a week against 4.0 and 10.8, and 4.5 and 6.3 against 7.1 and 10.8. Its busiest week
+is 14 pushes against 22, and 66 against 151. The first ladder, 3.9, doubles today's
+volume (6.5 pushes and 15.4 note rows a week).
+
 ## Sources
 
 - StockCharts, intermarket relationships (Murphy):

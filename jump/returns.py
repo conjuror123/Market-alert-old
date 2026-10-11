@@ -211,6 +211,7 @@ def overnight_gaps(asset: Asset, frame: pd.DataFrame, session: pd.Series,
     from jump import futures
     from jump.sessions import (DAILY_CLOSED_MAX_SECONDS, daily_session_open,
                                  instrument_day_hours, is_calendar_template,
+                                 is_exchange_template, previous_trading_day,
                                  session_key_close)
 
     if not (template in ("us_equity", "fx_continuous") or is_calendar_template(template)) \
@@ -249,7 +250,16 @@ def overnight_gaps(asset: Asset, frame: pd.DataFrame, session: pd.Series,
         # bars), dropped as too thin, which leaves the 12:00 bar the last.
         reached = np.array([prev_hour[k] + 2 * HOUR >= closes[prev_day[k]]
                             for k in range(n)], dtype=bool)
-        complete = reached & ((hours - prev_hour) <= DAILY_CLOSED_MAX_SECONDS)
+        if is_exchange_template(template):
+            # A market abroad's table says which days it trades: the night is
+            # whole when it runs from the trading day before, however long the
+            # closure (Golden Week), and not when a trading day is missing.
+            before = {d: str(previous_trading_day(date.fromisoformat(d), template))
+                      for d in set(day)}
+            within = np.array([prev_day[k] == before[day[k]] for k in range(n)], dtype=bool)
+        else:
+            within = (hours - prev_hour) <= DAILY_CLOSED_MAX_SECONDS
+        complete = reached & within
         rolled = np.isin(day, sorted(futures.roll_sessions(asset.ticker, day)))
         first = {d: daily_session_open(date.fromisoformat(d), template) // HOUR * HOUR
                  for d in set(day[is_open])}

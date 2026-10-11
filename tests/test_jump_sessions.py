@@ -323,3 +323,76 @@ def test_the_b3_table_is_extended_append_only(tmp_path):
     days, first, last = sessions._b3_days(path)
     assert sorted(days) == [date(2026, 1, 5), date(2026, 1, 7), date(2026, 1, 8)]
     sessions._b3_days.cache_clear()
+
+
+# --- the markets abroad: a table per exchange (EXCHANGES) ---------------------
+
+def test_tokyos_close_moved_to_half_past_three_on_2024_11_05():
+    # 06:00 UTC is 15:00-16:00 in Tokyo: after the close before the change, the
+    # session's last half hour after it.
+    assert sessions.daily_session_of(_utc(2024, 11, 1, 6), "tokyo") is None
+    assert sessions.daily_session_of(_utc(2024, 11, 6, 6), "tokyo") == date(2024, 11, 6)
+
+
+def test_riyadh_trades_sunday_to_thursday():
+    # 08:00 UTC is 11:00 in Riyadh.
+    assert sessions.daily_session_of(_utc(2026, 6, 14, 8), "riyadh") == date(2026, 6, 14)
+    assert sessions.daily_session_of(_utc(2026, 6, 18, 8), "riyadh") == date(2026, 6, 18)
+    assert sessions.daily_session_of(_utc(2026, 6, 12, 8), "riyadh") is None    # Friday
+    assert sessions.daily_session_of(_utc(2026, 6, 13, 8), "riyadh") is None    # Saturday
+
+
+def test_mexico_city_keeps_new_yorks_hours():
+    # 13:00 UTC is 07:00-08:00 in Mexico City all year: inside the session that
+    # opens at 07:30 while New York is on daylight saving, outside the 08:30 one.
+    assert sessions.daily_session_of(_utc(2026, 6, 15, 13), "mexico_city") == date(2026, 6, 15)
+    assert sessions.daily_session_of(_utc(2026, 1, 15, 13), "mexico_city") is None
+
+
+def test_golden_week_is_known_to_be_shut():
+    assert not sessions.trades_on(date(2025, 10, 3), "shanghai")
+    assert sessions.previous_trading_day(date(2025, 10, 9), "shanghai") == date(2025, 9, 30)
+    assert sessions.previous_trading_day(date(2025, 9, 24), "shanghai") == date(2025, 9, 23)
+
+
+def test_past_its_table_a_market_abroad_keeps_its_usual_week(tmp_path, monkeypatch):
+    path = str(tmp_path / "xsau.csv")
+    sessions.write_sessions(path, [sessions.Session(date(2026, 6, 14), "10:00", "15:00", False),
+                                   sessions.Session(date(2026, 6, 16), "10:00", "15:00", False)])
+    monkeypatch.setattr(sessions, "exchange_table_path", lambda name: path)
+    sessions._exchange_table.cache_clear()
+    try:
+        assert not sessions.trades_on(date(2026, 6, 15), "riyadh")   # inside it, not listed
+        assert sessions.trades_on(date(2026, 6, 21), "riyadh")       # a Sunday past it
+        assert not sessions.trades_on(date(2026, 6, 19), "riyadh")   # a Friday past it
+    finally:
+        sessions._exchange_table.cache_clear()
+
+
+def test_an_exchange_table_is_extended_append_only(tmp_path):
+    path = str(tmp_path / "xtks.csv")
+    first = sessions.Session(date(2026, 1, 5), "09:00", "15:30", False)
+    sessions.write_sessions(path, [first])
+    sessions._exchange_table.cache_clear()
+    try:
+        added = sessions.extend_exchange_table(
+            "tokyo", date(2026, 1, 7), path=path,
+            generate=lambda name, a, b: [sessions.Session(date(2026, 1, 5), "09:00", "15:00", False),
+                                         sessions.Session(date(2026, 1, 6), "09:00", "15:30", False)])
+        assert added == 1
+        table = sessions.load_sessions(path)
+        assert table[date(2026, 1, 5)] == first and date(2026, 1, 6) in table
+    finally:
+        sessions._exchange_table.cache_clear()
+
+
+def test_the_exchange_tables_with_the_real_calendar_library():
+    pytest.importorskip("exchange_calendars")
+    tokyo = {s.day: s for s in sessions.generate_exchange_sessions(
+        "tokyo", date(2024, 11, 1), date(2024, 11, 8))}
+    assert tokyo[date(2024, 11, 1)].local_close == "15:00"
+    assert tokyo[date(2024, 11, 5)].local_close == "15:30"
+    assert date(2024, 11, 4) not in tokyo                     # Culture Day observed
+    # A calendar whose holidays are known only so far ahead stops there.
+    assert sessions.generate_exchange_sessions("shanghai", date(2027, 1, 4),
+                                               date(2027, 2, 1)) == []

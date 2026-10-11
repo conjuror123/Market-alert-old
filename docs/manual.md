@@ -186,9 +186,16 @@ funds, comma-separated. That run repairs first, then makes the ordinary hourly p
 **Sessions** (`jump/sessions.py`): the NYSE table (`data/jump/sessions/nyse.csv`),
 the FX week, and each daily-session market's hours (LME, ICE, CME, B3). B3's trading days
 (`data/jump/sessions/b3.csv`) take its holidays out of USD/BRL's session: SiftingIO quotes
-on them, flat or thin. The tables extend themselves: when under two years remain, the
-hourly run appends the days through the end of the year three years ahead to both,
-leaving existing rows untouched.
+on them, flat or thin. The markets abroad (`EXCHANGES`: Sydney, Tokyo, Seoul, Taipei,
+Shanghai, Hong Kong, Mumbai, Frankfurt, London, Zurich, Istanbul, Riyadh, Johannesburg,
+Toronto, São Paulo, Mexico City) each have a table of their own in the NYSE table's format
+(`data/jump/sessions/<exchange code>.csv`, from `exchange_calendars`): the days they trade
+and their hours that day - Tokyo's close moved to 15:30 on 2024-11-05, Riyadh trades
+Sunday to Thursday, Mexico City keeps New York's 09:30-16:00. The tables extend
+themselves: when under two years remain, the hourly run appends the days through the end
+of the year three years ahead to all of them, leaving existing rows untouched. A
+calendar whose holidays the library knows only so far ahead stops there (Shanghai's and
+Mumbai's at 2026-12-31); past a table's last row its usual week holds.
 
 **Quality gate** (`jump/quality.py`): a bar is unusable if it has no price (a removed
 bar) or a price is not positive,
@@ -428,7 +435,11 @@ so as a band of its own it is only about twice as rare as major's (479 against 8
 **Gaps** are scored by the same rules against earlier gaps **of their own kind** over the
 same half-year: nights against nights, weekends against weekends. A gap of 48 hours or
 more is a weekend. A pair has no nights: its holiday closures count as weekends. Scoring
-starts at 16 nights or 7 weekends.
+starts at 16 nights or 7 weekends. A daily-session market's gap is whole only if the bar
+before it came within an hour of its session's close and the closure is no longer than
+110 hours (`DAILY_CLOSED_MAX_SECONDS`), or the source was out; a market abroad's, only
+if it runs from its table's trading day before, however long the closure - China's
+Golden Week is a gap, a trading day without bars is not.
 
 **Broken prints.** A reading beyond 1,000σ (`MISTAKE_SIGMA`) is not a reading and never
 enters a yardstick. The hours after such a break are dropped too, until the price is back
@@ -580,7 +591,7 @@ topped up daily from the live feed.
 | `data/economic_calendar/` | release archive | every run |
 | `data/jump/corporate_actions.csv`, `dividend_checks.csv` | payouts, how far each fund is confirmed | every run |
 | `data/jump/verified.csv` | the sources' votes | every run |
-| `data/jump/sessions/nyse.csv`, `b3.csv` | NYSE schedule, B3's trading days | when extended |
+| `data/jump/sessions/nyse.csv`, `b3.csv`, `<exchange code>.csv` | NYSE schedule, B3's trading days, the markets abroad's | when extended |
 | `data/jump/bars/*/YYYY-MM.csv`, `YYYY.parquet` | settled bars | when a month or year settles |
 | `data/jump/bars/*/YYYY-MM.open.csv` | open months | no: release `bars-live-<branch>`; the backfill reads the default branch's |
 | `data/jump/vix/` | daily VIX | Saturday 04:00 UTC |

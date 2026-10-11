@@ -329,6 +329,19 @@ quote sits flat, or moves up to 23 bp an hour on thin offshore quotes, against 1
 trading day (2019-09 to 2026-10). Scored, they made a session of their own and a night
 after it.
 
+**A market abroad keeps its exchange's own calendar** (for the basket's stage 1,
+`docs/basket-proposal.md`; 2026-10-11). Fixed hours and "a long closure is the source
+out" were enough for the LME and ICE, not for sixteen exchanges: Tokyo's close moved to
+15:30 on 2024-11-05, Riyadh trades Sunday to Thursday, China's Golden Week shuts Shanghai
+for nine days - longer than the 110 hours that mean an outage at home - and Mexico City
+moves its hours with New York's daylight saving (Yahoo's ^MXX opens at 07:30 local from
+spring to autumn, 08:30 in winter; the library has 08:30 all year). So each has a table of
+its days and hours from `exchange_calendars`, Mexico's on New York's clock, and a night is
+whole when it runs from the table's trading day before: a closure of any length is a gap,
+a trading day without bars is not. Where the library and Yahoo's bars disagree the wider
+session is kept, since an empty hour is skipped and a cut one is lost: São Paulo to 18:00
+(Yahoo's bars end at 17:00 all year).
+
 **A provider down is that provider's, not the run's.** The run goes red only when the fetch
 got nothing at all. A red run for one dark provider said nothing the health chat had not
 said, and every hour of an outage would read as a broken bot.

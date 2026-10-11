@@ -409,3 +409,36 @@ def test_lme_hours_are_one_to_nineteen_london_on_weekdays():
     hours = pd.Series([ldn(2026, 9, 30, 0), ldn(2026, 9, 30, 1), ldn(2026, 9, 30, 18),
                        ldn(2026, 9, 30, 19), ldn(2026, 10, 3, 12)])
     assert list(quality.in_session(nickel(), hours)) == [False, True, True, False, False]
+
+
+# --- a market abroad: the CSI 300 on Shanghai's days ----------------------------
+
+def csi300():
+    return asset(ticker="000300.SS", source="yahoo", block="equity",
+                 has_volume=False, tick_size=0.01, session_template="shanghai",
+                 fetch_interval="1h", label="CSI 300")
+
+
+def cst(y, m, d, h):
+    return int(datetime(y, m, d, h, tzinfo=ZoneInfo("Asia/Shanghai")).timestamp())
+
+
+def test_golden_week_is_a_night_for_shanghai_not_an_outage():
+    # China shut from 2025-10-01 to 10-08: the close of 09-30 to the open of 10-09
+    # is nine days, longer than any closure of the daily markets at home.
+    out = returns.split_channels(csi300(), frame([
+        (cst(2025, 9, 30, 13), 4600, 4610, 4590, 4605, 0.0, 12),
+        (cst(2025, 9, 30, 14), 4605, 4620, 4600, 4615, 0.0, 12),
+        (cst(2025, 10, 9, 9), 4700, 4710, 4690, 4705, 0.0, 12),
+    ]), dividends=dividends(ticker="SPY"))
+    assert out.iloc[2]["gap"] == pytest.approx(math.log(4700 / 4615))
+
+
+def test_a_shanghai_night_across_a_missing_trading_day_is_not_scored():
+    # 2025-09-23 traded, and none of its bars is here: Monday's close to
+    # Wednesday's open spans a day of trading, though it is shorter than a weekend.
+    out = returns.split_channels(csi300(), frame([
+        (cst(2025, 9, 22, 14), 4500, 4510, 4490, 4505, 0.0, 12),
+        (cst(2025, 9, 24, 9), 4550, 4560, 4540, 4555, 0.0, 12),
+    ]), dividends=dividends(ticker="SPY"))
+    assert out["gap"].isna().all()

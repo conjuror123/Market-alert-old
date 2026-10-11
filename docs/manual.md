@@ -380,7 +380,8 @@ fetch brings them back. The night after each is unscored.
 - **`gap`:** a session's first open against the previous session's last close. It is
   dividend-adjusted, and left unscored on a split, an unconfirmed dividend, a missing
   bar before the close, or a missing first hour: from a late first bar the "night" would
-  span hours of trading. A pair's weekend that opens exactly at Friday's close is no
+  span hours of trading. A market abroad opening on the half hour may have its first bar at
+  the next hour, as Yahoo's history files a bar under the hour it ends in. A pair's weekend that opens exactly at Friday's close is no
   measurement (a stitched open, or no quote) and is left unscored too, and so is a USD/BRL
   night that opens exactly at the previous close. **A stock index's night runs to its first
   bar's close**, and that bar has no `r` of its own: an index's first value is computed

@@ -275,7 +275,14 @@ def overnight_gaps(asset: Asset, frame: pd.DataFrame, session: pd.Series,
             within = (hours - prev_hour) <= DAILY_CLOSED_MAX_SECONDS
         complete = reached & within
         rolled = np.isin(day, sorted(futures.roll_sessions(asset.ticker, day)))
-        first = {d: daily_session_open(date.fromisoformat(d), template) // HOUR * HOUR
+        # A market abroad opening on the half hour (Hong Kong 09:30): Yahoo's
+        # hourly history files its first bar under the hour that bar ends in
+        # (jump.backfill, yahoo_hours_by_end), the hour after the open's; the
+        # live bars, folded from 30 minutes, under the open's own. Either is
+        # the session's first bar - else Hang Seng's history kept 39 nights of
+        # 490 sessions, and none of its -9.6% Monday, 2025-04-07.
+        late = HOUR - 1 if is_exchange_template(template) else 0
+        first = {d: (daily_session_open(date.fromisoformat(d), template) + late) // HOUR * HOUR
                  for d in set(day[is_open])}
         on_time = np.array([is_open[k] and hours[k] <= first[day[k]] for k in range(n)],
                            dtype=bool)

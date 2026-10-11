@@ -449,6 +449,23 @@ def test_an_indexs_night_runs_to_its_first_hours_close():
     assert out.iloc[3]["r"] == pytest.approx(math.log(4530 / 4520))
 
 
+def test_a_half_hour_markets_first_bar_filed_by_its_end_still_opens_its_night():
+    # Hang Seng opens at 09:30: Yahoo's hourly history files the bar of
+    # 09:30-10:30 under 10:00, the live 30-minute bars fold the first into
+    # 09:00. Either is the session's first bar, and its night is scored.
+    hsi = asset(ticker="^HSI", source="yahoo", block="equity", has_volume=False,
+                tick_size=0.01, session_template="hong_kong", fetch_interval="30min",
+                label="Hong Kong")
+    hkt = lambda y, m, d, h: int(datetime(y, m, d, h, tzinfo=ZoneInfo("Asia/Hong_Kong")).timestamp())
+    for first in (9, 10):
+        out = returns.split_channels(hsi, frame([
+            (hkt(2025, 4, 3, 15), 22800, 22870, 22790, 22812, 0.0, 12),
+            (hkt(2025, 4, 3, 16), 22812, 22850, 22800, 22850, 0.0, 12),
+            (hkt(2025, 4, 7, first), 22850, 22850, 20500, 20762, 0.0, 12),
+        ]), dividends=dividends(ticker="SPY"))
+        assert out.iloc[2]["gap"] == pytest.approx(math.log(20762 / 22850)), first
+
+
 def test_a_shanghai_night_across_a_missing_trading_day_is_not_scored():
     # 2025-09-23 traded, and none of its bars is here: Monday's close to
     # Wednesday's open spans a day of trading, though it is shorter than a weekend.

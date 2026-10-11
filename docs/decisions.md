@@ -386,8 +386,9 @@ Toronto (0.82), Istanbul (0.82), Mexico City (0.75) or Shanghai (137 hours). Tho
 start with the 58 days, their yardstick young until it reaches half a year. The gate asks
 a five-hour market (Taipei, Riyadh) the funds' 29 sessions rather than their 200 hours,
 which 59 days of it cannot hold. Filed one hour late, the half-hour markets' first bar
-of a day is not their session's first hour, so their history has no nights: those start
-with the live fetch.
+of a day is still their session's first bar, and opens its night (the user's, 2026-10-11):
+held to the open's own hour, Hang Seng's history kept 39 nights of 490 sessions, and none
+of its −9.6% Monday, 2025-04-07; now 486.
 
 **A provider down is that provider's, not the run's.** The run goes red only when the fetch
 got nothing at all. A red run for one dark provider said nothing the health chat had not

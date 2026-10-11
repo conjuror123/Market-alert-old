@@ -240,6 +240,76 @@ pairs 74, today's seventeen 47. The 20 new instruments are not in these numbers.
 | gold and silver | no round-the-clock source measured: Dukascopy has their history, Wallstreetcn a voter's bars; SiftingIO's catalogue lists XAUUSD and XAGUSD, Twelve Data XAU/USD and XAG/USD, both behind keys | a keyed probe of the two, about ten requests: yes |
 | platinum | no round-the-clock source: Dukascopy and Wallstreetcn have no spot platinum, Yahoo only the futures | to stage 2, PPLT standing in: yes |
 
+### Task 9: the levels, thought through again (2026-10-11)
+
+Four questions, each from its own source.
+
+**What the test itself says.** Lee & Mykland's test asks whether the largest move among n
+readings is too big for ordinary trading, at a chosen error rate. In the bot's σ (bipower,
+already scaled to an ordinary σ), their 1% line is:
+
+| readings judged together | n | the 1% line |
+|---|---|---|
+| one day of a market abroad | 7 | 3.85σ |
+| one day of a 24-hour market | 24 | 3.89σ |
+| one week of a 24-hour market | 168 | 4.20σ |
+| one year of a fund or index | 1,750 | 4.65σ |
+| one year of a coin | 8,760 | 4.95σ |
+| one year of the whole stage 1 basket | about 350,000 | 5.60σ |
+
+The first ladder's 3.9 is the line for one day of 24 hourly readings: its first commit
+(a100623) set it "for now, to be tuned at the end against the exact 99% level". The line
+comes from an asymptotic formula, and at 24 readings it is conservative: on the bell curve
+the exact 1% is 3.53σ. The comparison of jump tests finds the test undersized at low
+frequencies (Maneesoonthorn et al.), and its norming constants have been argued over and
+upheld (Nunes & Ruas 2024).
+
+But the bell curve is not what real hours do. On it, an hour reaches 3.9σ once in 10,396
+hours. In the bot's records, an hour of every class does so once in about 115, 90 times as
+often (docs/decisions.md, "Rarity is measured"). So at every candidate bottom, almost
+every move flagged is beyond what ordinary trading explains. **The test sets a floor, not
+a level**: below about 3.9σ a move cannot be told from an ordinary hour, even within a
+single day. Above it, the test cannot choose between 3.9, 5 and 6.
+
+**What the tails say.** Large moves thin out as a power of their size. In US stocks the
+chance of a move falls about as its size cubed: the "inverse cubic law" (Gopikrishnan et
+al. 1998, tail exponents 2.8–3.1, over 5–120 minute returns). On this basket, doubling a
+move in σ makes it about ten times rarer (docs/decisions.md, "Words at…"). So words √2
+apart are each about three times rarer than the one below, whatever the bottom: **keep the
+√2 steps.**
+
+**What alerting practice says.** An alert system should have "strong signal and very
+little noise", and a page is costly because it takes a person away from their work
+(Google's SRE book, ch. 6). Alerts that need no action are cut, and only what needs
+attention should ring (PagerDuty, Squadcast). The bot already found that moves of every
+size hold at the close alike (76–80%, docs/decisions.md). A lower bottom therefore brings
+more messages of the same quality, not worse ones: **the bottom is a volume choice.**
+
+**What traders mean by "σ".** Not this bot's σ. For the S&P 500's daily closes, moves of
+5σ or more came 0.68 times a year over 1950–2012, and 56% of them fell in 1987 and 2008
+(CFA Institute). A trader's σ is a standard deviation of daily returns, swollen by the very
+moves it measures. The bot's bipower σ leaves them out (docs/decisions.md, "Bipower σ"), so
+the same move reads as more σ here. "6σ" in this channel and "6σ" in the news are
+different scales; neither is wrong.
+
+**The proposal.** Keep √2 steps. Choose the bottom by volume, as the 6σ bottom was chosen
+(2026-10-04). Task 11 measures four bottoms on the whole stage 1 basket:
+- 3.9 / 5.5 / 7.8 / 11.0: the first ladder, at the test's floor
+- 4.5 / 6.4 / 9.0 / 12.7
+- 5 / 7.1 / 10 / 14.1: about the test's 1% line for one instrument's year
+- 6 / 8.5 / 12 / 17: today's
+
+The recommendation: **the lowest bottom whose stage 1 volume is at or below today's**,
+about 4 pushes and 10 note rows a week (docs/manual.md, "Expected volume"). The channel
+carries that volume now, and the complaint was what it is about, not how much of it there
+is.
+
+Gate A already puts the first ladder near that volume before the 19 new instruments: the
+38 kept at 4σ gave 4.7 pushes and 11.2 note rows a week, against today's 172 at 4.0 and
+10.8 (year to 2026-10-05). So 3.9 will likely land above today's volume once the indices,
+copper, gold and silver are in, and 4.5 or 5 near it. That is a guess until task 11
+measures it.
+
 ## Sources
 
 - StockCharts, intermarket relationships (Murphy):
@@ -259,3 +329,14 @@ pairs 74, today's seventeen 47. The 20 new instruments are not in these numbers.
   https://www.advisorperspectives.com/commentaries/2024/08/12/understanding-yen-carry-trade-impact-world-markets
 - TTF's record, 2022:
   https://www.spglobal.com/energy/en/news-research/latest-news/natural-gas/081622-dutch-ttf-prices-hit-all-time-high-with-no-signs-of-slowing
+- Which high-frequency jump test (Lee & Mykland's norming constants; its size at low
+  frequencies): https://arxiv.org/abs/1708.09520
+- Nunes & Ruas, the Gumbel convergence of the Lee-Mykland tests (Finance Research Letters,
+  2024): https://repositorio.iscte-iul.pt/bitstream/10071/31168/1/article_100198.pdf
+- Gopikrishnan et al., the inverse cubic law: https://arxiv.org/abs/cond-mat/9803374
+- Google SRE book, monitoring distributed systems:
+  https://sre.google/sre-book/monitoring-distributed-systems/
+- PagerDuty, alert fatigue: https://www.pagerduty.com/blog/uncategorized/lets-talk-about-alert-fatigue-2/
+- Squadcast, alert noise: https://www.squadcast.com/blog/optimizing-your-alerts-to-reduce-alert-noise
+- CFA Institute, the S&P 500's sigma events:
+  https://rpc.cfainstitute.org/blogs/enterprising-investor/2012/fact-file-sp-500s-sigma-events?page=1

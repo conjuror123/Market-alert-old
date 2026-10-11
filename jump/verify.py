@@ -494,6 +494,12 @@ def candidates(asset: Asset, frame: pd.DataFrame, table, now: int,
                 # for the night correction (judge_all).
                 c["night_hour"], c["night_close"] = int(h[i - 1]), float(close[i - 1])
             out.append(c)
+        elif sessions.is_exchange_template(template):
+            # A stock index's night runs to its first bar's close
+            # (jump.returns.split_channels): so is it asked about.
+            out.append({"hour": int(h[i]), "check": OPEN, "from_open": False,
+                        "prev_hour": int(h[i - 1]), "prev_close": float(close[i - 1]),
+                        "price": float(close[i]), "to_close": True})
         else:
             out.append({"hour": int(h[i]), "check": OPEN, "from_open": False,
                         "prev_hour": int(h[i - 1]), "prev_close": float(close[i - 1]),
@@ -529,9 +535,11 @@ def judge(c: dict, v: pd.DataFrame) -> "tuple[str, float, float]":
             return UNKNOWN, p, 0.0
         befores = [vclose[int(earlier[-1])]]
 
-    # ... and after it: its open at a session's first print, its closes up to
-    # an hour after, or else its first one, once it has one.
-    afters = [vopen[h]] if c["check"] == OPEN and h in vopen else []
+    # ... and after it: its open at a session's first print (not where the
+    # night runs to its first bar's close), its closes up to an hour after, or
+    # else its first one, once it has one.
+    at_open = c["check"] == OPEN and h in vopen and not c.get("to_close")
+    afters = [vopen[h]] if at_open else []
     afters += [vclose[int(t)] for t in stamps[(stamps >= h) & (stamps <= h + lag)]]
     if not afters:
         later = stamps[stamps > h]
@@ -545,7 +553,7 @@ def judge(c: dict, v: pd.DataFrame) -> "tuple[str, float, float]":
     # - or its nearest bars either side; the lag window only decides.
     start = befores[0] if c.get("from_open") else \
         vclose.get(hp, vclose[int(stamps[stamps <= hp][-1])] if (stamps <= hp).any() else befores[-1])
-    end = vopen[h] if c["check"] == OPEN and h in vopen else \
+    end = vopen[h] if at_open else \
         vclose.get(h, vclose[int(stamps[stamps >= h][0])] if (stamps >= h).any() else afters[0])
     direct = math.log(end / start)
     if with_it * p > 0 and abs(with_it) >= REAL_SHARE * abs(p):

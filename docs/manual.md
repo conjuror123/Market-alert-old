@@ -259,8 +259,9 @@ about an instrument it provides itself: its word is the store's.
 **One source's answer** (`judge`). Each feed is compared with itself, so a steady
 offset is not a move.
 - **Saw it:** the source moved the same way at least half as far (`REAL_SHARE`), from its
-  closes up to an hour before the move to its closes up to an hour after. An hour it has no
-  bar for is bridged by its nearest bars within 12 hours. Measured 2026-10-08 over 3,444
+  closes up to an hour before the move to its closes up to an hour after (a session's gap
+  to its first open too - not a stock index's, whose night runs to its first bar's close).
+  An hour it has no bar for is bridged by its nearest bars within 12 hours. Measured 2026-10-08 over 3,444
   moves: answers sit at 0.8 or more or under 0.2, half is in the gap between, and no source
   is consistently an hour late (`docs/decisions.md`).
 - **Did not:** it did not move with it, or has not yet - the vote is taken with what the
@@ -381,7 +382,11 @@ fetch brings them back. The night after each is unscored.
   bar before the close, or a missing first hour: from a late first bar the "night" would
   span hours of trading. A pair's weekend that opens exactly at Friday's close is no
   measurement (a stitched open, or no quote) and is left unscored too, and so is a USD/BRL
-  night that opens exactly at the previous close.
+  night that opens exactly at the previous close. **A stock index's night runs to its first
+  bar's close**, and that bar has no `r` of its own: an index's first value is computed
+  from its stocks' last closes before most of them trade, so it sits at the previous
+  close and the night's move comes in during the first hour (FTSE 100, the year to
+  2026-10-05: the night a median 5.8 bp, the first hour 28, the other hours 11).
 - **`hole`:** the move across a missing hour inside a session. It is never scored; it only
   keeps the price path whole for the close check.
 
@@ -451,8 +456,9 @@ yardstick (`without_not_real`); a first hour voted overnight is scored with the 
 night in its gap and the rest in the hour (`with_nights`).
 
 **When a reading is judged** (`ended`, `found_times`). An hour once it has ended. A fund's
-gap with its first bar, once that bar has ended. A pair's weekend gap, and a
-daily-session market's night, at the open. `found_utc` is that moment.
+gap with its first bar, once that bar has ended, and a stock index's night, which runs to
+that bar's close. A pair's weekend gap, and another daily-session market's night, at the
+open. `found_utc` is that moment.
 
 **Rule.** A reading is judged only once it can be. The run at :05 sees what was found by
 :00.

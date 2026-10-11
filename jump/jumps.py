@@ -386,11 +386,16 @@ def matches(hours, z, share: float = RARE_SHARE, bottom: float = LEVELS[0]
 def found_times(scored: pd.DataFrame, template: str) -> np.ndarray:
     """When each reading became judgeable: an hour once it has ended; a fund's
     gap with its first bar, once that bar has ended (the first half-hour, as
-    the bar is stamped on the hour); a currency pair's weekend gap and a
-    daily-session market's night at their open, which is the whole of them."""
+    the bar is stamped on the hour); a stock index's night too, which runs to
+    its first bar's close (jump.returns.split_channels); a currency pair's
+    weekend gap and another daily-session market's night at their open,
+    which is the whole of them."""
+    from jump.sessions import is_exchange_template
+
     hours = scored["hour_utc"].astype("int64").to_numpy()
-    fx_gap = (scored["reading"] != HOUR).to_numpy() & (template != "us_equity")
-    return np.where(fx_gap, hours, hours + 3600)
+    at_open = (scored["reading"] != HOUR).to_numpy() & (template != "us_equity") \
+        & (not is_exchange_template(template))
+    return np.where(at_open, hours, hours + 3600)
 
 
 def ended(scored: pd.DataFrame, template: str, now: int) -> pd.DataFrame:

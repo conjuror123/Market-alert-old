@@ -40,6 +40,16 @@ instrument an event at each word about every 4 months, 11 months, 3 years and 5�
 **Rarity is measured, not read off the bell curve.** Against its own half-year σ, an hour
 of every class reaches 3.9σ about once in 115, not once in 10,000.
 
+**A stock index's night runs to its first hour's close** (stage 1, the user's, 2026-10-11).
+Its first value of the day is computed from its stocks' last closes, before most of them
+trade, so it sits at the previous close and the night's move comes in during the first
+hour. Read as an hour, against quiet hours, an ordinary opening gap was a 13σ hour: FTSE
+100's of 2026-03-03, a −2.27% first hour after a +0.08% night; 15 of its 16 events of the
+year to 2026-10-05 were first hours. Read as the night, it is −2.19% at −5.4σ against
+FTSE's other nights. Over that year at 4.5σ, the indices push 21 times instead of 67
+(`docs/basket-proposal.md`, gate D). A fund's first price is a trade, and its night ends
+there.
+
 **Gaps are read against their own kind.** Nights against nights, weekends against
 weekends, over the same half-year. Clock time does not scale a gap: a 65-hour weekend
 moves only 1.17× a 17.5-hour night (French & Roll 1986). Borrowing σ from trading hours

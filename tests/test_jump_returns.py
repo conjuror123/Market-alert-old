@@ -431,7 +431,22 @@ def test_golden_week_is_a_night_for_shanghai_not_an_outage():
         (cst(2025, 9, 30, 14), 4605, 4620, 4600, 4615, 0.0, 12),
         (cst(2025, 10, 9, 9), 4700, 4710, 4690, 4705, 0.0, 12),
     ]), dividends=dividends(ticker="SPY"))
-    assert out.iloc[2]["gap"] == pytest.approx(math.log(4700 / 4615))
+    assert out.iloc[2]["gap"] == pytest.approx(math.log(4705 / 4615))
+
+
+def test_an_indexs_night_runs_to_its_first_hours_close():
+    # An index's first value is computed from its stocks' last closes, before
+    # most of them trade: the night's move comes in during the first hour. The
+    # night takes it, and the first hour is no hour of its own.
+    out = returns.split_channels(csi300(), frame([
+        (cst(2025, 9, 29, 13), 4600, 4610, 4590, 4605, 0.0, 12),
+        (cst(2025, 9, 29, 14), 4605, 4620, 4600, 4615, 0.0, 12),
+        (cst(2025, 9, 30, 9), 4615, 4615, 4510, 4520, 0.0, 12),
+        (cst(2025, 9, 30, 10), 4520, 4540, 4515, 4530, 0.0, 12),
+    ]), dividends=dividends(ticker="SPY"))
+    assert out.iloc[2]["gap"] == pytest.approx(math.log(4520 / 4615))
+    assert np.isnan(out.iloc[2]["r"])
+    assert out.iloc[3]["r"] == pytest.approx(math.log(4530 / 4520))
 
 
 def test_a_shanghai_night_across_a_missing_trading_day_is_not_scored():

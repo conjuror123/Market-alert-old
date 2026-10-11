@@ -2,6 +2,7 @@
 scored, and its message says so. The verdicts are pinned on real cases,
 checked by hand against Yahoo.
 """
+import math
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -36,10 +37,11 @@ def served(v, now):
     return v[v["hour_utc"] + HOUR <= now].reset_index(drop=True)
 
 
-def judge(hour, prev, price, rows, now, *, check="close", prev_hour=None, from_open=False):
+def judge(hour, prev, price, rows, now, *, check="close", prev_hour=None, from_open=False,
+          to_close=False):
     c = {"hour": ts(hour), "check": check, "prev_close": prev, "price": price,
          "prev_hour": ts(hour) if from_open else ts(prev_hour) if prev_hour else ts(hour) - HOUR,
-         "from_open": from_open}
+         "from_open": from_open, **({"to_close": True} if to_close else {})}
     return verify.judge(c, served(bars_of(rows), ts(now)))
 
 
@@ -665,6 +667,18 @@ def test_the_sources_vote_and_the_store_is_one_vote_that_saw_it():
     assert verify.combine([])[0] == verify.REAL
 
 
+def test_an_indexs_night_is_judged_to_its_first_hours_close():
+    # FTSE 100, 2026-03-03: its first value is the previous close; the night's
+    # move is in the first hour's close, in the store and in the source alike.
+    v = {"2026-03-02 15:00": 10790.0, "2026-03-02 16:00": 10780.0,
+         "2026-03-03 08:00": (10780.0, 10546.0), "2026-03-03 09:00": 10530.0}
+    answer, stored, theirs = judge("2026-03-03 08:00", 10780.0, 10544.0, v, "2026-03-03 10:05",
+                                   check=verify.OPEN, prev_hour="2026-03-02 16:00",
+                                   to_close=True)
+    assert answer == verify.CONFIRMED
+    assert theirs == pytest.approx(math.log(10546.0 / 10780.0))
+
+
 def test_a_source_with_bars_around_the_move_outweighs_one_bridging_a_gap():
     # USD/INR's bad print at 22:00: Yahoo's last bar is 10:00, MarketWatch and
     # Wallstreetcn have every hour and stayed flat. Yahoo could only bridge
@@ -1082,3 +1096,38 @@ def test_the_indices_abroad_are_voted_by_the_sources_that_move_with_them():
     # None found yet for these.
     assert _asked(index("^TWII", "taipei")) == _asked(index("^KS11", "seoul")) == []
     assert verify.recount_days(index("^FTSE", "london")) == 9
+
+
+def test_an_indexs_night_is_asked_about_to_its_first_hours_close(basket):
+    # FTSE 100's quiet sessions, then a first value at the previous close and
+    # a first hour 3% down: the night is asked about, to that hour's close -
+    # and the hour is not asked about on its own.
+    from datetime import date
+    from zoneinfo import ZoneInfo
+
+    from jump import sessions
+    from jump.corporate_actions import Dividends
+    asset = basket["^FTSE"]
+    london = ZoneInfo("Europe/London")
+    days = [d for d in (date(2026, 5, 1) + timedelta(days=k) for k in range(140))
+            if sessions.trades_on(d, "london")]
+    rng = np.random.default_rng(3)
+    rows, price = [], 10000.0
+    for n, day in enumerate(days):
+        for k, hour in enumerate(range(8, 17)):
+            stamp = int(datetime(day.year, day.month, day.day, hour, tzinfo=london).timestamp())
+            o = price * (1.0 if n == len(days) - 1 and k == 0 else np.exp(rng.normal(0, 0.002)))
+            price = o * (0.97 if n == len(days) - 1 and k == 0 else np.exp(rng.normal(0, 0.001)))
+            rows.append({"hour_utc": stamp, "open": o, "high": max(o, price), "low": min(o, price),
+                         "close": price, "volume": 0.0, "n_src": 1})
+        if n == len(days) - 1:
+            break
+    frame = pd.DataFrame(rows).iloc[:-8]                     # the run after the first hour
+    first = int(frame["hour_utc"].iloc[-1])
+    paid = Dividends(steps={}, splits={}, checked_through={})
+    asked = verify.candidates(asset, frame, sessions.load_sessions(), first + HOUR + 300,
+                              basket=load_basket(), dividends=paid)
+    night = [c for c in asked if c["hour"] == first]
+    assert [c["check"] for c in night] == [verify.OPEN]
+    assert night[0]["price"] == pytest.approx(float(frame["close"].iloc[-1]))
+    assert night[0]["to_close"]

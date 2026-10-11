@@ -12,7 +12,7 @@ half-year BEFORE the reading (their eq. 8):
 Products of neighbouring moves, so a jump in the window never multiplies with
 itself and cannot inflate the yardstick it is later measured against.
 
-THE WORD, from |z|: 6, 8.5, 12, 17 (LEVELS) - about sqrt(2) apart, each about
+THE WORD, from |z|: 4.5, 6.4, 9, 12.7 (LEVELS) - about sqrt(2) apart, each about
 three times rarer to reach than the one below.
 
 THE WINDOW is half a year of calendar time for every instrument (a fund about
@@ -68,7 +68,7 @@ WORDS: tuple[str, ...] = ("noticeable", "high", "major", "extreme")
 WINDOW_DAYS = 182.6          # half a year of calendar time
 # The four words' thresholds on |z|, in half-year sigmas: about sqrt(2) apart,
 # each word about three times rarer to reach than the one below, rounded.
-LEVELS: "tuple[float, ...]" = (6.0, 8.5, 12.0, 17.0)
+LEVELS: "tuple[float, ...]" = (4.5, 6.4, 9.0, 12.7)
 
 # Bars a day, per calendar, for the paper's minimum window.
 BARS_PER_DAY: "dict[str, int]" = {"us_equity": 7, "fx_continuous": 24, "crypto_24_7": 24}

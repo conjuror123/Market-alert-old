@@ -428,14 +428,15 @@ for a 24-hour market) and is marked `young` until the window is full.
 
 | word | square | σ |
 |---|---|---|
-| noticeable | ⬜ | 6 |
-| high | 🟨 | 8.5 |
-| major | 🟧 | 12 |
-| extreme | 🟥 | 17 |
+| noticeable | ⬜ | 4.5 |
+| high | 🟨 | 6.4 |
+| major | 🟧 | 9 |
+| extreme | 🟥 | 12.7 |
 
 Each word is about three times rarer to reach than the one below (events at or above
-each, over all history on 2026-10-09: 12,438, 4,195, 1,301, 479). Extreme has no ceiling,
-so as a band of its own it is only about twice as rare as major's (479 against 822). `high` and up push
+each, over the whole history of the 58, measured 2026-10-11: 9,604, 3,227, 1,056, 304).
+Extreme has no ceiling, so as a band of its own it is about two and a half times rarer
+than major's (304 against 752). `high` and up push
 (`routing.PUSH_TIERS`); `noticeable` goes into the weekly note.
 
 **Gaps** are scored by the same rules against earlier gaps **of their own kind** over the
@@ -494,9 +495,9 @@ channel in line with them.
 **A push** (`high` and up):
 
 ```
-🟨 LTC/USDT · Litecoin +5.77% · 11.1×σ
-📈 Rarest hour in 16 days (then 11.5×σ)
-🕐 24.09.2026 02:00 UTC · next close in 17h
+🟨 KOSPI · South Korea -5.98% · 6.5×σ
+📉 Rarest hour in 2 months (then 8.2×σ)
+🕐 29.07.2026 01:00 UTC · next close in 17h
 Nearby economic events (...)
 ```
 
@@ -507,13 +508,13 @@ its close follow (a release after the close came after the move).
 The name after the ticker is the instrument's `label` in `config/basket.yaml`. A stock
 index abroad leads with its own name instead of Yahoo's ticker (`display`), then its place:
 `Nikkei 225 · Japan`. A pair against
-the US dollar is named by its other currency (`USD/TRY · Turkish lira`, `EUR/USD · Euro`);
-the move is the pair's, as its ticker reads, so USD/TRY +2% is the lira weaker.
+the US dollar is named by its other currency (`USD/JPY · Yen`, `EUR/USD · Euro`);
+the move is the pair's, as its ticker reads, so USD/JPY +2% is the yen weaker.
 
 **A note row** (`noticeable`) goes into the weekly note, and a ping line points at it:
 
 ```
-⬜ LTC/USDT · Litecoin +3.40% · 6.3×σ
+⬜ EUR/USD · Euro -0.31% · 5.2×σ
 Added to digest👆🏻👆🏻
 ```
 
@@ -528,9 +529,9 @@ it goes on in opens with its name-line, `continued`:
 ```
 ━━━ 🏛 RATES ━━━
 
-⬜ VGIT · US Treasuries 3-10y (Vanguard) -0.41% · 7.6×σ
-📉 Rarest hour in 20 months (then 10.1×σ)
-🕐 16.09.2026 18:00 UTC · close 113%
+⬜ TLT · Treasuries 20+ years -0.70% · 5.2×σ
+📉 Rarest hour in 18 days (then 5.0×σ)
+🕐 28.09.2026 14:00 UTC · close 38%
 ```
 
 A note in several messages ends each with its part and period (`part 2 of 3 - 02.10.2026
@@ -680,9 +681,13 @@ has 12 of the job's 20 minutes: past them it is stopped, and delivery, health an
 commit still run. Each part of it (fetch, pipeline, jumps) notes its start, so a step that
 stops short is reported with the part it was in and its minutes.
 
-**Expected volume.** About 4 pushes and 10 note rows a week (209 and 546 events over the
-year to 2026-10-01). Replayed hour by hour over that year, delivery sends about 9 messages
-a week (8.6: 2.2 push messages, 5.2 ping messages, 1.2 note parts), 7.5 of them ringing. A quiet day is normal: green runs mean it looked and found nothing.
+**Expected volume.** About 4 pushes and 10 note rows a week: 3.6 and 10.0 over the year to
+2026-10-05, 4.4 and 6.3 over the year to 2025-10-05, by the stage report's count
+(24-hour events, without the vote; GLD and SLV standing in for gold and silver). The
+basket of 172 at 6σ, counted the same way, made 4.0 and 10.8 (`docs/basket-proposal.md`,
+gate D). How many messages that makes, replayed through delivery, is not measured for
+the 58 yet (the 172 sent about 9 a week). A quiet day is normal: green runs mean it looked
+and found nothing.
 
 **Checking on it.** `PYTHONPATH=. python tools/stage_report.py` prints rates by word,
 block and channel, and the biggest hours. To run the pass by hand, export the keys and

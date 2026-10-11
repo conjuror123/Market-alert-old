@@ -9,13 +9,13 @@ percentage works. Each move is measured against the instrument's own last half-y
 with the jump test of Lee & Mykland (2008), and the message says how far out it is:
 
 ```
-🟨 LTC/USDT · Litecoin +5.77% · 11.1×σ
-📈 Rarest hour in 16 days (then 11.5×σ)
-🕐 24.09.2026 02:00 UTC · next close 242%
+🟨 KOSPI · South Korea -5.98% · 6.5×σ
+📉 Rarest hour in 2 months (then 8.2×σ)
+🕐 29.07.2026 01:00 UTC · next close 129%
 ```
 
-The colour is the word: ⬜ noticeable at 6σ, 🟨 high at 8.5σ, 🟧 major at 12σ, 🟥 extreme
-at 17σ, each about three times rarer to reach than the one below. `high` and up arrive at once
+The colour is the word: ⬜ noticeable at 4.5σ, 🟨 high at 6.4σ, 🟧 major at 9σ, 🟥 extreme
+at 12.7σ, each about three times rarer to reach than the one below. `high` and up arrive at once
 (about 4 a week); `noticeable` goes into one weekly note (about 10 rows). Every other data
 feed that carries the instrument votes on a far move: one most did not see is marked `❌`
 with each feed's own move and kept out of the statistics, a tie `⚠️` and kept in. It runs entirely on

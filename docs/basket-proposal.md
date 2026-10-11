@@ -369,6 +369,11 @@ rows a week against 4.0 and 10.8, and 4.5 and 6.3 against 7.1 and 10.8. Its busi
 is 14 pushes against 22, and 66 against 151. The first ladder, 3.9, doubles today's
 volume (6.5 pushes and 15.4 note rows a week).
 
+**The user's answer** (2026-10-11): 4.5 / 6.4 / 9.0 / 12.7, and both faults fixed (2fc9240,
+920d710). Measured again with exactly those levels and the fixed code: 3.6 pushes and 10.0
+note rows a week over the year to 2026-10-05, 4.4 and 6.3 over the year before; the
+busiest week 14 and 65 pushes.
+
 ## Sources
 
 - StockCharts, intermarket relationships (Murphy):

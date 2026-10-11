@@ -26,16 +26,20 @@ pair, 4,380 for a coin, all inside the paper's valid range (√(252·n) to 252·
 market), its rows marked `young`. A half-year warm-up would leave thirteen funds blind
 through March 2020.
 
-**Words at 6 / 8.5 / 12 / 17σ.** On this basket, doubling a move's size in σ makes it
-about ten times rarer, so levels √2 apart make each word about three times rarer to reach
-than the one below: events at or above 6, 8.5, 12 and 17σ were 12,438, 4,195, 1,301 and
-479 over all history (2026-10-09, the funds' first bars mended), 3.0, 3.2 and 2.7 times
-apart. Extreme has no ceiling, so as a band of its own it is only about twice as rare as
-major's (479 against 822). The 6σ bottom is a volume choice: moves of every size hold at the close alike
-(76–80%), so a higher bottom buys fewer messages, not better ones. At 6σ: about 9 messages
-a week (8.6 over the year to 2026-10-01, the delivery replayed hour by hour); for one
-instrument an event at each word about every 4 months, 11 months, 3 years and 5½ years
-(over the 2,602 settled instrument-years to 2026-10-08).
+**Words at 4.5 / 6.4 / 9 / 12.7σ** (the user's, 2026-10-11). On this basket, doubling a
+move's size in σ makes it about ten times rarer, so levels √2 apart make each word about
+three times rarer to reach than the one below: over the 58's whole history, events at or
+above 4.5, 6.4, 9 and 12.7σ were 9,604, 3,227, 1,056 and 304 (measured 2026-10-11), 3.0,
+3.1 and 3.5 times apart. Extreme has no ceiling, so as a band of its own it is about two
+and a half times rarer than major's (304 against 752). The bottom is a volume choice:
+moves of every size hold at the close alike (76–80%), so a higher bottom buys fewer
+messages, not better ones. The ladder began at 3.9σ, Lee & Mykland's 1% line for a day of
+24 hourly readings (2026-09-28); it went to 6σ for the volume of the 172 (2026-10-04), and
+came to 4.5σ with stage 1's 58 as the lowest bottom at or below that volume: 3.6 pushes
+and 10.0 note rows a week against 4.0 and 10.8, over the year to 2026-10-05
+(`docs/basket-proposal.md`, task 9 and gate D). For one instrument, an event at each word
+about every 3½ weeks, 2½ months, 7½ months and 2¼ years (over the 58's 642 settled
+instrument-years to 2026-10-08).
 
 **Rarity is measured, not read off the bell curve.** Against its own half-year σ, an hour
 of every class reaches 3.9σ about once in 115, not once in 10,000.

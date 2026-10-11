@@ -1,4 +1,5 @@
-"""MarketWatch's hourly bars: a voter on the currency pairs, the funds and live cattle.
+"""MarketWatch's hourly bars: a voter on the currency pairs, the funds, live cattle
+and the stock indices abroad.
 
 THE ENDPOINT is the one MarketWatch's own charts read (api.wsj.net, Dow Jones'
 "michelangelo" time series): hourly bars for about the last ten days, keyed as
@@ -13,6 +14,13 @@ median, and its quotes are its own; live cattle's continuous contract moves
 with the stored front contract at 0.92 hour by hour (docs/decisions.md, "The
 sources' vote"). Its coffee is Yahoo's, one upstream, so not a voter on the
 softs.
+
+ITS INDICES (INDICES, for the basket's stage 1) are Yahoo's to the cent where both
+hold the hour - hourly correlation 0.96-1.00 and 0 bp at the median over its ten
+days to 2026-10-09 - one upstream's prices from two vendors, which is agreement,
+not a copy (docs/decisions.md, "The sources' vote"). India's is the Sensex, not
+the Nifty: another index of the same market, moving with it at 0.99. Not carried:
+the KOSPI, TAIEX, CSI 300, JSE Top 40 and Bovespa (keys tried 2026-10-11).
 
 AND THE STANDING RISK. An undocumented endpoint that wants the access token
 MarketWatch's own pages send with every chart: public, in their page, not a
@@ -72,6 +80,14 @@ def parse(payload: dict, key: str, now: datetime | None = None) -> list[Candle]:
         out.append(Candle(open_time=start, open=o, high=h, low=low, close=c, volume=0.0,
                           close_time=start + HOUR))
     return out
+
+
+INDICES = {
+    "^AXJO": "INDEX/AU/XASX/XJO", "^N225": "INDEX/JP/XTKS/NIK", "^HSI": "INDEX/HK/XHKG/HSI",
+    "^NSEI": "INDEX/IN/XBOM/1", "^STOXX50E": "INDEX/XX/XSTX/SX5E", "^FTSE": "INDEX/UK//UKX",
+    "^SSMI": "INDEX/CH/XSWX/SMI", "XU100.IS": "INDEX/TR/XIST/XU100",
+    "^TASI.SR": "INDEX/SA//TASI", "^GSPTSE": "INDEX/CA/XTSE/GSPTSE", "^MXX": "INDEX/MX//IPC",
+}
 
 
 def fetch_hourly(key: str, session: requests.Session | None = None,

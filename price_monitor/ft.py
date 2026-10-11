@@ -42,6 +42,12 @@ HEADERS = {"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"}
 # The continuous series the FT names, by xid.
 CONTINUOUS = {"KC.1": "1046650"}
 SOFTS = {"KC=F": "KC.1"}
+# The stock indices abroad, for the basket's stage 1, by xid: those moving with
+# Yahoo's folded bars at 0.90 or more hour by hour over its 24 days to
+# 2026-10-09 - Europe's and the Americas' 0.92-0.98. Asia's lag it (the Nikkei
+# 0.80, the Hang Seng 0.86, the ASX 200 0.06) and are left out.
+INDICES = {"^STOXX50E": "567938", "^FTSE": "572009", "^SSMI": "567786",
+           "^BVSP": "570637", "^MXX": "584510"}
 MAX_DAYS = 24
 HOUR = 3600
 MAX_ATTEMPTS = 3
@@ -117,6 +123,8 @@ def xid_for(name: str, session: requests.Session | None = None) -> str:
     search finds (LCZ26)."""
     if name in CONTINUOUS:
         return CONTINUOUS[name]
+    if name.isdigit():                   # an xid already (INDICES)
+        return name
     if name not in _found:
         answer = _ask(lambda: (session or requests).get(
             SEARCH, params={"query": name}, headers=HEADERS, timeout=30), name)

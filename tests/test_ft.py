@@ -83,3 +83,10 @@ def test_a_contract_the_search_does_not_find_and_a_refusal_raise(monkeypatch):
         ft.fetch_hourly("LCZ26", _Session(nothing, None))
     with pytest.raises(ExchangeError, match="403"):
         ft.fetch_hourly("KC.1", _Session(None, _Answer(403)))
+
+
+def test_an_index_is_asked_by_its_xid_without_a_search(monkeypatch):
+    monkeypatch.setattr(ft, "_found", {})
+    session = _Session(None, _Answer(200, payload([], [], [], [], [])))
+    ft.fetch_hourly(ft.INDICES["^FTSE"], session, days=3)
+    assert session.searched == [] and session.posted[0]["elements"][0]["Symbol"] == "572009"

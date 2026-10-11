@@ -625,6 +625,7 @@ it was taken and returned the one after (USD/TRY's history flipped four votes ev
 | live cattle | MarketWatch continuous; the FT's bars of the store's contract | MarketWatch hourly correlation 0.92; the FT 2.3 bp off |
 | coins | Coinbase and Kraken | other exchanges' dollar pairs: hourly moves correlate 0.988–1.000 with Binance's (300 hours to 2026-09-25); a year of checks found 4 moves not seen, all Binance's own on 2025-10-10's liquidations |
 | LME metals | Wallstreetcn | the only feed found that a runner reaches: 0 bp off at the median, hourly correlation 0.96–0.99, in part Sina's upstream |
+| stock indices abroad (stage 1, not in the basket yet) | MarketWatch (11), Wallstreetcn (4), the FT (5), Sina for the CSI 300 | each source at 0.90 or more against Yahoo's folded bars hour by hour, 2026-08 to 10: MarketWatch 0.96–1.00 at 0 bp (Yahoo's upstream to the cent); Wallstreetcn 0.91–0.99; the FT 0.92–0.98 for Europe and the Americas, while it lags Asia (Nikkei 0.80, Hang Seng 0.86, ASX 200 0.06); Sina's CSI 300 0.90. India's two are the Sensex, not the Nifty (0.99, 0.91). Left out below 0.90: Wallstreetcn's ASX 200 (0.80), KOSPI (0.89), Euro Stoxx 50 (0.86); its index futures change contract on their own days. No voter yet for the KOSPI, the TAIEX or the JSE Top 40 |
 
 ---
 

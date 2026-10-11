@@ -103,9 +103,9 @@ import numpy as np
 import pandas as pd
 import requests
 
-from price_monitor import alpaca, ft, wallstreetcn
+from price_monitor import alpaca, ft, marketwatch, sina, wallstreetcn
 from price_monitor.models import UNANSWERED_IN_A_ROW, Unreachable
-from jump import atomic, bars
+from jump import atomic, bars, sessions
 from jump.basket import Asset
 
 log = logging.getLogger("jump.verify")
@@ -260,13 +260,26 @@ SOURCES: "dict[str, tuple[Source, ...]]" = {
     "lme": (
         Source("wallstreetcn", "Wallstreetcn", 79, "1h", lambda a: wallstreetcn.LME.get(a.ticker)),
     ),
+    # The stock indices abroad (the basket's stage 1): each source that moves with
+    # Yahoo's folded bars at 0.90 or more hour by hour (2026-10-11; the record's
+    # voters were accepted at 0.92-0.999, Sina's live cattle refused at 0.80).
+    # MarketWatch is Yahoo's upstream to the cent; India's two are the Sensex.
+    # None yet for the KOSPI, the TAIEX or the JSE Top 40.
+    "indices": (
+        Source("marketwatch", "MarketWatch", 9, "1h", lambda a: marketwatch.INDICES.get(a.ticker)),
+        Source("wallstreetcn", "Wallstreetcn", 170, "1h",
+               lambda a: wallstreetcn.INDICES.get(a.ticker)),
+        Source("ft", "FT", 30, "1h", lambda a: ft.INDICES.get(a.ticker)),
+        Source("sina", "Sina", 365, "1h", lambda a: sina.CN_INDICES.get(a.ticker)),
+    ),
     "crypto_24_7": (
         Source("coinbase", "Coinbase", 365, "1h", _exchange("coinbase")),
         Source("kraken", "Kraken", 29, "1h", _exchange("kraken")),
     ),
 }
 _CLASS = {"fx_continuous": "fx", "b3_fx": "fx",
-          "ice_coffee": "softs", "ice_cocoa": "softs", "ice_cotton": "softs"}
+          "ice_coffee": "softs", "ice_cocoa": "softs", "ice_cotton": "softs",
+          **{name: "indices" for name in sessions.EXCHANGES}}
 # What the channel calls each provider: the sources, and the stores' own.
 LABELS = {**{s.name: s.label for group in SOURCES.values() for s in group},
           "binance": "Binance", "sifting": "SiftingIO", "tiingo": "Tiingo",
@@ -374,6 +387,8 @@ def fetch_verifier(name: str, symbol: str, interval: str, days: float,
                                            end=now)
     elif name == "sina" and interval == "30min":
         candles = sina.fetch_us_bars(symbol, session, now)
+    elif name == "sina" and symbol in sina.CN_INDICES.values():
+        candles = sina.fetch_cn_bars(symbol, session, now)
     elif name == "sina":
         candles = sina.fetch_bars(symbol, session, now, url=sina.GLOBAL_URL)
     else:

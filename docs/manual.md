@@ -236,6 +236,7 @@ the channel gives it; a source added there is asked from the next run.
 | live cattle (Yahoo) | MarketWatch continuous contract, hourly (9 days back), and the FT's bars of the contract the store holds (24 trading days back) |
 | coins (16, Binance) | Coinbase's dollar pairs, hourly (`price_monitor/coinbase.py`, a year back) and Kraken's (`kraken.py`, 29 days back): a wick on Binance alone is real there and not the market's |
 | LME tin, nickel, aluminium (Sina) | Wallstreetcn, hourly (`price_monitor/wallstreetcn.py`, about 170 days back, counted again for 79 days, as the softs) |
+| the stock indices abroad (stage 1, `sessions.EXCHANGES`; not in the basket yet) | MarketWatch (`marketwatch.INDICES`, 9 days back), Wallstreetcn (`wallstreetcn.INDICES`), the FT (`ft.INDICES`, by xid) and for the CSI 300 Sina's A-share hourly bars (`sina.fetch_cn_bars`, back to 2025-09, each filed under the hour its last minute falls in): only sources at 0.90 or more against Yahoo's folded bars; none yet for the KOSPI, the TAIEX or the JSE Top 40 |
 
 **Rule.** Never Tiingo, SiftingIO, Twelve Data or Google: the live run needs their
 allowances, and Google is one session deep. A test pins it.

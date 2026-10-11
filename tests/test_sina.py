@@ -95,3 +95,18 @@ def test_a_negative_volume_is_unknown_not_a_broken_bar():
     text = 'var t=([{"d":"2026-07-17 09:00:00","o":"17115","h":"17124.5","l":"17080","c":"17124.5","v":"-10641","p":"0"}]);'
     bar = sina.parse(text, "NID", now=datetime(2026, 7, 18, tzinfo=timezone.utc))[0]
     assert bar.volume == 0.0 and bar.close == 17124.5
+
+
+# --- China's own indices: the CSI 300 (sina.fetch_cn_bars) -----------------------
+
+def test_a_csi_300_bar_is_filed_under_the_hour_its_last_minute_falls_in():
+    rows = [{"day": "2026-10-09 10:30:00", "open": "4320.1", "high": "4330.0",
+             "low": "4310.0", "close": "4325.5", "volume": "1"},
+            {"day": "2026-10-09 15:00:00", "open": "4325.5", "high": "4340.0",
+             "low": "4320.0", "close": "4317.3", "volume": "1"}]
+    got = sina.parse_cn(rows, "sh000300", datetime.fromtimestamp(bj(2026, 10, 9, 14, 0), timezone.utc))
+    # 09:30-10:30 Beijing lands on the 10:00 hour; 15:00's bar has not ended at 14:00.
+    assert [(c.open_time, c.close_time, c.close) for c in got] == [
+        (bj(2026, 10, 9, 10), bj(2026, 10, 9, 10, 30), 4325.5)]
+    with pytest.raises(sina.ExchangeError):
+        sina.parse_cn({"error": "x"}, "sh000300")

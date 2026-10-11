@@ -1065,3 +1065,18 @@ def test_lme_copper_is_voted_by_wallstreetcn_as_the_other_metals_are():
                    label="Copper (LME)", in_basket=True)
     assert _asked(copper) == [("wallstreetcn", "UKCA.OTC", "1h")]
     assert verify.recount_days(copper) == 79
+
+
+def test_the_indices_abroad_are_voted_by_the_sources_that_move_with_them():
+    from jump.basket import Asset
+    index = lambda t, tpl: Asset(ticker=t, source="yahoo", block="equity",  # noqa: E731
+                                 has_volume=False, tick_size=0.01, session_template=tpl,
+                                 fetch_interval="30min", label=t, in_basket=True)
+    assert _asked(index("^FTSE", "london")) == [("marketwatch", "INDEX/UK//UKX", "1h"),
+                                                ("ft", "572009", "1h")]
+    assert _asked(index("000300.SS", "shanghai")) == [("sina", "sh000300", "1h")]
+    assert [n for n, _, _ in _asked(index("^NSEI", "mumbai"))] == ["marketwatch", "wallstreetcn"]
+    assert _asked(index("^BVSP", "sao_paulo")) == [("ft", "570637", "1h")]
+    # None found yet for these.
+    assert _asked(index("^TWII", "taipei")) == _asked(index("^KS11", "seoul")) == []
+    assert verify.recount_days(index("^FTSE", "london")) == 9

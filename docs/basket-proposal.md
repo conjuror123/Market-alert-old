@@ -202,6 +202,30 @@ before the measured before/after and the user's go.
 | 13 | `pytest -q`, alone | |
 | 14 | the live branch, on the user's go only; a week of watching | |
 
+### Gate A: the levels on the 38 existing instruments (measured 2026-10-11)
+
+By the stage report's own scoring and 24-hour events (`tools/stage_report.py`), only the
+instruments and the levels changed; young readings counted, as live delivers them; no
+vote. Today's basket by this method: 211 pushes in the year to 2026-10-05 (the live
+store, with the vote and delivery, holds 247) - so compare within the table only.
+
+| | pushes a week | note rows a week | pushes, of them coins + pairs | busiest week's pushes |
+|---|---|---|---|---|
+| **year to 2026-10-05** | | | | |
+| today's 172 at 6σ | 4.0 | 10.8 | 211: 68 + 47 | 22 |
+| stage 1's 38 at 6σ | 1.0 | 2.5 | 54: 15 + 18 | 5 |
+| stage 1's 38 at 5σ (5 / 7.07 / 10 / 14.14) | 2.0 | 5.2 | 104: 23 + 38 | 7 |
+| stage 1's 38 at 4σ (4 / 5.66 / 8 / 11.31) | 4.7 | 11.2 | 243: 74 + 74 | 13 |
+| **year to 2025-10-05** | | | | |
+| today's 172 at 6σ | 7.1 | 10.8 | 368 | 151 |
+| stage 1's 38 at 6σ | 1.8 | 2.8 | 93 | 26 |
+| stage 1's 38 at 5σ | 2.9 | 4.3 | 149: 31 + 66 | 38 |
+| stage 1's 38 at 4σ | 5.3 | 7.2 | 278 | 54 |
+
+A lower ladder raises the round-the-clock markets most, as they have the most hours: at
+4σ the four coins push 74 times in the year to 2026-10-05, today's sixteen 68; the seven
+pairs 74, today's seventeen 47. The 20 new instruments are not in these numbers.
+
 ## Sources
 
 - StockCharts, intermarket relationships (Murphy):

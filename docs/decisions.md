@@ -179,7 +179,9 @@ the futures are not built yet: BNO for Brent, SHY, IEF and TLT for the Treasurie
 WEAT, SOYB and CANE for the grains and sugar, PPLT for platinum, and GLD and SLV for gold
 and silver until a round-the-clock source passes. So nothing goes blind over the user's
 pause. The 134 that went (133 of the basket, and DBC outside it) keep their stored bars on
-disk.
+disk; what only they used went with them (Google Finance's client, USD/BRL's session, the
+sources' entries for them), and the metrics of the 58 rebuilt after it were the same to
+the last bit.
 
 **One provider per instrument, chosen by measurement**, against the stored bars hour by
 hour, in basis points, beside an hourly σ of 20–40 bp. A feed a few bp off on a thin fund

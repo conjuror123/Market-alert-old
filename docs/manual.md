@@ -105,7 +105,7 @@ standing in, a few minutes of it; that bar heals on the next fetch.
 | Alpaca | 30 funds | free IEX bars live; the consolidated tape (SIP) from 2016, for history and the vote, 15 minutes behind |
 | Twelve Data | 8 funds (USO UNG GLD SLV CPER DBA CORN DBC) | consolidated tape for thin funds; one batched request a run |
 | Sina Finance | 33 funds; LME tin, nickel, aluminium | US half-hour bars (consolidated); LME three-month contract, last 1,023 hourly bars |
-| Yahoo | 34 funds; coffee, cocoa, cotton, live cattle | futures from the front contract, rolled before first notice, cattle twelve business days before its delivery month; each run asks the contract's bars from the session it became front (`jump/futures.py`) |
+| Yahoo | 34 funds; coffee, cocoa, cotton, live cattle | futures from the front contract, rolled before first notice, cattle twelve business days before its delivery month; each run asks the contract's bars from the session it became front (`jump/futures.py`). For the markets abroad (`sessions.EXCHANGES`, the basket's stage 1, not in it yet) a history pass (backfill workflow, `deepen-yahoo`, `jump.backfill.deepen_from_yahoo`): the last 58 days at their own interval (30 minutes, 15 for Nifty) folded onto the hour, and before them Yahoo's hourly bars back to 2024-10, filed under the hour each one ends in, taken only where over the 58 days they pass the import gate against the folded ones |
 | Google Finance | TUR | read off the quote page |
 | SiftingIO | 17 FX pairs | the bar closed at :00 is served by :05 |
 | Binance | 16 coins | each coin as its USDT pair, via `data-api.binance.vision` (reachable from US runners) |

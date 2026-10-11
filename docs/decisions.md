@@ -344,6 +344,19 @@ session is kept, since an empty hour is skipped and a cut one is lost: São Paul
 library's close, for the closing auction that sets the official close and that Yahoo
 serves as a bar of its own at 16:00 (each of the 59 days to 2026-10-09).
 
+**Their history is Yahoo's, where it agrees with Yahoo's own folded bars** (2026-10-11).
+Yahoo serves 59 days of half-hour bars and two years of hourly ones. An hourly bar on the
+round hour is the two half-hour bars exactly - Tokyo, London and eight more, correlation
+1.0000 and 0 bp over the 58 days - and on the half or quarter hour it is filed under the
+hour it ends in, so its close never lands in an hour before its own; half an hour off the
+folded bars, it passes the import gate for Hong Kong (0.93) and Nifty (0.91), not for
+Toronto (0.82), Istanbul (0.82), Mexico City (0.75) or Shanghai (137 hours). Those four
+start with the 58 days, their yardstick young until it reaches half a year. The gate asks
+a five-hour market (Taipei, Riyadh) the funds' 29 sessions rather than their 200 hours,
+which 59 days of it cannot hold. Filed one hour late, the half-hour markets' first bar
+of a day is not their session's first hour, so their history has no nights: those start
+with the live fetch.
+
 **A provider down is that provider's, not the run's.** The run goes red only when the fetch
 got nothing at all. A red run for one dark provider said nothing the health chat had not
 said, and every hour of an outage would read as a broken bot.

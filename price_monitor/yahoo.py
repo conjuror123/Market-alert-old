@@ -52,17 +52,18 @@ BASE_URL = "https://query1.finance.yahoo.com"
 CHART_ENDPOINT = "/v8/finance/chart/{symbol}"
 
 # This app's interval names -> Yahoo's.
-INTERVAL_CODES = {"30min": "30m", "1h": "1h", "1d": "1d"}
+INTERVAL_CODES = {"15min": "15m", "30min": "30m", "1h": "1h", "1d": "1d"}
 
-INTERVAL_SECONDS = {"30min": 1800, "1h": 3600, "1d": 86400}
+INTERVAL_SECONDS = {"15min": 900, "30min": 1800, "1h": 3600, "1d": 86400}
 
 # How far back Yahoo will serve each interval AT ALL. These are properties of
 # the endpoint, not of a plan, and asking past them returns an empty result
 # rather than an error - which would look exactly like a quiet market. The
 # limits are enforced here so that a request which cannot be answered is
 # refused loudly instead. Measured 2026-10-08 by date: 30-minute bars to 59 days
-# (60 refused), hourly to 729 (730 refused).
-MAX_LOOKBACK_DAYS = {"30min": 59, "1h": 729, "1d": 36500}
+# (60 refused), hourly to 729 (730 refused); 15-minute bars as the 30-minute ones
+# (59 days of Nifty's on 2026-10-11).
+MAX_LOOKBACK_DAYS = {"15min": 59, "30min": 59, "1h": 729, "1d": 36500}
 
 # Yahoo answers an unadorned request with 429. Any ordinary browser string is
 # accepted; this one names the project so the traffic is attributable.

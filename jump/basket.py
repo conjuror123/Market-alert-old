@@ -44,7 +44,7 @@ SOURCES = ("twelvedata", "binance", "yahoo", "sina")
 # instrument whose history came from somewhere else.
 PROVIDERS = ("twelvedata", "binance", "tiingo", "alpaca", "yahoo", "sifting", "google",
              "sina")
-FETCH_INTERVALS = ("30min", "1h")
+FETCH_INTERVALS = ("15min", "30min", "1h")
 
 
 class BasketConfigError(ValueError):

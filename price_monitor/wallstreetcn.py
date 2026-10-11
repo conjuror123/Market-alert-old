@@ -3,7 +3,8 @@ pairs, and the LME's history from 2026-04.
 
 THE ENDPOINT is the one Wallstreetcn's own charts read (api-ddc-wscn.awtmt.com,
 market/kline): hourly bars without volume. The LME's three-month tin
-(UKSN.OTC), nickel (UKNI.OTC) and aluminium (UKAH.OTC) in dollars a tonne; ICE's
+(UKSN.OTC), nickel (UKNI.OTC), aluminium (UKAH.OTC) and copper (UKCA.OTC, for
+the basket's stage 1) in dollars a tonne; ICE's
 cocoa (USCC.OTC) and cotton (USCT.OTC), continuous futures that change contract
 on their own days; and the currency pairs as their six letters (EURUSD.OTC) -
 every pair of the basket but USD/KRW. `tick_count` asks for about that many
@@ -15,7 +16,7 @@ open, close, high, low, start). Against the stored bars, no shift (2026-10-09).
 
 IT CARRIES MORE than the basket uses (its rank lists, 2026-10-10): sugar
 (USYO.OTC), lean hogs (LHC.OTC), wheat, corn, soybeans and soybean oil
-(USZW, USZC, USZS, USZL), the LME's copper, lead and zinc, gold, silver,
+(USZW, USZC, USZS, USZL), the LME's lead and zinc, gold, silver,
 platinum, palladium, WTI and Brent crude and natural gas; 65 pairs and the
 dollar index; 38 stock indices and index futures (US500.OTC, JP225.OTC,
 DE30.OTC, VIX.OTC, ...); 52 government bond yields (US10YR.OTC, DE10YR.OTC,
@@ -54,7 +55,7 @@ URL = "https://api-ddc-wscn.awtmt.com/market/kline"
 HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 # The store's futures as Wallstreetcn names them: the LME's metals, and the
 # softs it carries (not coffee).
-LME = {"SND": "UKSN.OTC", "NID": "UKNI.OTC", "AHD": "UKAH.OTC"}
+LME = {"SND": "UKSN.OTC", "NID": "UKNI.OTC", "AHD": "UKAH.OTC", "CAD": "UKCA.OTC"}
 SOFTS = {"CC=F": "USCC.OTC", "CT=F": "USCT.OTC"}
 # The basket's pairs it does not carry (2026-10-10).
 NO_PAIR = ("USD/KRW",)

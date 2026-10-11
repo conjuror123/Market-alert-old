@@ -252,6 +252,9 @@ LME changed, and the LME's flagged readings since July go from three to one - ni
 2026-09-02 hour (6.3σ) and aluminium's 09-17 night (7.4σ) fall under 6σ against the
 fuller yardstick, aluminium's 09-10 hour stays (7.6σ → 6.2σ). All three were note rows;
 no push changed. Its half-year yardstick fills about 2026-10-22 instead of 2027-01.
+Copper, for the basket's stage 1, came the same way on 2026-10-11: Sina's 1,023 bars from
+2026-07-22, and Wallstreetcn's 1,126 below them from 2026-04-23 (overlap 1,011 hours,
+correlation 0.9936, median 0.31 bp, no opening left out).
 
 **Wallstreetcn on cocoa, cotton and the pairs**: a second voter for cocoa and cotton, a
 third for 16 pairs (it does not carry USD/KRW). Its quotes are its own: over 2026-04-22 to

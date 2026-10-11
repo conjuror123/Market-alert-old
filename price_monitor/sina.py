@@ -1,6 +1,7 @@
 """Sina Finance's bars: the LME's metals and US funds.
 
-THE LME METALS - tin (SND), nickel (NID), aluminium (AHD) - come from the chart
+THE LME METALS - tin (SND), nickel (NID), aluminium (AHD), and copper (CAD) for
+the basket's stage 1 - come from the chart
 endpoint behind Sina's global futures pages (gu.sina.cn GlobalService.getMink,
 type 60): the three-month contract's traded hourly bars, in dollars a tonne,
 with volume. Only the last 1,023 are served - about three months - and nothing

@@ -1056,3 +1056,12 @@ def test_an_overnight_verdict_is_kept_for_good_and_read_as_the_feeds_median(tmp_
         "verifier": "yahoo,sina", "verifier_move": "0.046000,0.048000"}}, now, path)
     assert verify.overnight(path) == {("x:TLH", old, "close"): pytest.approx(0.047)}
     assert verify.not_real(path) == {}
+
+
+def test_lme_copper_is_voted_by_wallstreetcn_as_the_other_metals_are():
+    from jump.basket import Asset
+    copper = Asset(ticker="CAD", source="sina", block="industrial_metals", has_volume=True,
+                   tick_size=0.5, session_template="lme", fetch_interval="1h",
+                   label="Copper (LME)", in_basket=True)
+    assert _asked(copper) == [("wallstreetcn", "UKCA.OTC", "1h")]
+    assert verify.recount_days(copper) == 79

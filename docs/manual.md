@@ -240,8 +240,9 @@ test pins it.
 
 **Rule.** A source is no voter on a move whose bars it supplied to the store: its word
 there is the store's (`verify.SUPPLIED`, `supplied`). Only a hand-mend inside the live
-recount is listed - Yahoo, TUR's holes of 2026-10-01 and -02; who built the rest of the
-history is the table in section 11, and no vote reaches it. A seam is known to the day:
+recount is listed - none since stage 1 (TUR's holes of 2026-10-01 and -02, mended from
+Yahoo, left with it); who built the rest of the history is the table in section 11, and no
+vote reaches it. A seam is known to the day:
 the day either side is left out too.
 
 A source that runs behind the clock (`delay`: Alpaca's tape, fifteen minutes on the free

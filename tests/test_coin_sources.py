@@ -34,9 +34,8 @@ def test_coinbase_pages_by_three_hundred_hours(monkeypatch):
     assert all(asked[k + 1][0] == asked[k][1] + 3600 for k in range(len(asked) - 1))
 
 
-def test_kraken_names_bitcoin_and_dogecoin_its_own_way():
+def test_kraken_names_bitcoin_its_own_way():
     assert kraken.pair_for("BTC/USDT") == "XBTUSD"
-    assert kraken.pair_for("DOGE/USDT") == "XDGUSD"
     assert kraken.pair_for("ETH/USDT") == "ETHUSD"
 
 

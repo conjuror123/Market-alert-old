@@ -6,8 +6,7 @@ market/kline): hourly bars without volume. The LME's three-month tin
 (UKSN.OTC), nickel (UKNI.OTC), aluminium (UKAH.OTC) and copper (UKCA.OTC, for
 the basket's stage 1) in dollars a tonne; ICE's
 cocoa (USCC.OTC) and cotton (USCT.OTC), continuous futures that change contract
-on their own days; and the currency pairs as their six letters (EURUSD.OTC) -
-every pair of the basket but USD/KRW. `tick_count` asks for about that many
+on their own days; and the currency pairs as their six letters (EURUSD.OTC). `tick_count` asks for about that many
 hours back from its latest bar, and at most MAX_TICKS are served - back to
 2026-04-22 from 2026-10-09, for each of them; more is answered with one bar.
 Each line holds the bar's prices and its start in UTC seconds, in the order the
@@ -65,8 +64,6 @@ SOFTS = {"CC=F": "USCC.OTC", "CT=F": "USCT.OTC"}
 # contract on their own days, and MarketWatch carries both indices.
 INDICES = {"^N225": "JP225.OTC", "^TASI.SR": "TASI.OTC", "^GSPTSE": "SPTSX.OTC",
            "^NSEI": "SENSEX.OTC"}
-# The basket's pairs it does not carry (2026-10-10).
-NO_PAIR = ("USD/KRW",)
 # The most one answer serves (measured 2026-10-09: 4,096 and 4,100 bring the
 # same 2,046 bars, 4,500 one).
 MAX_TICKS = 4096
@@ -75,9 +72,9 @@ MAX_ATTEMPTS = 3
 BACKOFF_SECONDS = 2.0
 
 
-def pair_code(ticker: str) -> str | None:
-    """A currency pair as Wallstreetcn names it (EUR/USD: EURUSD.OTC), or None."""
-    return None if ticker in NO_PAIR else ticker.replace("/", "").upper() + ".OTC"
+def pair_code(ticker: str) -> str:
+    """A currency pair as Wallstreetcn names it (EUR/USD: EURUSD.OTC)."""
+    return ticker.replace("/", "").upper() + ".OTC"
 
 
 FIELDS = ("open_px", "close_px", "high_px", "low_px", "tick_at")

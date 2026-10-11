@@ -139,14 +139,8 @@ _BEFORE_THE_VOTE = {CONFIRMED: REAL, UNCONFIRMED: NOT_REAL}
 CLOSE, OPEN = "close", "open"     # the check: the hour's reading, or the gap's
 
 # MarketWatch names a fund by its listing exchange; ARCX unless here
-# (measured 2026-10-07: 96 funds on ARCX).
-MARKETWATCH_FUND_EXCHANGE = {
-    **dict.fromkeys(("QQQ", "SHY", "IEI", "IEF", "TLT", "MBB", "EMB", "PFF", "SMH", "SOXX",
-                     "CIBR", "SKYY", "TUR", "VNQI", "VGIT", "VGLT", "VTIP", "VMBS", "LMBS",
-                     "VCIT", "VCSH", "IGIB", "USIG", "SLQD", "ANGL", "FALN", "VWOB"), "XNAS"),
-    **dict.fromkeys(("ITB", "IYT", "IGV", "EZU", "INDA", "REM", "GOVT", "USHY", "EMHY",
-                     "CEMB"), "BATS"),
-}
+# (measured 2026-10-07).
+MARKETWATCH_FUND_EXCHANGE = dict.fromkeys(("SHY", "IEF", "TLT", "EMB"), "XNAS")
 
 # The softs Yahoo serves, as Sina's global futures name them (the same endpoint
 # the LME's metals come from): against the stored bars over 2026-05 to 10,
@@ -293,10 +287,9 @@ LABELS = {**{s.name: s.label for group in SOURCES.values() for s in group},
 # store's. Each entry: the instruments (tickers, or a template), from, to (a
 # day, exclusive), and the check if only one. A seam is known to the day, so
 # the day either side is left out too.
-SUPPLIED: "dict[str, tuple[tuple, ...]]" = {
-    # TUR's holes of 2026-10-01 and -02, mended from Yahoo by hand.
-    "yahoo": ((("TUR",), "2026-10-01", "2026-10-03"),),
-}
+# None since stage 1 (TUR's holes of 2026-10-01 and -02, mended from Yahoo, left
+# with it).
+SUPPLIED: "dict[str, tuple[tuple, ...]]" = {}
 
 
 def supplied(name: str, asset: Asset, c: dict) -> bool:

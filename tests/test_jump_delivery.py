@@ -532,3 +532,17 @@ def test_past_the_close_without_its_bars_it_waits():
 
 def test_no_check_columns_no_suffix():
     assert md.check_suffix(jump()) == ""
+
+
+def test_an_index_leads_with_its_own_name_where_yahoos_ticker_is_yahoos_only():
+    # ^N225 is NI225 on another chart: the Nikkei's name is the one a reader
+    # types anywhere (jump.basket.Asset.display). A fund still leads with its
+    # ticker.
+    labels = md._labels()
+    nikkei = event(asset_id="yahoo:^N225", block="equity", tier="high", r=-0.042)
+    assert md.format_push(nikkei, labels).splitlines()[0].startswith(
+        "🟨 <b>Nikkei 225</b> · Japan -4.20%")
+    assert md.ping_line(event(asset_id="yahoo:000300.SS", tier="noticeable", r=0.031),
+                        labels).startswith("⬜ <b>CSI 300</b> · China +3.10%")
+    assert md.ping_line(event(asset_id="twelvedata:SPY", tier="noticeable"),
+                        labels).startswith("⬜ <b>SPY</b> · ")

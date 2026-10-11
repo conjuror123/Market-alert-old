@@ -71,6 +71,15 @@ class Asset:
     # Who is asked for the bars. Defaults to `source` when the configuration
     # does not say otherwise.
     provider: str = ""
+    # The name a message leads with where the ticker is only one vendor's
+    # (Yahoo's ^N225 is NI225 elsewhere): the index's own name. Defaults to the
+    # ticker.
+    display: str = ""
+
+    @property
+    def shown_as(self) -> str:
+        """The name a message leads with: `display`, or the ticker."""
+        return self.display or self.ticker
 
     @property
     def fetched_from(self) -> str:
@@ -175,7 +184,7 @@ def _asset(raw: dict, *, in_basket: bool) -> Asset:
         session_template=raw["session_template"], fetch_interval=raw["fetch_interval"],
         tick_size=float(raw["tick_size"]),
         label=raw.get("label", raw["ticker"]), in_basket=in_basket,
-        provider=raw.get("provider", ""),
+        provider=raw.get("provider", ""), display=raw.get("display", ""),
     )
 
 

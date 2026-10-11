@@ -137,6 +137,12 @@ Treasuries move 0.024% in a usual hour and a coin several per cent.
 already read "Brazilian real". A fund keeps the word where it is the point: EMB's
 "Emerging-market sovereign bonds in dollars", against EMLC's in local currencies.
 
+**A stock index abroad leads with its own name, then its place** (stage 1, 2026-10-11):
+`Nikkei 225 · Japan`. The ticker leads elsewhere because it is what a reader types into a
+chart and the same everywhere; Yahoo's index tickers are Yahoo's only (^N225 is NI225 on
+another chart, NKY on a third), and the index's name is the one every chart knows
+(`display` in `config/basket.yaml`).
+
 **A reading is judged only once its bar has ended.** The run at :05 holds five minutes of
 the current hour.
 

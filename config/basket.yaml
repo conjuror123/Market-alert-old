@@ -270,6 +270,8 @@ assets:
   # Yahoo's hourly bars where they agree with those, back to 2024-10 - the CSI 300,
   # BIST 100, TSX and IPC only the last 58 days, their older bars having failed the
   # import gate (jump.backfill, deepen_from_yahoo). An index has no volume here.
+  # `display` is the name a message leads with, as Yahoo's ticker is Yahoo's
+  # only; `label` the market's place.
   - ticker: "^AXJO"
     source: yahoo
     block: equity
@@ -277,7 +279,8 @@ assets:
     tick_size: 0.01
     session_template: sydney
     fetch_interval: 30min
-    label: "ASX 200 (Australia)"
+    display: "ASX 200"
+    label: "Australia"
   - ticker: "^N225"
     source: yahoo
     block: equity
@@ -285,7 +288,8 @@ assets:
     tick_size: 0.01
     session_template: tokyo
     fetch_interval: 30min
-    label: "Nikkei 225 (Japan)"
+    display: "Nikkei 225"
+    label: "Japan"
   - ticker: "^KS11"
     source: yahoo
     block: equity
@@ -293,7 +297,8 @@ assets:
     tick_size: 0.01
     session_template: seoul
     fetch_interval: 30min
-    label: "KOSPI (Korea)"
+    display: "KOSPI"
+    label: "South Korea"
   - ticker: "^TWII"
     source: yahoo
     block: equity
@@ -301,7 +306,8 @@ assets:
     tick_size: 0.01
     session_template: taipei
     fetch_interval: 30min
-    label: "TAIEX (Taiwan)"
+    display: "TAIEX"
+    label: "Taiwan"
   - ticker: "000300.SS"
     source: yahoo
     block: equity
@@ -309,7 +315,8 @@ assets:
     tick_size: 0.01
     session_template: shanghai
     fetch_interval: 30min
-    label: "CSI 300 (China)"
+    display: "CSI 300"
+    label: "China"
   - ticker: "^HSI"
     source: yahoo
     block: equity
@@ -317,7 +324,8 @@ assets:
     tick_size: 0.01
     session_template: hong_kong
     fetch_interval: 30min
-    label: "Hang Seng (Hong Kong)"
+    display: "Hang Seng"
+    label: "Hong Kong"
   - ticker: "^NSEI"
     source: yahoo
     block: equity
@@ -325,7 +333,8 @@ assets:
     tick_size: 0.01
     session_template: mumbai
     fetch_interval: 15min
-    label: "Nifty 50 (India)"
+    display: "Nifty 50"
+    label: "India"
   - ticker: "^STOXX50E"
     source: yahoo
     block: equity
@@ -333,7 +342,8 @@ assets:
     tick_size: 0.01
     session_template: frankfurt
     fetch_interval: 30min
-    label: "Euro Stoxx 50 (euro area)"
+    display: "Euro Stoxx 50"
+    label: "Euro area"
   - ticker: "^FTSE"
     source: yahoo
     block: equity
@@ -341,7 +351,8 @@ assets:
     tick_size: 0.01
     session_template: london
     fetch_interval: 30min
-    label: "FTSE 100 (UK)"
+    display: "FTSE 100"
+    label: "UK"
   - ticker: "^SSMI"
     source: yahoo
     block: equity
@@ -349,7 +360,8 @@ assets:
     tick_size: 0.01
     session_template: zurich
     fetch_interval: 30min
-    label: "SMI (Switzerland)"
+    display: "SMI"
+    label: "Switzerland"
   - ticker: "XU100.IS"
     source: yahoo
     block: equity
@@ -357,7 +369,8 @@ assets:
     tick_size: 0.01
     session_template: istanbul
     fetch_interval: 30min
-    label: "BIST 100 (Turkey)"
+    display: "BIST 100"
+    label: "Turkey"
   - ticker: "^TASI.SR"
     source: yahoo
     block: equity
@@ -365,7 +378,8 @@ assets:
     tick_size: 0.01
     session_template: riyadh
     fetch_interval: 30min
-    label: "Tadawul (Saudi Arabia)"
+    display: "Tadawul"
+    label: "Saudi Arabia"
   - ticker: "^J200.JO"
     source: yahoo
     block: equity
@@ -373,7 +387,8 @@ assets:
     tick_size: 0.01
     session_template: johannesburg
     fetch_interval: 30min
-    label: "JSE Top 40 (South Africa)"
+    display: "JSE Top 40"
+    label: "South Africa"
   - ticker: "^GSPTSE"
     source: yahoo
     block: equity
@@ -381,7 +396,8 @@ assets:
     tick_size: 0.01
     session_template: toronto
     fetch_interval: 30min
-    label: "TSX (Canada)"
+    display: "TSX"
+    label: "Canada"
   - ticker: "^BVSP"
     source: yahoo
     block: equity
@@ -389,7 +405,8 @@ assets:
     tick_size: 0.01
     session_template: sao_paulo
     fetch_interval: 30min
-    label: "Bovespa (Brazil)"
+    display: "Bovespa"
+    label: "Brazil"
   - ticker: "^MXX"
     source: yahoo
     block: equity
@@ -397,7 +414,8 @@ assets:
     tick_size: 0.01
     session_template: mexico_city
     fetch_interval: 30min
-    label: "IPC (Mexico)"
+    display: "IPC"
+    label: "Mexico"
   # --- rates -----------------------------------------------------------------
   # US Treasuries by maturity, and inflation-protected. SHY, IEF and TLT stand in
   # for the 2-, 10- and 30-year Treasury futures until stage 2

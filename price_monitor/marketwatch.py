@@ -9,8 +9,8 @@ contract. Each tick is the start of its bar in UTC milliseconds -
 against the stored bars, no shift (2026-10-04) - and a bar with no price comes
 as nulls.
 
-It has every hour of the 17 pairs, 0-0.6 bp from the stored bars at the
-median, and its quotes are its own; live cattle's continuous contract moves
+It has every hour of the pairs (the 17 of 2026-10-04), 0-0.6 bp from the stored
+bars at the median, and its quotes are its own; live cattle's continuous contract moves
 with the stored front contract at 0.92 hour by hour (docs/decisions.md, "The
 sources' vote"). Its coffee is Yahoo's, one upstream, so not a voter on the
 softs.

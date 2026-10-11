@@ -22,10 +22,9 @@ at most 2000 bars and carries `meta.next_cursor` while more remain.
 LIMITS. The free tier is 10,000 calls a MONTH and a few a second. The response's
 `X-Quota-Remaining` is NOT the month: after a run's 16 requests it said 4 while the
 account showed 181 for the month (2026-10-06), so it counts a short window; the
-month is on the account page only. Sixteen pairs asked once an hour
-through the FX week, and USD/BRL in its session, is about 8,700 a month -
-inside it, without much room. A
-429 means the budget or the burst is spent, and RateLimited stops the run for
+month is on the account page only. Seven pairs asked once an hour through the
+FX week are about 3,600 a month (sixteen and USD/BRL were about 8,700 until
+stage 1). A 429 means the budget or the burst is spent, and RateLimited stops the run for
 this provider rather than retrying into it.
 """
 from __future__ import annotations

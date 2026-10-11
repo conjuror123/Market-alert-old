@@ -21,9 +21,9 @@ and print their own bad ticks - so the vote is "not seen elsewhere", never "a
 mistake".
 
 WHO IS ASKED (SOURCES, sources_for). Every source of the instrument's class
-that carries it, except its own provider. The currency pairs and the real:
-Yahoo's hourly FX, MarketWatch's and Wallstreetcn's (not USD/KRW) - Yahoo
-reaches back two years but has as little as a fifth of USD/INR's hours,
+that carries it, except its own provider. The currency pairs: Yahoo's hourly
+FX, MarketWatch's and Wallstreetcn's - Yahoo reaches back two years but had as
+little as a fifth of some pairs' hours (USD/INR's, 2026-10),
 MarketWatch has every hour of the last nine trading days. Funds: Yahoo's and
 Sina's half-hour bars and MarketWatch's hourly ones, and Alpaca's consolidated
 tape (Alpaca_SIP), fifteen minutes behind - asked once it serves the move's
@@ -234,8 +234,8 @@ SOURCES: "dict[str, tuple[Source, ...]]" = {
         Source("sina", "Sina", 77, "30min", lambda a: a.ticker),
         Source("marketwatch", "MarketWatch", 9, "1h", lambda a: "FUND/US/{}/{}".format(
             MARKETWATCH_FUND_EXCHANGE.get(a.ticker, "ARCX"), a.ticker)),
-        # Every exchange's trades: another source than the IEX feed Alpaca
-        # serves 30 funds from, which is one exchange's (the user's, 2026-10-08).
+        # Every exchange's trades: another source than the IEX feeds the funds
+        # are fetched from, which are one exchange's (the user's, 2026-10-08).
         Source("alpaca_sip", "Alpaca_SIP", (datetime.now(timezone.utc) - alpaca.FIRST).days + 1,
                "30min", lambda a: a.ticker, delay=15 * 60, keys=ALPACA_KEYS),
     ),

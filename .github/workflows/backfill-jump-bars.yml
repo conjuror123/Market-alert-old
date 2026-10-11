@@ -47,8 +47,8 @@ name: Backfill Jump Bars
 #                   already declared. It must reach at least
 #                   as far back as the bars, or an older payout arrives as an
 #                   unexplained price drop. Nights and weekends only: it takes
-#                   about three hours of Tiingo's 50 an hour, and refuses to
-#                   start while the hourly run is asking Tiingo too. Twelve Data remains a labelled
+#                   about half an hour of Tiingo's 50 an hour (the 23 funds),
+#                   and refuses to start while the hourly run is asking Tiingo. Twelve Data remains a labelled
 #                   fallback (`--source twelvedata`) that cannot see splits.
 #   voter-bars      every live voter's bars of every instrument (or those named),
 #                   35 days, uploaded as the artifact `voter-bars` for a

@@ -3,10 +3,10 @@ and the IEX exchange's bars for the hour.
 
 LIVE: IEX. The free plan's IEX bars are current - measured 2026-10-01 at 15:05
 UTC, the half-hour bar opened at 15:00 was served, minute bars to 15:04 - and
-on the 30 funds whose IEX price agrees with the tape (measured against it:
-median <= 2 bp, p90 <= 5, at most 2% of hours missing) that is the same price.
+on a fund whose IEX price agrees with the tape (measured against it: median
+<= 2 bp, p90 <= 5, at most 2% of hours missing) that is the same price.
 Tiingo's intraday feed is IEX too; this carries the IEX-safe funds Tiingo has
-no hourly room for. A fund IEX does not price like the tape belongs on a
+no hourly room for - none since stage 1, whose 13 Tiingo carries. A fund IEX does not price like the tape belongs on a
 consolidated feed instead (Twelve Data, Sina or Yahoo).
 
 HISTORY: SIP. The free plan serves SIP bars only

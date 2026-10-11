@@ -1,5 +1,5 @@
-"""Wallstreetcn's hourly bars: a voter on the LME's metals, cocoa, cotton and 16
-pairs, and the LME's history from 2026-04.
+"""Wallstreetcn's hourly bars: a voter on the LME's metals, cocoa, cotton, the
+pairs and four stock indices abroad, and the LME's history from 2026-04.
 
 THE ENDPOINT is the one Wallstreetcn's own charts read (api-ddc-wscn.awtmt.com,
 market/kline): hourly bars without volume. The LME's three-month tin

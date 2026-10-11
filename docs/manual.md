@@ -13,8 +13,9 @@ Running it · 11 Modules and data layout · 12 Known limitations
 ## 1. What it is
 
 An hourly bot on GitHub Actions. It watches 58 instruments and posts to a Telegram
-channel when one moves unusually **for itself**: each move is measured against that instrument's own last half-year (the jump
-test of Lee & Mykland, 2008), not against a shared percentage.
+channel when one moves unusually **for itself**: each move is measured against that
+instrument's own last half-year (the jump test of Lee & Mykland, 2008), not against a
+shared percentage.
 
 | block | instruments |
 |---|---|
@@ -61,7 +62,7 @@ Local:
 
 ```bash
 pip install -r requirements-dev.txt
-pytest -q          # ~830 tests, about 2 minutes; run alone, several load large parquet files
+pytest -q          # ~855 tests, about 2 minutes; run alone, several load large parquet files
 ```
 
 Each test file also passes on its own (`pytest -q tests/test_jump_backfill.py`).
@@ -105,13 +106,13 @@ standing in, a few minutes of it; that bar heals on the next fetch.
 | Alpaca | — | the consolidated tape (SIP) from 2016, for history and the vote, 15 minutes behind |
 | Twelve Data | 4 funds (UNG GLD SLV CORN) | consolidated tape for thin funds; one batched request a run |
 | Sina Finance | 1 fund (SOYB); LME tin, nickel, aluminium, copper | US half-hour bars (consolidated); LME three-month contract, last 1,023 hourly bars |
-| Yahoo | 5 funds; coffee, cocoa, cotton, live cattle; 16 stock indices abroad | futures from the front contract, rolled before first notice, cattle twelve business days before its delivery month; each run asks the contract's bars from the session it became front (`jump/futures.py`). The stock indices abroad (`sessions.EXCHANGES`) live at 30 minutes (15 for the Nifty) folded onto the hour; their history from a pass (backfill workflow, `deepen-yahoo`, `jump.backfill.deepen_from_yahoo`): the last 58 days so, and before them Yahoo's hourly bars back to 2024-10, filed under the hour each one ends in, taken only where over the 58 days they pass the import gate against the folded ones (the CSI 300, BIST 100, TSX and IPC did not: 58 days) |
+| Yahoo | 5 funds; coffee, cocoa, cotton, live cattle; 16 stock indices abroad | futures from the front contract, rolled before first notice (cattle twelve business days before its delivery month, `jump/futures.py`); the indices at 30 minutes (15 for the Nifty) folded onto the hour, their history from the backfill's `deepen-yahoo` (hourly bars filed by the hour they end in, kept where they pass the import gate) |
 | SiftingIO | 7 FX pairs | the bar closed at :00 is served by :05 |
 | Binance | 4 coins | each coin as its USDT pair, via `data-api.binance.vision` (reachable from US runners) |
-| Wallstreetcn | — | the LME's metals, cocoa, cotton, the 7 pairs and 4 stock indices abroad, without volume, about 170 days back: a voter on them, and the LME's history below Sina's (backfill workflow, `deepen-wallstreetcn`, `jump.backfill.deepen_from_wallstreetcn`; gated on the overlap like any import, and only hours in the LME's session, less a session's first bar that opens 1% or more off the last close and is back as far within the hour - 11 such openings in its bars of 2026-04 to 07). It also carries what the basket does not hold - sugar, lean hogs, wheat, corn, soybeans and soybean oil, the LME's lead and zinc, the rest of its 38 stock indices and index futures, 52 government bond yields (codes in `price_monitor/wallstreetcn.py`) - each with about 170 days of history (`docs/decisions.md`, "What else Wallstreetcn carries") |
+| Wallstreetcn | — | a voter on the LME's metals, cocoa, cotton, the pairs and 4 indices, hourly without volume, about 170 days back; the LME's history below Sina's (`deepen-wallstreetcn`: gated on the overlap, a session's first bar 1% off and back within the hour left out). What else it carries: `docs/decisions.md`, "What else Wallstreetcn carries" |
 | FT | — | the vote on live cattle, asked for the contract the store holds, coffee, its continuous series, and 5 stock indices abroad (`ft.INDICES`): hourly, 24 trading days back, without volume (`price_monitor/ft.py`) |
 | Dukascopy, Bitstamp, Bitfinex | — | history only |
-| HF Data | — | funds' history to 2020, imported; it withdrew its consolidated tape on 2026-10-03, and its client was deleted |
+| HF Data | — | funds' history to 2020, imported once (its client is gone) |
 
 Each fund's feed is chosen by measurement; see `docs/decisions.md`, "Data and providers".
 

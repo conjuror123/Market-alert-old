@@ -42,11 +42,12 @@ Under `detector:` in `config/basket.yaml`:
 ```yaml
 detector:
   window_days: 182.6              # how far back "usual" reaches
-  levels: [6.0, 8.5, 12.0, 17.0]  # noticeable, high, major, extreme, in sigmas
+  levels: [4.5, 6.4, 9.0, 12.7]   # noticeable, high, major, extreme, in sigmas
 ```
 
-The bottom level sets how much you hear: 6 gives about 9 messages a week, 5 about 14,
-3.9 about 26 (the delivery replayed over the year to 2026-10-01). Which words push is `PUSH_TIERS` in `jump/routing.py`. To silence the
+The bottom level sets how much you hear: 4.5 gives about 3.6 pushes and 10 note rows a
+week, 3.9 about 6.5 and 15, 6 about 1.3 and 3 (the stage report's count over the year to
+2026-10-05). Which words push is `PUSH_TIERS` in `jump/routing.py`. To silence the
 channel without stopping the bot, set `jump_alerts_muted: true` in
 `config/config.yaml`.
 
@@ -58,7 +59,7 @@ channel without stopping the bot, set `jump_alerts_muted: true` in
 | why it is built this way; rejected options; open questions | `docs/decisions.md` |
 | how an agent works on this repository | `CLAUDE.md` |
 | which instruments, in which blocks, from which provider | `config/basket.yaml` (the source of truth) |
-| a new basket under discussion, not yet live | `docs/basket-proposal.md` |
+| the new basket: why, stage 1's state, stage 2 | `docs/basket-proposal.md` |
 | run settings: health alerts, the mute, the calendar | `config/config.yaml` |
 | how much history each instrument has | `data/jump/coverage.md` |
 | the detector | `jump/jumps.py` |

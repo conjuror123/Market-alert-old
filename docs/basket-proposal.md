@@ -168,9 +168,12 @@ USD/TRY otherwise flags on the lira's managed crawl: most of its other 6σ hours
 
 ## Stage 1: the build (planned 2026-10-11)
 
-Version 5 will not all be built before the user's long pause, so it comes in two stages,
-with the levels back at **4 / 5.657 / 8 / 11.314σ** (4σ and √2 steps; now 6 / 8.5 / 12 /
-17) - the user's, since version 5 pushes about a quarter of today's volume.
+Version 5 will not all be built before the user's long pause, so it comes in two stages.
+Its levels are set again, since version 5 pushes about a quarter of today's volume: the
+user's first wish is the ladder the detector started with on 2026-09-28, **3.9 / 5.5 /
+7.8 / 11.0σ** (3.9σ and √2 steps), raised to today's 6 / 8.5 / 12 / 17 on 2026-10-04 for
+volume (29.1 messages a week at 3.9 against 9.0, the delivery replayed over the year to
+2026-10-01). The ladder is researched again (task 9) and chosen at gate D.
 
 **Stage 1: 58 instruments.** The 30 kept; 8 funds standing in for the futures not yet
 built - BNO (Brent), SHY, IEF, TLT (Treasuries), CORN, WEAT, SOYB, CANE (grains, sugar) -
@@ -195,12 +198,13 @@ before the measured before/after and the user's go.
 | 6 | gold, silver, platinum round the clock: a provider by the four questions (SiftingIO first, from its docs, no quota spent probing; the 7 pairs leave it about 3,600 of 10,000 calls a month, the metals would add about 1,600); history from Dukascopy | |
 | 7 | voters: an `indices` class and a round-the-clock metals class in `jump/verify.py`; copper joins `lme` | B: each new instrument has bars and a voter, or is named |
 | 8 | `config/basket.yaml`: 134 out, 20 in, one commit | |
-| 9 | `detector.levels` to the new ladder, a commit of its own; the vote's candidates and its 40-request budget checked | |
+| 9 | the levels thought through again: search the web (the jump test's own critical values, how alerting systems set thresholds, how traders read sigma moves) and propose a ladder with reasons; candidates at least the first 3.9 / 5.5 / 7.8 / 11.0, a 5σ ladder and today's 6 / 8.5 / 12 / 17 | |
 | 10 | delivery read with the new instruments; a cold rebuild on the development branch for measuring only - not committed, the live run rebuilds after the merge; the new instruments' open month comes from the first live fetch (`tools/hot_bars.sh`); a cold first run of 58 inside the hourly job's 20 minutes | |
-| 11 | measured before/after: today (172 at 6σ), stage 1 at 6σ and at 4σ, by block, with windows | D: the user's go and ladder |
-| 12 | docs: manual, decisions, README | |
-| 13 | `pytest -q`, alone | |
-| 14 | the live branch, on the user's go only; a week of watching | |
+| 11 | measured before/after: today (172 at 6σ) against stage 1 at each candidate ladder, by block, with windows | D: the user's go and ladder |
+| 12 | `detector.levels` to the chosen ladder, a commit of its own; the vote's candidates and its 40-request budget checked | |
+| 13 | docs: manual, decisions, README | |
+| 14 | `pytest -q`, alone | |
+| 15 | the live branch, on the user's go only; a week of watching | |
 
 ### Gate A: the levels on the 38 existing instruments (measured 2026-10-11)
 
@@ -215,7 +219,7 @@ store, with the vote and delivery, holds 247) - so compare within the table only
 | today's 172 at 6σ | 4.0 | 10.8 | 211: 68 + 47 | 22 |
 | stage 1's 38 at 6σ | 1.0 | 2.5 | 54: 15 + 18 | 5 |
 | stage 1's 38 at 5σ (5 / 7.07 / 10 / 14.14) | 2.0 | 5.2 | 104: 23 + 38 | 7 |
-| stage 1's 38 at 4σ (4 / 5.66 / 8 / 11.31) | 4.7 | 11.2 | 243: 74 + 74 | 13 |
+| stage 1's 38 at 4σ (4 / 5.66 / 8 / 11.31; not the first ladder, which began at 3.9) | 4.7 | 11.2 | 243: 74 + 74 | 13 |
 | **year to 2025-10-05** | | | | |
 | today's 172 at 6σ | 7.1 | 10.8 | 368 | 151 |
 | stage 1's 38 at 6σ | 1.8 | 2.8 | 93 | 26 |

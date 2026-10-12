@@ -179,21 +179,41 @@ first notice, past September (and August), as Yahoo's series went straight to De
 November. Brent's last trading day is two months before delivery and sugar's the month
 before, so they roll on business days before it, not before the delivery month.
 
-**Stage 2's history is by series** (`tools/futures_history.py`, run once and deleted;
-the user's: Dukascopy where it reaches further). Yahoo keeps no expired contract, and its
-continuous series switches on its own days, inside an hour (the 10-year 2026-08-27 07:00
-UTC opened on September's price and closed on December's: -26 bp against the contract's
--3), and prints the other month for hours around it (corn -7.4% and back on 2026-06-25).
-So: Dukascopy's CFDs, one contract at a time, for Brent, the 30-year bond, soybeans and
-platinum, their switches looked for among the nights before each roll as the softs' were;
-Yahoo's continuous series to 2024-10 for the 2- and 10-year notes, which Dukascopy does
-not carry, their switches looked for within a business day of each roll - in a wider
-window they did not stand out from the data releases, and 341-349 of 730 days went; and
-for corn, wheat and sugar the contract held now, from the first month it traded at least
-5% of its volume as front (2026-01/02), past the detector's half-year: one contract, no
-switch. Dukascopy's sugar is London's white sugar, and it has no corn or wheat. A Treasury
-switch missed leaves a step of 5-30 bp a quarter in the notes' history; the largest
-readings there are data releases and the Fed, none within three days of a roll.
+**Stage 2's history is by series** (`tools/futures_history.py`, run once on 2026-10-12 and
+deleted; the user's: Dukascopy where it reaches further). Yahoo keeps no expired contract,
+and its continuous series switches on its own days, inside an hour (the 10-year 2026-08-27
+07:00 UTC opened on September's price and closed on December's: -26 bp against the
+contract's -3), and prints the other month for hours around it (corn -7.4% and back on
+2026-06-25). So:
+
+- Dukascopy's CFDs, one contract at a time - Brent from 2011-01, the 30-year bond from
+  2019-01 (its 2018 is not the market: a -19.6% hour and back, a zero), soybeans from
+  2018-03, platinum from 2021-11. Each switch is a roll night, unscored; a window where
+  none stands out is dropped. The bond's and platinum's switch in the weeks before this
+  series' rolls and were looked for there: 14 and 9 nights, 16 and 11 windows dropped
+  (422 and 293 days). Soybeans' moves to each of the seven listed months 5 business days
+  before the month ends (on its last business day to 2019-07), weeks after this series'
+  mid-month rolls, so its windows held none of them: looked for in the last 12 business
+  days of those months, 26 nights, each where its gap to Yahoo's daily series jumps; 31
+  windows dropped (645 days). Brent's moves every month, on ICE's last trading day or the
+  session after; in the 18 business days before each roll the month's news stood out
+  instead (2020-03-09's -24%, 2019-09-16's Abqaiq) and 3,037 days went. So it is looked
+  for from 2 business days before the expiry to 3 after, and a night is taken only if the
+  CFD's gap to Yahoo's daily close moves with it - a switch moves the CFD, the market moves
+  both: 44 of the 84 nights that stood out (2023-04-03's OPEC+ cut, 580 bp, moved the gap
+  21); 142 windows dropped (1,136 days). Against Yahoo's daily series at the settlement
+  hour, no lasting step is left unmarked in the four. Their volume is a tick count whose
+  scale changes over the years (Brent's hour a median 22 million in 2012, a few hundred
+  from 2013-03), so each month is scaled to the contract's median: against one factor the
+  thin-bar rule left out 56% of Brent's 2013-Q2.
+- Yahoo's continuous series to 2024-10 for the 2- and 10-year notes, which Dukascopy does
+  not carry, their switches looked for within a business day of each roll - in a wider
+  window they did not stand out from the data releases, and 341-349 of 730 days went. A
+  switch missed leaves a step of 5-30 bp a quarter; the largest readings there are data
+  releases and the Fed, none within three days of a roll.
+- Corn, wheat and sugar: the contract held now, from the first month it traded at least
+  5% of its volume as front (2026-01/02), past the detector's half-year: one contract, no
+  switch. Dukascopy's sugar is London's white sugar, and it has no corn or wheat.
 
 **The LME's metals are the LME's own, from Sina**: the right instrument with a short record
 (from 2026-04-22) over a longer record of another (Shanghai tin, Kitco, COMEX aluminium).

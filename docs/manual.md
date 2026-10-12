@@ -749,7 +749,7 @@ How far back each record reaches:
 | 4 coins | 2013–2020 by listing | Binance; earlier from Bitstamp, Bitfinex, Coinbase |
 | coffee, cocoa, cotton | 2018-01 | Dukascopy CFDs, then the listed contract; cocoa's 2026-07-21 to 08-10, the roll window where no CFD switch could be located, from the December contract (rolled into on 07-21) |
 | live cattle | 2024-05 | Yahoo |
-| stage 2's futures | see `docs/decisions.md`, "Stage 2's history is by series" | Dukascopy's CFDs for Brent, the 30-year bond, soybeans and platinum; Yahoo's continuous series for the 2- and 10-year notes (2024-10); the contract held now for corn, wheat and sugar (2026-01/02); then the listed contract (`tools/futures_history.py`, deleted once done) |
+| stage 2's futures | Brent 2011-01, soybeans 2018-03, the 30-year bond 2019-01, platinum 2021-11, the 2- and 10-year notes 2024-10, corn, wheat and sugar 2026-01/02 (`docs/decisions.md`, "Stage 2's history is by series") | Dukascopy's CFDs for Brent, the 30-year bond, soybeans and platinum, less the roll windows where no switch stood out; Yahoo's continuous series for the 2- and 10-year notes (2024-10); the contract held now for corn, wheat and sugar (2026-01/02); then the listed contract (`tools/futures_history.py`, deleted once done) |
 | 16 stock indices abroad | 2024-10; the CSI 300, BIST 100, TSX and IPC 2026-08 | Yahoo's hourly bars where they agree with its folded 30-minute ones, then those (section 4) |
 | LME tin, nickel, aluminium, copper | 2026-04-22 (copper 04-23) | Wallstreetcn to Sina's first bar (2026-07-08 tin, 07-15 nickel and aluminium, 07-22 copper), less its openings off the market (section 4: 11 of tin's and aluminium's); then Sina |
 

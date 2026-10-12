@@ -136,7 +136,8 @@ bars stay on disk.
   platinum (0.97-0.98); Sina's Brent (0.94) and spot platinum (0.93). Under 0.90 and left
   out: Wallstreetcn's grains and Brent, Sina's grains, the FT's Treasuries.
 - **History** (the user's: Dukascopy where it reaches further): Dukascopy's CFDs for
-  Brent, the 30-year bond, soybeans and platinum, their switches located; Yahoo's
+  Brent (from 2011-01), the 30-year bond (2019-01), soybeans (2018-03) and platinum
+  (2021-11), their switches located and the windows where none stood out dropped; Yahoo's
   continuous series to 2024-10 for the 2- and 10-year notes, its switches looked for
   within a business day of each roll; the contract held now, from 2026-01/02, for corn,
   wheat and sugar - Yahoo's continuous series prints the other month for hours around

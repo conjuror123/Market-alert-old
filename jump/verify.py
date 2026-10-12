@@ -611,6 +611,34 @@ def judge_all(c: dict, asked: "list[tuple[str, pd.DataFrame | None]]"
     return result, stored, names, moves, seen
 
 
+def judge_found(asset: Asset, frame: pd.DataFrame, found: "list[dict]",
+                sources: "list[Source]", asked: "list[tuple[str, pd.DataFrame | None]]",
+                now_ts: int) -> "list[tuple[dict, tuple]]":
+    """One instrument's candidates put to its sources, as the pass judges them: `asked`
+    is each source's bars in `sources`' order, or None for one that was down. Returns
+    each candidate with judge_all's answer; one that cannot be judged is left out,
+    logged. tools/measure.py votes through it too."""
+    rolls = {src.name for src in sources if src.own_rolls}
+    changed = {name: switches(frame, v, asset.session_template)
+               for name, v in asked if name in rolls and v is not None}
+    out = []
+    for c in found:
+        try:
+            # A source across its own change of contract has nothing to
+            # say about the move: an outage for it. One that cannot serve
+            # the move whole yet is no voter on it this time.
+            usable = [(src.name, None if v is None or crosses(c, changed.get(src.name, []))
+                       else v)
+                      for src, (_, v) in zip(sources, asked)
+                      if src.serves(c, now_ts) and not supplied(src.name, asset, c)]
+            out.append((c, judge_all(c, usable)))
+        except Exception as exc:
+            # One instrument's surprise costs that reading, not the pass.
+            log.warning("verify: %s %s could not be judged - %s", asset.ticker,
+                        c["hour"], exc)
+    return out
+
+
 def overnight_move(c: dict, asked: "list[tuple[str, pd.DataFrame | None]]"
                    ) -> "tuple[list, list] | None":
     """A session's first hour most feeds did not see move - but did most see
@@ -814,24 +842,8 @@ def verify(instruments, bars_dir: str, table, session=None, now: "datetime | Non
                         blocked.add(name)
                 else:
                     unanswered.pop(name, None)              # it answered
-        rolls = {src.name for src in sources if src.own_rolls}
-        changed = {name: switches(frame, v, asset.session_template)
-                   for name, v in asked if name in rolls and v is not None}
-        for c in found:
-            try:
-                # A source across its own change of contract has nothing to
-                # say about the move: an outage for it. One that cannot serve
-                # the move whole yet is no voter on it this time.
-                usable = [(src.name, None if v is None or crosses(c, changed.get(src.name, []))
-                           else v)
-                          for src, (_, v) in zip(sources, asked)
-                          if src.serves(c, now_ts) and not supplied(src.name, asset, c)]
-                verdict, stored, names, moves, seen = judge_all(c, usable)
-            except Exception as exc:
-                # One instrument's surprise costs that reading, not the pass.
-                log.warning("verify: %s %s could not be judged - %s", asset.ticker,
-                            c["hour"], exc)
-                continue
+        for c, (verdict, stored, names, moves, seen) in judge_found(
+                asset, frame, found, sources, asked, now_ts):
             counts[verdict] += 1
             record[(asset.asset_id, c["hour"], c["check"])] = _row(
                 asset, c, verdict, stored, names, moves, seen, now_ts)

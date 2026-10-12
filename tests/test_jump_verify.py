@@ -104,6 +104,18 @@ def test_every_instrument_is_asked_of_every_source_of_its_class_but_its_own(bask
         "^KS11", "^TWII", "^J200.JO"}
 
 
+def test_gold_and_silver_keep_the_pairs_week_but_not_their_voters(basket):
+    # Served by SiftingIO like the pairs, on the pairs' week; asked of
+    # Wallstreetcn and Sina's London metals, not of Yahoo or MarketWatch, which
+    # carry no spot metal.
+    from dataclasses import replace
+    pair = basket["EUR/USD"]
+    gold, silver = (replace(pair, ticker=t) for t in ("XAU/USD", "XAG/USD"))
+    assert _asked(gold) == [("wallstreetcn", "XAUUSD.OTC", "1h"), ("sina", "XAU", "1h")]
+    assert _asked(silver) == [("wallstreetcn", "XAGUSD.OTC", "1h"), ("sina", "XAG", "1h")]
+    assert verify.recount_days(gold) == 60
+
+
 def test_alpacas_tape_votes_on_every_fund_with_its_keys_and_is_no_voter_without(
         monkeypatch, basket):
     # Its consolidated tape is every exchange's trades: another source than

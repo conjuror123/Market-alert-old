@@ -33,7 +33,8 @@ cattle: MarketWatch's continuous contract, and the FT's bars of the contract
 the store holds. The coins, served by Binance, whose prices are its own
 trades: Coinbase's and Kraken's dollar pairs - a wick on one exchange is real
 there and not the market's. The LME's metals, served by Sina: Wallstreetcn's
-hourly bars. Two vendors printing the same bars agree: each is a voice.
+hourly bars. Spot gold and silver, served by SiftingIO: Wallstreetcn's and
+Sina's. Two vendors printing the same bars agree: each is a voice.
 
 THE VOTE (judge_all, combine) is taken with what the sources serve when it is
 taken: a source that has not shown the move yet counts against, until the
@@ -148,6 +149,8 @@ MARKETWATCH_FUND_EXCHANGE = dict.fromkeys(("SHY", "IEF", "TLT", "EMB"), "XNAS")
 # missing. Live cattle is there too (LE), but as quotes without volume whose
 # hours correlate 0.80 with the store's: not used.
 SINA_FUTURES = {"KC=F": "KC", "CC=F": "CC", "CT=F": "CT"}
+# London's spot gold and silver, from the same global service.
+SINA_METALS = {"XAU/USD": "XAU", "XAG/USD": "XAG"}
 
 # Sina's softs are continuous series that change contract on their own days,
 # not this series' (jump.futures): for those sessions the two feeds hold
@@ -270,10 +273,22 @@ SOURCES: "dict[str, tuple[Source, ...]]" = {
         Source("coinbase", "Coinbase", 365, "1h", _exchange("coinbase")),
         Source("kraken", "Kraken", 29, "1h", _exchange("kraken")),
     ),
+    # Spot gold and silver: against SiftingIO's bars over 964 hours to 2026-10-12,
+    # Wallstreetcn moved at 0.9975 and 0.9969, Sina's London metals at 0.9977
+    # and 0.9970 - in part one upstream (73% of gold's closes the same, 7% of
+    # silver's). Sina's 1,023 bars reached 62 days, counted as 60. Yahoo has
+    # no spot metals (404); its futures roll, MarketWatch refuses the pair (400).
+    "metals": (
+        Source("wallstreetcn", "Wallstreetcn", 170, "1h",
+               lambda a: wallstreetcn.pair_code(a.ticker)),
+        Source("sina", "Sina", 60, "1h", lambda a: SINA_METALS.get(a.ticker)),
+    ),
 }
 _CLASS = {"fx_continuous": "fx",
           "ice_coffee": "softs", "ice_cocoa": "softs", "ice_cotton": "softs",
           **{name: "indices" for name in sessions.EXCHANGES}}
+# Ahead of the template: gold and silver keep the pairs' week, not their voters.
+_TICKER_CLASS = {"XAU/USD": "metals", "XAG/USD": "metals"}
 # What the channel calls each provider: the sources, and the stores' own.
 LABELS = {**{s.name: s.label for group in SOURCES.values() for s in group},
           "binance": "Binance", "sifting": "SiftingIO", "tiingo": "Tiingo",
@@ -343,7 +358,9 @@ def recount_hours(asset: Asset, record: dict, now: int) -> "list[int]":
 def sources_for(asset: Asset) -> "list[Source]":
     """Every source of the instrument's class that carries it, except its own
     provider."""
-    group = SOURCES.get(_CLASS.get(asset.session_template, asset.session_template), ())
+    kind = _TICKER_CLASS.get(asset.ticker) or _CLASS.get(asset.session_template,
+                                                         asset.session_template)
+    group = SOURCES.get(kind, ())
     return [s for s in group if s.name != asset.fetched_from and s.symbol(asset)
             and all(os.environ.get(k, "").strip() for k in s.keys)]
 

@@ -229,6 +229,7 @@ the channel gives it; a source added there is asked from the next run.
 | class | asked of |
 |---|---|
 | currency pairs (7, SiftingIO) | Yahoo hourly FX (729 days back), MarketWatch (`price_monitor/marketwatch.py`, 9 days back, every hour) and Wallstreetcn (`price_monitor/wallstreetcn.py`, 170 days back) |
+| spot gold and silver (SiftingIO, `verify._TICKER_CLASS`) | Wallstreetcn (`XAUUSD.OTC`, 170 days back) and Sina's London metals (`verify.SINA_METALS`, its last 1,023 bars, counted as 60 days): the pairs' week, not their voters, as Yahoo and MarketWatch carry no spot metal |
 | funds (23) | Yahoo 30-minute bars folded to the hour (59 days back), Sina 30-minute US bars (77 days back), MarketWatch hourly (`FUND/US/<exchange>/<ticker>`, 9 days back) - two of these for a fund Yahoo or Sina serves, all three for the rest - and Alpaca's consolidated tape (`Alpaca_SIP`, from 2016, fifteen minutes behind), for every fund |
 | coffee, cocoa, cotton (Yahoo) | Sina global futures, hourly (79 days back: coffee and cocoa from 2026-05-12, cotton from 07-20); for cocoa and cotton also Wallstreetcn (170 days back), for coffee the FT's continuous series (`price_monitor/ft.py`, 24 trading days back), each changing contract on its own days too |
 | live cattle (Yahoo) | MarketWatch continuous contract, hourly (9 days back), and the FT's bars of the contract the store holds (24 trading days back) |

@@ -8,25 +8,28 @@ jump.jumps.run, a push by routing.PUSH_TIERS, a vote by jump.verify (candidates,
 judge_found, as the live pass votes). Nothing is written to the store, the record or the
 metrics the bot keeps, and nothing is kept between runs.
 
-THE VOTES ARE TAKEN AGAIN, by this code, from every voter's bars as tools/voter_bars.py
-fetched them (`--voters`): every far move of the last 365 days put to its sources. A
-source reaches back only so far (MarketWatch 9 days, the FT 30, Wallstreetcn 170, Alpaca's
-tape years), and a source with no bar at a move is an outage, so the older a move, the
-fewer its voters: the votes are counted by age, with the sources that reach each age.
+THE VOTES ARE TAKEN AGAIN, by this code, as the live pass would take them now: each
+instrument's far moves inside its recount window (verify.recount_days: 9 days for the funds
+and pairs, 29 for the coins, 79 for the LME; past it the bot never votes again), put to
+its sources on their bars as tools/voter_bars.py --recount fetched them (`--voters`), and
+voted again with the record so far until it settles, as the bot's record does over its
+runs. Nothing older is voted: the bot votes a move only while its sources still serve it.
 
-TWO READINGS. "The detector alone": every reading, no vote. "With the votes": the votes
-taken here applied as the live run applies its record (a move voted not real left out, a
-first hour voted overnight moved into its night) - over the voted year only, as no vote
-exists before it.
+TWO READINGS. "The detector alone": every reading, no vote - the two years and the archive.
+"With the votes": the votes taken here applied as the live run applies its record (a move
+voted not real left out, a first hour voted overnight moved into its night). The votes
+change only the readings inside their windows, so that is where the two are compared.
 
 WINDOWS. The year to the measurement (the voters' fetch, or now without them) and the year
 before it; the archive by calendar year. An event belongs to the window its first reading
 was found in (`event_start`).
 
 SELF-CHECKS. The counts are cross-added - blocks to the basket, instruments to their block,
-words to the total, years to the archive, ages and verdicts to the votes, each source's
-answers to its asks - and every instrument must have scored. A check that fails makes the
-command fail, so no wrong page is published.
+words to the total, years to the archive, windows and verdicts to the votes, each source's
+answers to its asks, the instruments to the votes' effect - every vote must lie inside its
+instrument's window, the votes must change nothing outside the windows, and every
+instrument must have scored. A check that fails makes the command fail, so no wrong page
+is published.
 """
 from __future__ import annotations
 
@@ -49,9 +52,9 @@ from tools.stage_report import BIGGEST_SHARE
 log = logging.getLogger("tools.measure")
 
 DAY = 86400
-VOTE_DAYS = 365
-# The ages a vote is counted by, in days: where the sources' reaches end.
-AGE_EDGES = (0, 9, 30, 60, 170, 365)
+# A store whose newest bar is this much older than the measurement is named on the page:
+# its newest hours were not in what this run had (a market holiday does it too).
+BEHIND_DAYS = 4
 
 
 def windows(end: int) -> "list[dict]":
@@ -181,10 +184,11 @@ def read_fetch(voters_dir: str) -> dict:
     """tools/voter_bars.py's first line (when it fetched, how far back) and its failures."""
     with open(os.path.join(voters_dir, "failed.txt"), encoding="utf-8") as f:
         lines = [line.rstrip("\n") for line in f]
-    words = lines[0].split()            # fetched YYYY-MM-DD HH:MM UTC, N days
+    head, _, span = lines[0].partition(", ")   # fetched YYYY-MM-DD HH:MM UTC, <how far>
+    words = head.split()
     at = datetime.strptime(f"{words[1]} {words[2]}", "%Y-%m-%d %H:%M").replace(
         tzinfo=timezone.utc)
-    return {"at": int(at.timestamp()), "days": float(words[4]),
+    return {"at": int(at.timestamp()), "span": span,
             "failed": [line for line in lines[1:] if line.strip()]}
 
 
@@ -193,8 +197,10 @@ def _z_of(asset, metrics_dir: str) -> "dict[tuple[int, str], float]":
     from jump import verify
 
     window, ladder = jumps.settings()
-    m = pd.read_parquet(os.path.join(metrics_dir, f"{asset.file_stem}.parquet"),
-                        columns=["hour_utc", "r", "gap"])
+    path = os.path.join(metrics_dir, f"{asset.file_stem}.parquet")
+    if not os.path.exists(path):        # its metrics failed: named by the checks
+        return {}
+    m = pd.read_parquet(path, columns=["hour_utc", "r", "gap"])
     parts = [jumps.score(m, asset.session_template, window, ladder),
              jumps.score_gaps(m, window, ladder, asset.session_template)]
     s = pd.concat([p for p in parts if not p.empty], ignore_index=True)
@@ -202,43 +208,66 @@ def _z_of(asset, metrics_dir: str) -> "dict[tuple[int, str], float]":
             for h, k, z in zip(s["hour_utc"], s["reading"], s["z"])}
 
 
-def take_votes(basket, bars_dir: str, metrics_dir: str, voters_dir: str, now: int,
-               days: float = VOTE_DAYS) -> "tuple[list[dict], dict]":
-    """Every far move of the last `days` before `now`, voted by this code on the voters'
-    saved bars, as the live pass votes (verify.candidates, verify.judge_found). Returns
-    one row per vote and the record they make, in the bot's own format."""
+def vote_windows(basket) -> "dict[str, float]":
+    """Each voted instrument's recount window in days (verify.recount_days): how long
+    the live pass votes a move, while the closest-reaching of its sources serves it."""
+    from jump import verify
+
+    return {a.ticker: float(verify.recount_days(a)) for a in basket.instruments
+            if verify.sources_for(a)}
+
+
+def take_votes(basket, bars_dir: str, metrics_dir: str, voters_dir: str,
+               now: int) -> "tuple[list[dict], dict]":
+    """The votes the live pass would hold now: each instrument's far moves inside its
+    recount window, voted by this code on the voters' saved bars (verify.candidates,
+    verify.judge_found), then voted again with that record - a move voted not real leaves
+    the yardstick, and one far only without it is a candidate too - until the verdicts
+    settle, as they do over the bot's runs. Returns one row per vote and the record they
+    make, in the bot's own format."""
     from jump import bars, corporate_actions, sessions, verify
 
     settings = jumps.settings()
     table = sessions.load_sessions()
     dividends = corporate_actions.load_dividends()
-    since = now - int(days * DAY)
     rows, record = [], {}
     for asset in basket.instruments:
         sources = verify.sources_for(asset)
         if not sources:
             continue
+        days = float(verify.recount_days(asset))
+        since = now - int(days * DAY)
         frame = bars.load(bars.store_path(bars_dir, asset.file_stem),
                           since - verify.tail_days(settings[0]) * DAY)
         if frame.empty:
-            continue
-        found = verify.candidates(asset, frame, table, now, since, basket, dividends,
-                                  settings, None)
-        if not found:
             continue
         asked = []
         for src in sources:
             path = os.path.join(voters_dir, src.name, f"{asset.file_stem}.parquet")
             asked.append((src.name, verify._priced(pd.read_parquet(path))
                           if os.path.exists(path) else None))
+        mine: "dict[tuple, dict]" = {}
+        judged: list = []
+        for _ in range(4):
+            found = verify.candidates(asset, frame, table, now, since, basket, dividends,
+                                      settings, mine)
+            judged = verify.judge_found(asset, frame, found, sources, asked, now)
+            again = {(asset.asset_id, c["hour"], c["check"]): verify._row(
+                         asset, c, verdict, stored, names, moves, seen, now)
+                     for c, (verdict, stored, names, moves, seen) in judged}
+            settled = ({k: r["verdict"] for k, r in again.items()}
+                       == {k: r["verdict"] for k, r in mine.items()})
+            mine = again
+            if settled or not any(r["verdict"] in verify.KEPT for r in again.values()):
+                break
+        record.update(mine)
+        if not judged:
+            continue
         z = _z_of(asset, metrics_dir)
-        for c, (verdict, stored, names, moves, seen) in verify.judge_found(
-                asset, frame, found, sources, asked, now):
-            record[(asset.asset_id, c["hour"], c["check"])] = verify._row(
-                asset, c, verdict, stored, names, moves, seen, now)
+        for c, (verdict, stored, names, moves, seen) in judged:
             rows.append({"ticker": asset.ticker, "block": asset.block, "hour": int(c["hour"]),
                          "check": c["check"], "z": z.get((int(c["hour"]), c["check"])),
-                         "stored": float(stored), "verdict": verdict,
+                         "stored": float(stored), "verdict": verdict, "window_days": days,
                          "age_days": round((now - int(c["hour"])) / DAY, 2),
                          "answers": [{"source": n, "move": None if m is None else float(m),
                                       "saw": n in seen} for n, m in zip(names, moves)]})
@@ -261,21 +290,22 @@ def write_record(record: dict, path: str) -> None:
 VERDICTS = ("real", "uncertain", "not_real", "overnight")
 
 
-def vote_tables(votes: "list[dict]", bottom: float) -> dict:
-    """The votes counted: by verdict (all, and those far enough to be flagged), by age,
-    by source, by block."""
+def vote_tables(votes: "list[dict]", bottom: float, windows_of: "dict[str, float]") -> dict:
+    """The votes counted: by verdict (all, and those far enough to be flagged), by
+    recount window, by source, by block."""
     def count(rows):
         return {v: sum(r["verdict"] == v for r in rows) for v in VERDICTS}
 
     flagged = [r for r in votes if r["z"] is not None and abs(r["z"]) >= bottom]
-    ages = []
-    for lo, hi in zip(AGE_EDGES, AGE_EDGES[1:]):
-        mine = [r for r in votes if lo <= r["age_days"] < hi]
+    by_window = []
+    for days in sorted(set(windows_of.values())):
+        mine = [r for r in votes if windows_of.get(r["ticker"]) == days]
         answered = [sum(a["move"] is not None for a in r["answers"]) for r in mine]
-        reach = sorted({a["source"] for r in mine for a in r["answers"] if a["move"] is not None})
-        ages.append({"from_days": lo, "to_days": hi, "votes": len(mine), **count(mine),
-                     "answers_a_vote": round(float(np.mean(answered)), 2) if answered else None,
-                     "sources_answering": reach})
+        by_window.append({"days": days,
+                          "instruments": sorted(t for t, d in windows_of.items() if d == days),
+                          "votes": len(mine), **count(mine),
+                          "answers_a_vote": round(float(np.mean(answered)), 2) if answered
+                          else None})
     sources: "dict[str, dict]" = {}
     for r in votes:
         for a in r["answers"]:
@@ -292,7 +322,61 @@ def vote_tables(votes: "list[dict]", bottom: float) -> dict:
         blocks[b] = count([r for r in votes if r["block"] == b])
     return {"votes": len(votes), "by_verdict": count(votes),
             "flagged": len(flagged), "flagged_by_verdict": count(flagged),
-            "by_age": ages, "by_source": sources, "by_block": blocks}
+            "by_window": by_window, "by_source": sources, "by_block": blocks}
+
+
+def _in_windows(events: pd.DataFrame, windows_of: "dict[str, float]", end: int) -> pd.Series:
+    """Whether each event began inside its instrument's recount window, or in the day
+    before it - an event runs 24 hours from its first reading, so one begun then can hold
+    a voted reading - and before `end`. The yardstick looks back only (jumps), so a vote
+    changes no reading before its own hour."""
+    start = end - (events["ticker"].map(windows_of).astype("float64") + 1) * DAY
+    return (events["event_start"] >= start) & (events["event_start"] < end)
+
+
+def effect(detector: pd.DataFrame, voted: pd.DataFrame, windows_of: "dict[str, float]",
+           end: int) -> dict:
+    """What the votes change: each voted instrument's pushes and note rows inside its
+    recount window (_in_windows), the detector alone and with the votes; and both
+    readings' events outside the windows, which the votes must leave as they are."""
+    def counts(events):
+        return {"pushes": int(events["push"].sum()), "rows": int((~events["push"]).sum())}
+
+    d_in, v_in = _in_windows(detector, windows_of, end), _in_windows(voted, windows_of, end)
+    per = {}
+    for ticker, days in sorted(windows_of.items()):
+        per[ticker] = {"window_days": days,
+                       "detector": counts(detector[d_in & (detector["ticker"] == ticker)]),
+                       "voted": counts(voted[v_in & (voted["ticker"] == ticker)])}
+    return {"detector": counts(detector[d_in]), "voted": counts(voted[v_in]),
+            "by_instrument": per,
+            "outside": {"detector": counts(detector[~d_in & (detector["event_start"] < end)]),
+                        "voted": counts(voted[~v_in & (voted["event_start"] < end)])}}
+
+
+def behind(cover: "list[dict]", end: int) -> "list[dict]":
+    """The instruments whose newest stored bar is BEHIND_DAYS or more before the
+    measurement: their newest hours were not in the store this run had."""
+    return [{"ticker": c["ticker"], "provider": c["provider"], "last": c["last"]}
+            for c in cover if c["last"] is None or c["last"] < end - BEHIND_DAYS * DAY]
+
+
+def not_carried(basket=None, bars_dir: "str | None" = None) -> "list[str]":
+    """The instruments the live run's open months do not carry (no open month in the
+    store) whose own provider needs no key: the workflow brings them up to now with the
+    bot's own fetch. Tiingo's, SiftingIO's and Twelve Data's quotas belong to the live
+    run, so those are left behind and named on the page."""
+    from jump import backfill, bars
+
+    basket = basket or load_basket()
+    bars_dir = bars_dir or bars.DEFAULT_BARS_DIR
+    out = []
+    for asset in basket.instruments:
+        store = bars.store_path(bars_dir, asset.file_stem)
+        opened = os.path.isdir(store) and any(n.endswith(".open.csv") for n in os.listdir(store))
+        if not opened and asset.fetched_from not in backfill.PROVIDER_KEYS:
+            out.append(asset.ticker)
+    return out
 
 
 # --- the checks -------------------------------------------------------------------
@@ -307,29 +391,31 @@ def checks(result: dict) -> "list[dict]":
     missing = [c["ticker"] for c in result["coverage"] if c["first"] is None]
     check("every instrument scored", not missing and not result["meta"]["failures"],
           f"no metrics: {missing}; failures: {result['meta']['failures']}")
-    for reading, wins in (("detector", result["windows"]),
-                          ("voted", result["windows"][:1] if result.get("votes") else [])):
-        for w in wins:
-            total = result["volume"][reading][w["name"]]
-            blocks = result["by_block"][reading][w["name"]]
-            tickers = result["by_instrument"][reading][w["name"]]
-            for kind in ("pushes", "rows"):
-                b = sum(x[kind] for x in blocks.values())
-                t = sum(x[kind] for x in tickers.values())
-                check(f"{reading}, {w['name']}: {kind} of the blocks and instruments add up",
-                      b == total[kind] == t, f"total {total[kind]}, blocks {b}, instruments {t}")
-            words = sum(total["by_word"].values())
-            check(f"{reading}, {w['name']}: the words add up",
-                  words == total["pushes"] + total["rows"],
-                  f"words {words}, events {total['pushes'] + total['rows']}")
+    for w in result["windows"]:
+        total = result["volume"][w["name"]]
+        blocks = result["by_block"][w["name"]]
+        tickers = result["by_instrument"][w["name"]]
+        for kind in ("pushes", "rows"):
+            b = sum(x[kind] for x in blocks.values())
+            t = sum(x[kind] for x in tickers.values())
+            check(f"{w['name']}: {kind} of the blocks and instruments add up",
+                  b == total[kind] == t, f"total {total[kind]}, blocks {b}, instruments {t}")
+        words = sum(total["by_word"].values())
+        check(f"{w['name']}: the words add up", words == total["pushes"] + total["rows"],
+              f"words {words}, events {total['pushes'] + total['rows']}")
     years = sum(y["events"] for y in result["archive"])
     check("the archive's years add up", years == result["events"],
           f"years {years}, events {result['events']}")
     votes = result.get("votes")
     if votes:
         t = votes["tables"]
-        ages = sum(a["votes"] for a in t["by_age"])
-        check("the votes' ages add up", ages == t["votes"], f"ages {ages}, votes {t['votes']}")
+        wins = sum(w["votes"] for w in t["by_window"])
+        check("the votes' windows add up", wins == t["votes"],
+              f"windows {wins}, votes {t['votes']}")
+        late = [f"{r['ticker']} {r['age_days']}d" for r in votes["list"]
+                if r["age_days"] > r["window_days"]]
+        check("every vote lies inside its instrument's recount window", not late,
+              f"outside: {late[:10]}")
         verdicts = sum(t["by_verdict"].values())
         check("the votes' verdicts add up", verdicts == t["votes"],
               f"verdicts {verdicts}, votes {t['votes']}")
@@ -338,6 +424,15 @@ def checks(result: dict) -> "list[dict]":
         check("each source's answers add up to its asks", not bad, f"not adding up: {bad}")
         listed = len(votes["list"])
         check("every vote is listed", listed == t["votes"], f"listed {listed}, votes {t['votes']}")
+        e = votes["effect"]
+        for reading in ("detector", "voted"):
+            for kind in ("pushes", "rows"):
+                per = sum(x[reading][kind] for x in e["by_instrument"].values())
+                check(f"the votes' effect, {reading}: {kind} of the instruments add up",
+                      per == e[reading][kind], f"total {e[reading][kind]}, instruments {per}")
+        check("the votes change nothing outside their windows",
+              e["outside"]["detector"] == e["outside"]["voted"],
+              f"detector {e['outside']['detector']}, with the votes {e['outside']['voted']}")
     return out
 
 
@@ -364,15 +459,16 @@ def measure(bars_dir: str, voters_dir: "str | None", work_dir: str) -> dict:
     no_record = os.path.join(work_dir, "no-record.csv")             # never written
     detector = event_table(jumps.run(metrics_dir, now=end, verified_path=no_record,
                                      failures=failures))
-    events = {"detector": detector}
     votes = None
     if fetch:
         rows, record = take_votes(basket, bars_dir, metrics_dir, voters_dir, end)
         path = os.path.join(work_dir, "votes.csv")
         write_record(record, path)
-        events["voted"] = event_table(jumps.run(metrics_dir, now=end, verified_path=path))
-        votes = {"fetched": fetch, "days": VOTE_DAYS, "list": rows,
-                 "tables": vote_tables(rows, levels[0])}
+        voted = event_table(jumps.run(metrics_dir, now=end, verified_path=path))
+        windows_of = vote_windows(basket)
+        votes = {"fetched": fetch, "list": rows,
+                 "tables": vote_tables(rows, levels[0], windows_of),
+                 "effect": effect(detector, voted, windows_of, end)}
     cover = coverage(basket, metrics_dir)
     result = {
         "meta": {"commit": os.environ.get("GITHUB_SHA") or _git("rev-parse", "HEAD"),
@@ -384,23 +480,18 @@ def measure(bars_dir: str, voters_dir: "str | None", work_dir: str) -> dict:
                  "push_words": list(routing.PUSH_TIERS),
                  "last_bar": max((c["last"] for c in cover if c["last"] is not None),
                                  default=None),
+                 "behind": behind(cover, end),
                  "failures": [f"{a}: {e}" for a, e in failures]},
         "windows": wins,
         "events": int(len(detector[detector["event_start"] < end])),
-        "volume": {"detector": {w["name"]: volume(detector, w) for w in wins}},
-        "by_block": {"detector": {w["name"]: split(detector, w, "block") for w in wins}},
-        "by_instrument": {"detector": {w["name"]: split(detector, w, "ticker") for w in wins}},
+        "volume": {w["name"]: volume(detector, w) for w in wins},
+        "by_block": {w["name"]: split(detector, w, "block") for w in wins},
+        "by_instrument": {w["name"]: split(detector, w, "ticker") for w in wins},
         "coverage": cover,
         "archive": archive(detector[detector["event_start"] < end], cover, end),
         "biggest_hours": biggest_hours(basket, metrics_dir, end),
         "votes": votes,
     }
-    if votes:
-        first = wins[0]
-        voted = events["voted"]
-        result["volume"]["voted"] = {first["name"]: volume(voted, first)}
-        result["by_block"]["voted"] = {first["name"]: split(voted, first, "block")}
-        result["by_instrument"]["voted"] = {first["name"]: split(voted, first, "ticker")}
     result["checks"] = checks(result)
     return result
 

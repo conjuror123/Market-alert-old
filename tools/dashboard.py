@@ -126,17 +126,16 @@ footer{margin-top:48px;color:var(--muted);font-size:.82rem;max-width:90ch}
   <p class="meta" id="meta"></p>
   <p class="meta" id="meta2"></p>
   <p class="meta" id="checks"></p>
+  <p class="meta" id="behind"></p>
   <div class="tiles" id="tiles"></div>
 </header>
 
 <section id="volume">
-  <h2>Volume</h2>
+  <h2>Volume, the detector alone</h2>
   <p class="note">An event is an instrument's flags inside 24 hours from its first, worded by
   its rarest; it counts in the window its first reading was found in. A push rings at once;
-  a note row goes into the weekly note. <b>Detector alone</b>: every reading, no vote.
-  <b>With the votes</b>: the votes this code takes (below) applied as the live run applies
-  its record - a move voted not real left out, a first hour voted overnight moved into its
-  night. Votes exist only in the voted year.</p>
+  a note row goes into the weekly note. Every reading counts here: no vote. What the votes
+  change is below, inside the windows the bot votes in.</p>
   <div class="tablebox"><table id="t-volume"></table></div>
 </section>
 
@@ -144,12 +143,14 @@ footer{margin-top:48px;color:var(--muted);font-size:.82rem;max-width:90ch}
   <h2>The votes, taken again by this code</h2>
   <p class="note" id="votes-note"></p>
   <div class="tiles" id="vote-tiles"></div>
-  <h3>By age: the older a move, the fewer sources still serve its hours</h3>
-  <div class="tablebox"><table id="t-age"></table></div>
+  <h3>By window</h3>
+  <div class="tablebox"><table id="t-window"></table></div>
   <div class="grid2">
     <div><h3>By source</h3><div class="tablebox"><table id="t-source"></table></div></div>
     <div><h3>By block</h3><div class="tablebox"><table id="t-vblock"></table></div></div>
   </div>
+  <h3>What the votes change, by instrument</h3>
+  <div class="tablebox"><table id="t-effect"></table></div>
   <h3>Every vote</h3>
   <div class="ctl">
     <label for="vq">Instrument</label><input id="vq" type="search" placeholder="filter">
@@ -163,10 +164,8 @@ footer{margin-top:48px;color:var(--muted);font-size:.82rem;max-width:90ch}
 </section>
 
 <section id="split">
-  <h2>By block and by instrument</h2>
+  <h2>By block and by instrument, the detector alone</h2>
   <div class="ctl">
-    <label for="reading">Reading</label>
-    <select id="reading"><option value="detector">detector alone</option></select>
     <label for="search">Instrument</label>
     <input id="search" type="search" placeholder="filter">
     <select id="block" aria-label="Block"><option value="">all blocks</option></select>
@@ -253,6 +252,10 @@ $("meta2").innerHTML = `<b>${meta.instruments}</b> instruments · levels <b>${me
   · pushed: ${esc(meta.push_words.join(", "))} · half-year window ${meta.window_days} days
   · measured to ${hour(meta.end)} UTC · newest bar ${hour(meta.last_bar)}`;
 const failed = M.checks.filter(c => !c.ok);
+const behind = meta.behind || [];
+$("behind").innerHTML = behind.length ? `<span class="status warn">⚠ ${behind.length} instrument(s)
+  with no bar in the 4 days to the measurement - their newest hours were not in the store this
+  run had (a market holiday does this too):</span> ${behind.map(b => `${esc(b.ticker)} (${esc(b.provider)}, last ${hour(b.last)})`).join(", ")}` : "";
 const partial = V && V.fetched.failed.length;
 $("checks").innerHTML = (failed.length
   ? `<span class="status bad">✕ ${failed.length} of ${M.checks.length} checks failed</span>`
@@ -261,19 +264,17 @@ $("checks").innerHTML = (failed.length
        : ` · <span class="status warn">⚠ no voters' bars: no votes this run</span>`);
 
 // tiles
-const vd = M.volume.detector, vv = M.volume.voted;
+const vd = M.volume, y0 = vd[W[0]], y1 = vd[W[1]];
 const tiles = [
-  ["Pushes a week", fmt((vv || vd)[W[0]].pushes_a_week,2),
-   vv ? `${W[0]}, with the votes · detector alone ${fmt(vd[W[0]].pushes_a_week,2)}` : `${W[0]}, detector alone`],
-  ["Note rows a week", fmt((vv || vd)[W[0]].rows_a_week,2),
-   vv ? `with the votes · detector alone ${fmt(vd[W[0]].rows_a_week,2)}` : "detector alone"],
-  ["Busiest week's pushes", fmt((vv || vd)[W[0]].busiest_week.pushes),
-   `week to ${(vv || vd)[W[0]].busiest_week.week_to}${vv ? ", with the votes" : ""}`],
-  ["The year before", fmt(vd[W[1]].pushes_a_week,2),
-   `pushes a week, detector alone · ${fmt(vd[W[1]].rows_a_week,2)} rows · busiest ${fmt(vd[W[1]].busiest_week.pushes)}`],
+  ["Pushes a week", fmt(y0.pushes_a_week,2), `${W[0]}, the detector alone`],
+  ["Note rows a week", fmt(y0.rows_a_week,2), "the detector alone"],
+  ["Busiest week's pushes", fmt(y0.busiest_week.pushes), `week to ${y0.busiest_week.week_to}`],
+  ["The year before", fmt(y1.pushes_a_week,2),
+   `pushes a week · ${fmt(y1.rows_a_week,2)} rows · busiest ${fmt(y1.busiest_week.pushes)}`],
 ];
-$("tiles").innerHTML = tiles.map(t => `<div class="panel tile"><div class="k">${t[0]}</div>
-  <div class="v">${t[1]}</div><div class="w">${t[2]}</div></div>`).join("");
+const tile = t => `<div class="panel tile"><div class="k">${t[0]}</div>
+  <div class="v">${t[1]}</div><div class="w">${t[2]}</div></div>`;
+$("tiles").innerHTML = tiles.map(tile).join("");
 
 // tooltip
 const tip = $("tip");
@@ -302,43 +303,53 @@ function table(el, cols, rows, caption){
 }
 
 // volume
-const vrows = [];
-const addVol = (reading, src, w) => { const v = src[w];
-  vrows.push({reading, window: w, pushes: v.pushes, rows: v.rows, pw: v.pushes_a_week,
-    rw: v.rows_a_week, busiest: v.busiest_week.pushes, bweek: v.busiest_week.week_to, ...v.by_word}); };
-if (vv) addVol("with the votes", vv, W[0]);
-W.forEach(w => addVol("detector alone", vd, w));
 table($("t-volume"),
-  [["reading","Reading"],["window","Window"],["pushes","Pushes",true,n0],["pw","a week",true,v => fmt(v,2)],
+  [["window","Window"],["pushes","Pushes",true,n0],["pw","a week",true,v => fmt(v,2)],
    ["rows","Note rows",true,n0],["rw","a week",true,v => fmt(v,2)],
    ["busiest","Busiest week",true,(v,r) => `${fmt(v)} <span style="color:var(--muted)">to ${r.bweek}</span>`],
-   ...WORDS.map(w => [w, w, true, n0])], vrows,
+   ...WORDS.map(w => [w, w, true, n0])],
+  W.map(w => { const v = vd[w]; return {window: w, pushes: v.pushes, rows: v.rows,
+    pw: v.pushes_a_week, rw: v.rows_a_week, busiest: v.busiest_week.pushes,
+    bweek: v.busiest_week.week_to, ...v.by_word}; }),
   "Pushes are the events worded " + esc(M.meta.push_words.join(", ")) + "; note rows the rest. Busiest week: Saturday to Friday, by when each event started.");
 
 // votes
+const days = d => fmt(d) + (d === 1 ? " day" : " days");
 if (V){
-  const T = V.tables;
-  $("votes-note").innerHTML = `Every move of the last ${V.days} days to ${hour(M.meta.end)} UTC at the
-    candidate line or more, put to its sources by this code exactly as the live pass votes, on the
-    sources' bars fetched ${hour(V.fetched.at)} UTC (${fmt(V.fetched.days)} days back, or a source's own
-    reach if shorter). A source with no bar - or no price - at either of the move's two bars is an
-    outage, left out; with nobody left the move is uncertain.` +
+  const T = V.tables, E = V.effect;
+  $("votes-note").innerHTML = `The votes the live pass would hold at ${hour(M.meta.end)} UTC: each
+    instrument's moves at the candidate line or more inside its recount window - as long as the
+    closest-reaching of its sources still serves the hour; past it the bot never votes again -
+    put to its sources by this code exactly as the live pass votes, on their bars fetched
+    ${hour(V.fetched.at)} UTC (${esc(V.fetched.span)}). A source with no bar - or no price - at either
+    of the move's two bars is an outage, left out; with nobody left the move is uncertain.
+    Voted again with its own record until the verdicts settle, as over the bot's runs.` +
     (V.fetched.failed.length ? `<br><span class="status warn">⚠ Not fetched: ${V.fetched.failed.map(esc).join("; ")}</span>` : "");
   $("vote-tiles").innerHTML = [["Votes", fmt(T.votes), `${fmt(T.flagged)} at the bottom level or more`],
-    ...VERDICTS.map(v => [VNAME[v], fmt(T.by_verdict[v]), `${fmt(T.flagged_by_verdict[v])} of the flagged`])]
-    .map(t => `<div class="panel tile"><div class="k">${t[0]}</div><div class="v">${t[1]}</div><div class="w">${t[2]}</div></div>`).join("");
-  table($("t-age"), [["age","Move's age"],["votes","Votes",true,n0],
-    ...VERDICTS.map(v => [v, VNAME[v], true, n0]),
+    ...VERDICTS.map(v => [VNAME[v], fmt(T.by_verdict[v]), `${fmt(T.flagged_by_verdict[v])} of the flagged`]),
+    ["Pushes inside the windows", `${fmt(E.detector.pushes)} → ${fmt(E.voted.pushes)}`, "the detector alone → with the votes"],
+    ["Note rows inside the windows", `${fmt(E.detector.rows)} → ${fmt(E.voted.rows)}`, "the detector alone → with the votes"]]
+    .map(tile).join("");
+  table($("t-window"), [["window","Recount window",true,days],["n","Instruments",true,n0],
+    ["votes","Votes",true,n0], ...VERDICTS.map(v => [v, VNAME[v], true, n0]),
     ["answers_a_vote","Sources answering a vote",true,v => fmt(v,2)],
-    ["sources","Sources that answered","",null,"long"]],
-    T.by_age.map(a => ({...a, age: `${a.from_days}–${a.to_days} days`, sources: a.sources_answering.join(", ")})),
-    "A source's answer is its own move over the move's two bars; an outage has no bar there.");
+    ["names","Instruments","",null,"long"]],
+    T.by_window.map(w => ({...w, window: w.days, n: w.instruments.length, names: w.instruments.join(", ")})),
+    "An instrument's window is the reach of the closest-reaching of its sources; a source's answer is its own move over the move's two bars.");
   table($("t-source"), [["source","Source"],["asked","Asked",true,n0],["saw","Saw it",true,n0],
     ["did_not","Did not",true,n0],["outage","Outage",true,n0]],
     Object.entries(T.by_source).map(([k,v]) => ({source:k, ...v})),
-    "Each source is asked about every move of its instruments, as in the bot; a move older than the source reaches back is an outage.");
+    "An outage: no bar, or no price, at either of the move's two bars.");
   table($("t-vblock"), [["block","Block"],...VERDICTS.map(v => [v, VNAME[v], true, n0])],
     Object.entries(T.by_block).map(([k,v]) => ({block:k, ...v})));
+  const erows = Object.entries(E.by_instrument).map(([k,v]) => ({ticker: k, window: v.window_days,
+    dp: v.detector.pushes, vp: v.voted.pushes, dr: v.detector.rows, vr: v.voted.rows,
+    change: (v.voted.pushes - v.detector.pushes) + (v.voted.rows - v.detector.rows)}));
+  table($("t-effect"), [["ticker","Instrument"],["window","Window",true,days],
+    ["dp","Pushes, detector",true,n0],["vp","with the votes",true,n0],
+    ["dr","Rows, detector",true,n0],["vr","with the votes",true,n0]],
+    erows.filter(r => r.change !== 0 || r.dp || r.dr),
+    `Inside each instrument's window, and the day before it (an event runs 24 hours). Outside the windows the votes change nothing: ${fmt(E.outside.detector.pushes)} pushes and ${fmt(E.outside.detector.rows)} rows either way. Instruments with no event in their window are left out.`);
   const vlist = () => {
     const q = $("vq").value.trim().toLowerCase(), ver = $("vv").value, fl = $("vf").value;
     const rows = V.list.slice().sort((a,b) => b.hour - a.hour).filter(r => (!q || r.ticker.toLowerCase().includes(q)) && (!ver || r.verdict === ver)
@@ -353,7 +364,6 @@ if (V){
   };
   ["vq","vv","vf"].forEach(id => $(id).addEventListener("input", vlist));
   vlist();
-  $("reading").innerHTML += `<option value="voted">with the votes (${esc(W[0])})</option>`;
 } else {
   $("votes").innerHTML = `<h2>The votes</h2><p class="note">No voters' bars this run: no votes were taken.</p>`;
 }
@@ -363,10 +373,10 @@ const cover = M.coverage;
 const blocks = [...new Set(cover.map(c => c.block))].sort();
 $("block").innerHTML += blocks.map(b => `<option>${esc(b)}</option>`).join("");
 function splits(){
-  const r = $("reading").value, q = $("search").value.trim().toLowerCase(), b = $("block").value;
-  const ws = Object.keys(M.by_block[r]);
+  const q = $("search").value.trim().toLowerCase(), b = $("block").value;
+  const ws = W;
   const brows = blocks.map(bl => { const row = {block: bl, members: cover.filter(c => c.block === bl).length};
-    ws.forEach((w,i) => { const x = M.by_block[r][w][bl] || {pushes:0, rows:0};
+    ws.forEach((w,i) => { const x = M.by_block[w][bl] || {pushes:0, rows:0};
       row["p"+i] = x.pushes; row["r"+i] = x.rows; }); return row; });
   table($("t-block"), [["block","Block"],["members","Instruments",true],
     ...ws.flatMap((w,i) => [["p"+i, "Pushes, "+w, true, n0], ["r"+i, "Rows, "+w, true, n0]])], brows);
@@ -374,14 +384,14 @@ function splits(){
       (!q || (c.ticker + " " + (c.display||"") + " " + c.label).toLowerCase().includes(q)))
     .map(c => { const row = {ticker: c.ticker, name: c.display || c.label, block: c.block,
       provider: c.provider, first: c.first};
-      ws.forEach((w,i) => { const x = M.by_instrument[r][w][c.ticker] || {pushes:0, rows:0};
+      ws.forEach((w,i) => { const x = M.by_instrument[w][c.ticker] || {pushes:0, rows:0};
         row["p"+i] = x.pushes; row["r"+i] = x.rows; }); return row; });
   table($("t-inst"), [["ticker","Instrument"],["name","Name"],["block","Block"],["provider","Feed"],
     ...ws.flatMap((w,i) => [["p"+i, "Pushes, "+w, true, n0], ["r"+i, "Rows, "+w, true, n0]]),
     ["first","History from",true,day]], irows,
     `${irows.length} of ${cover.length} instruments. An instrument whose history starts inside a window counts only the part it had.`);
 }
-["reading","search","block"].forEach(id => $(id).addEventListener("input", splits));
+["search","block"].forEach(id => $(id).addEventListener("input", splits));
 splits();
 
 // archive

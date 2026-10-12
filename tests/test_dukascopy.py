@@ -183,6 +183,15 @@ def test_volume_is_stored_as_zero_like_every_other_pair(monkeypatch):
     assert candles[0].volume == 0.0
 
 
+def test_a_futures_cfd_keeps_its_bid_ticks_for_the_thin_bar_rule(monkeypatch):
+    monkeypatch.setattr(dukascopy.time, "sleep", lambda *_: None)
+    session = _sides([(0, 120000, 120000, 120000, 120000, 42.0)],
+                     [(0, 120000, 120000, 120000, 120000, 40.0)])
+    candles = dukascopy.fetch_history("BRENTCMDUSD", date(2015, 1, 1), date(2015, 2, 1),
+                                      session, request_delay_seconds=0, tick_volume=True)
+    assert candles[0].volume == 42.0 and candles[0].close == 120.0      # thousandths
+
+
 def test_months_below_the_known_floor_are_not_asked_for(monkeypatch):
     # Two requests a month a pair, all of them 404s, for every month below the
     # first the symbol holds.

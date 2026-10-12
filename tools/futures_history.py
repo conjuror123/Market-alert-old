@@ -65,6 +65,10 @@ OWN_SHARE = 0.05
 # The splice's check: the archive against the contract held now over these last days.
 ALIGN_DAYS = 30
 CFD_MIN_HOURS = 60
+# Where a CFD's first months are not the market: the bond's 2018-Q1 holds 22
+# hourly moves past 2% (-19.6% and back on 02-27; a zero on 03-13) against 0-3 a
+# quarter after, and its 2018-Q3/Q4 no bars.
+CFD_FROM = {"ZB=F": date(2019, 1, 1)}
 # Dukascopy's archive answers 503 for minutes at a time: a month it gives up on is
 # asked again after MONTH_PAUSE seconds, MONTH_TRIES times; each month fetched is
 # kept in --cache, so a run that stops is resumed rather than repeated.
@@ -79,13 +83,13 @@ def _frame(candles) -> pd.DataFrame:
 def _cfd_month(symbol: str, start: date, session, cache: "str | None", today: date
                ) -> pd.DataFrame:
     stop = date(start.year + start.month // 12, start.month % 12 + 1, 1)
-    path = os.path.join(cache, f"{symbol}-{start:%Y-%m}.parquet") if cache else None
+    path = os.path.join(cache, f"{symbol}-{start:%Y-%m}-ticks.parquet") if cache else None
     if path and os.path.exists(path):
         return pd.read_parquet(path)
     for attempt in range(MONTH_TRIES):
         try:
             frame = _frame(dukascopy.fetch_history(symbol, start, min(stop, today + timedelta(days=1)),
-                                                   session))
+                                                   session, tick_volume=True))
             break
         except ExchangeError as exc:
             if attempt == MONTH_TRIES - 1:
@@ -103,7 +107,7 @@ def archive(ticker: str, today: date, session, cache: "str | None" = None
     """The archive's continuous record to today, and which archive it is."""
     symbol = dukascopy.CFDS.get(ticker)
     if symbol:
-        month = date(*dukascopy.first_month(symbol), 1)
+        month = CFD_FROM.get(ticker) or date(*dukascopy.first_month(symbol), 1)
         parts = []
         while month <= today:
             parts.append(_cfd_month(symbol, month, session, cache, today))

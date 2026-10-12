@@ -217,7 +217,8 @@ def _months(start: date, end: date) -> list[tuple[int, int]]:
 def fetch_history(symbol: str, start: date, end: date,
                   session: requests.Session | None = None,
                   base_url: str = BASE_URL,
-                  request_delay_seconds: float = REQUEST_DELAY_SECONDS) -> list[Candle]:
+                  request_delay_seconds: float = REQUEST_DELAY_SECONDS,
+                  tick_volume: bool = False) -> list[Candle]:
     """Every traded hourly bar between `start` and `end`, bid and ask folded
     to the mid.
 
@@ -264,8 +265,11 @@ def fetch_history(symbol: str, start: date, end: date,
                 open=(b[1] + a[1]) / 2.0, high=(b[2] + a[2]) / 2.0,
                 low=(b[3] + a[3]) / 2.0, close=(b[4] + a[4]) / 2.0,
                 # See the module docstring: their volume is a tick-count proxy,
-                # and the pairs already stored carry 0.0.
-                volume=0.0, close_time=stamp + HOUR_SECONDS))
+                # and the pairs already stored carry 0.0. A future's CFD keeps
+                # its bid ticks (`tick_volume`), scaled to contracts by its
+                # importer, so the thin-bar rule reads its history too.
+                volume=float(b[5]) if tick_volume else 0.0,
+                close_time=stamp + HOUR_SECONDS))
             kept += 1
         log.info("%s %d-%02d: %d traded hours kept (%d bid, %d ask rows)",
                  symbol, year, month, kept, len(bid), len(ask))

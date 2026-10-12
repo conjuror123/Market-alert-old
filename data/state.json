@@ -1,7 +1,7 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1791832087
+    "last_run_utc": 1791835673
   },
   "floor_pending_replies": [],
   "jump_delivery": {
@@ -22,7 +22,7 @@
           },
           "message": 100,
           "peak": "jump:binance:ATOM/USDT:hour:1791612000",
-          "seen": 1791832087,
+          "seen": 1791835673,
           "shown": [
             "noticeable",
             6.4,
@@ -55,7 +55,7 @@
           },
           "message": 99,
           "peak": "jump:binance:FIL/USDT:hour:1791597600",
-          "seen": 1791832087,
+          "seen": 1791835673,
           "shown": [
             "noticeable",
             6.9,
@@ -76,7 +76,7 @@
         },
         "twelvedata:USD/INR|1791766800": {
           "asset": "twelvedata:USD/INR",
-          "body": "\ud83d\udfe7 <b>USD/INR</b> \u00b7 Indian rupee -0.95% \u00b7 12.4\u00d7\u03c3\n\ud83d\udcc9 Rarest hour in 5 months (then 17.4\u00d7\u03c3)\n\ud83d\udd50 <b>12.10.2026 00:00 UTC</b> \u00b7 next close in 1h\n\u26a0\ufe0f SiftingIO(-0.94%), Yahoo(outage), MarketWatch(outage), Wallstreetcn(outage)",
+          "body": "\ud83d\udfe7 <b>USD/INR</b> \u00b7 Indian rupee -0.95% \u00b7 12.4\u00d7\u03c3\n\ud83d\udcc9 Rarest hour in 5 months (then 17.4\u00d7\u03c3)\n\ud83d\udd50 <b>12.10.2026 00:00 UTC</b> \u00b7 next close 126%\n\u26a0\ufe0f SiftingIO(-0.94%), Yahoo(outage), MarketWatch(outage), Wallstreetcn(outage)",
           "context": "",
           "form": "push",
           "hour": 1791763200,
@@ -88,7 +88,7 @@
           },
           "message": 101,
           "peak": "jump:twelvedata:USD/INR:hour:1791763200",
-          "seen": 1791832087,
+          "seen": 1791835673,
           "shown": [
             "major",
             12.4,
@@ -115,7 +115,7 @@
         },
         "101": {
           "first": "\ud83d\udfe7 <b>USD/INR</b> \u00b7 Indian rupee -0.95% \u00b7 12.4\u00d7\u03c3",
-          "hash": "0edc3d29e6ba9864"
+          "hash": "c105a143bb10337f"
         },
         "99": {
           "first": "\u2b1c <b>FIL/USDT</b> \u00b7 Filecoin +6.46% \u00b7 6.9\u00d7\u03c3",
@@ -124,7 +124,7 @@
       },
       "note": {
         "hashes": [
-          "3f5c038006ff726a"
+          "eddf46623317dd4d"
         ],
         "ids": [
           98

@@ -34,7 +34,10 @@ the store holds. The coins, served by Binance, whose prices are its own
 trades: Coinbase's and Kraken's dollar pairs - a wick on one exchange is real
 there and not the market's. The LME's metals, served by Sina: Wallstreetcn's
 hourly bars. Spot gold and silver, served by SiftingIO: Wallstreetcn's and
-Sina's. Two vendors printing the same bars agree: each is a voice.
+Sina's. Stage 2's futures (Brent, the Treasuries, the grains, sugar, platinum):
+MarketWatch's continuous series, the FT's bars of the contract the store holds
+for the grains and platinum, and Sina's Brent and spot platinum. Two vendors
+printing the same bars agree: each is a voice.
 
 THE VOTE (judge_all, combine) is taken with what the sources serve when it is
 taken: a source that has not shown the move yet counts against, until the
@@ -201,6 +204,20 @@ def _ft_cattle(asset: Asset) -> "str | None":
     return ft.cattle_symbol(held[0] if held else None)
 
 
+def _ft_future(asset: Asset) -> "str | None":
+    """The FT's name for the stage 2 contract the store holds today (CZ26,
+    US@PLF272), or None for one it does not carry."""
+    from jump import futures
+    held = futures.front_contract(asset.ticker, datetime.now(timezone.utc).date())
+    return ft.futures_symbol(held[0] if held else None)
+
+
+# Sina's global futures for stage 2's: ICE Brent's continuous series and London's
+# spot platinum. Against Yahoo's single contract, 2026-08 to 10: 0.944 and 0.928.
+# Its grains (C, W, S: 0.78-0.85) are left out; it holds no Treasuries or sugar.
+SINA_STAGE2 = {"BZ=F": "OIL", "PL=F": "XPT"}
+
+
 def _exchange(name: str) -> "Callable[[Asset], str | None]":
     def symbol(asset: Asset) -> "str | None":
         from price_monitor import coinbase, kraken
@@ -265,6 +282,19 @@ SOURCES: "dict[str, tuple[Source, ...]]" = {
         Source("ft", "FT", 30, "1h", lambda a: ft.INDICES.get(a.ticker)),
         Source("sina", "Sina", 365, "1h", lambda a: sina.CN_INDICES.get(a.ticker)),
     ),
+    # Stage 2's futures (2026-10-12), each source against Yahoo's single contract
+    # close to close: MarketWatch's continuous series 0.991-1.000 for all nine; the
+    # FT's own contract for corn, wheat, soybeans (0.97-0.98) and platinum (0.98);
+    # Sina's Brent (0.94) and spot platinum (0.93). Left out under 0.90:
+    # Wallstreetcn's grains (0.11-0.58) and Brent (0.86), the FT's Treasuries
+    # (0.885-0.89). Each changes contract on its own days, or none (spot), so a move
+    # across a step in its offset to the store is not asked of it (own_rolls).
+    "futures": (
+        Source("marketwatch", "MarketWatch", 9, "1h",
+               lambda a: marketwatch.FUTURES.get(a.ticker), own_rolls=True),
+        Source("ft", "FT", 30, "1h", _ft_future, own_rolls=True),
+        Source("sina", "Sina", 60, "1h", lambda a: SINA_STAGE2.get(a.ticker), own_rolls=True),
+    ),
     "crypto_24_7": (
         Source("coinbase", "Coinbase", 365, "1h", _exchange("coinbase")),
         Source("kraken", "Kraken", 29, "1h", _exchange("kraken")),
@@ -282,6 +312,8 @@ SOURCES: "dict[str, tuple[Source, ...]]" = {
 }
 _CLASS = {"fx_continuous": "fx",
           "ice_coffee": "softs", "ice_cocoa": "softs", "ice_cotton": "softs",
+          "nymex_globex": "futures", "cbot_rates": "futures", "cbot_grains": "futures",
+          "ice_sugar": "futures",
           **{name: "indices" for name in sessions.EXCHANGES}}
 # Ahead of the template: gold and silver keep the pairs' week, not their voters.
 _TICKER_CLASS = {"XAU/USD": "metals", "XAG/USD": "metals"}

@@ -17,7 +17,7 @@ def test_the_parallel_path_writes_exactly_what_the_serial_one_does(tmp_path):
     from jump import pipeline as pl
 
     basket = load_basket()
-    picked = [a for a in basket.instruments if a.ticker in ("SPY", "CORN")]
+    picked = [a for a in basket.instruments if a.ticker in ("SPY", "TIP")]
     if len(picked) < 2 or not all(
             os.path.isdir(bars.store_path(bars.DEFAULT_BARS_DIR, a.file_stem))
             for a in picked):
@@ -56,7 +56,7 @@ def test_a_single_worker_falls_back_to_the_serial_path(tmp_path, monkeypatch):
 
 # --- extending the stored metrics instead of recomputing them ---------------
 
-def _small_basket(tickers=("SPY", "CORN")):
+def _small_basket(tickers=("SPY", "TIP")):
     basket = load_basket()
     picked = [a for a in basket.instruments if a.ticker in tickers]
     if len(picked) < len(tickers) or not all(
@@ -356,7 +356,7 @@ def test_the_recomputed_tail_does_not_duplicate_or_lose_an_hour():
 def test_one_instruments_error_leaves_the_others_and_its_stored_metrics(tmp_path, monkeypatch):
     from jump import pipeline as pl
 
-    small = _small_basket(("SPY", "CORN"))
+    small = _small_basket(("SPY", "TIP"))
     spy, corn = sorted(small.instruments, key=lambda a: a.ticker != "SPY")
     stale = tmp_path / f"{spy.file_stem}.parquet"
     pd.DataFrame({"hour_utc": [1]}).to_parquet(stale)

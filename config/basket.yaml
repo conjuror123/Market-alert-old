@@ -93,6 +93,22 @@ session_templates:
     exchange: CME
     tz: America/Chicago
     description: "08:30-13:05 Chicago on weekdays"
+  nymex_globex:
+    exchange: NYMEX
+    tz: America/New_York
+    description: "18:00-17:00 New York on Globex, the session opening the evening before"
+  cbot_rates:
+    exchange: CBOT
+    tz: America/Chicago
+    description: "17:00-16:00 Chicago on Globex, the session opening the evening before"
+  cbot_grains:
+    exchange: CBOT
+    tz: America/Chicago
+    description: "19:00-13:20 Chicago, the session opening the evening before"
+  ice_sugar:
+    exchange: ICE US
+    tz: America/New_York
+    description: "03:30-13:00 New York on weekdays"
   # The stock markets abroad (jump/sessions.py EXCHANGES): each day's hours from
   # its exchange's own calendar (data/jump/sessions/<code>.csv, from
   # exchange_calendars), so a holiday or a half day is the exchange's; nominal
@@ -177,18 +193,16 @@ session_templates:
 #
 # WHAT THIS COSTS, HOURLY - each quota kept under about 85%, so tests and
 # backfills have room (docs/manual.md, "Running it"):
-#   Tiingo       13 IEX-safe funds, of its 50 requests an hour;
+#   Tiingo       10 IEX-safe funds, of its 50 requests an hour;
 #   Alpaca       the consolidated tape's vote on every fund;
-#   Twelve Data  2 thin funds that need the consolidated tape - one batched
-#                request a run (2 of its 8 credits a minute), in a thread beside
+#   Twelve Data  1 thin fund that needs the consolidated tape (UNG) - one
+#                request a run (1 of its 8 credits a minute), in a thread beside
 #                the other providers;
 #   SiftingIO    the 7 FX pairs and spot gold and silver, about 4,600 of 10,000
 #                a month;
-#   Yahoo        the 16 stock indices, 4 futures and 5 funds - at most 25
+#   Yahoo        the 16 stock indices, 13 futures and 1 fund - at most 30
 #                requests a run;
-#   Sina         the LME's 4 metals and 1 fund; Yahoo's and Sina's funds
-#                alternate within each block, so an outage of either leaves
-#                every block reporting;
+#   Sina         the LME's 4 metals;
 #   Binance      the 4 coins;
 #   the vote     at most 40 sources a run across Yahoo, Sina, MarketWatch,
 #                Alpaca's tape, Wallstreetcn, the FT, Coinbase and Kraken
@@ -414,36 +428,32 @@ assets:
     display: "IPC"
     label: "Mexico"
   # --- rates -----------------------------------------------------------------
-  # US Treasuries by maturity, and inflation-protected. SHY, IEF and TLT stand in
-  # for the 2-, 10- and 30-year Treasury futures until stage 2
-  # (docs/basket-proposal.md).
-  - ticker: SHY
-    source: twelvedata
-    provider: tiingo
+  # US Treasuries by maturity - the 2-, 10- and 30-year futures, live from Yahoo
+  # one contract at a time (jump/futures.py) - and inflation-protected.
+  - ticker: ZT=F
+    source: yahoo
     block: rates
     has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Treasuries 1-3 years"
-  - ticker: IEF
-    source: twelvedata
-    provider: tiingo
+    tick_size: 0.00390625
+    session_template: cbot_rates
+    fetch_interval: 1h
+    label: "2-year Treasury note (CBOT)"
+  - ticker: ZN=F
+    source: yahoo
     block: rates
     has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Treasuries 7-10 years"
-  - ticker: TLT
-    source: twelvedata
-    provider: tiingo
+    tick_size: 0.015625
+    session_template: cbot_rates
+    fetch_interval: 1h
+    label: "10-year Treasury note (CBOT)"
+  - ticker: ZB=F
+    source: yahoo
     block: rates
     has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Treasuries 20+ years"
+    tick_size: 0.03125
+    session_template: cbot_rates
+    fetch_interval: 1h
+    label: "30-year Treasury bond (CBOT)"
   - ticker: TIP
     source: twelvedata
     provider: tiingo
@@ -483,16 +493,16 @@ assets:
     fetch_interval: 30min
     label: "Emerging-market sovereign bonds in dollars"
   # --- energy ----------------------------------------------------------------
-  # The energy complex. BNO stands in for Brent's futures until stage 2.
-  - ticker: BNO
-    source: twelvedata
-    provider: yahoo
+  # The energy complex: Brent's futures, live from Yahoo one contract at a time
+  # (jump/futures.py), and natural gas.
+  - ticker: BZ=F
+    source: yahoo
     block: energy
     has_volume: true
     tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Brent crude oil"
+    session_template: nymex_globex
+    fetch_interval: 1h
+    label: "Brent crude (NYMEX)"
   - ticker: UNG
     source: twelvedata
     provider: twelvedata
@@ -504,8 +514,8 @@ assets:
     label: "Natural gas"
   # --- precious_metals -------------------------------------------------------
   # Precious metals. Spot gold and silver round the clock on the pairs' week, from
-  # SiftingIO's commodities endpoint over Dukascopy's history from 2003; PPLT
-  # stands in for platinum's futures until stage 2.
+  # SiftingIO's commodities endpoint over Dukascopy's history from 2003; platinum's
+  # futures live from Yahoo one contract at a time (jump/futures.py).
   - ticker: XAU/USD
     source: sifting
     block: precious_metals
@@ -522,15 +532,14 @@ assets:
     session_template: fx_continuous
     fetch_interval: 1h
     label: "Silver"
-  - ticker: PPLT
-    source: twelvedata
-    provider: yahoo
+  - ticker: PL=F
+    source: yahoo
     block: precious_metals
     has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Platinum"
+    tick_size: 0.1
+    session_template: nymex_globex
+    fetch_interval: 1h
+    label: "Platinum (NYMEX)"
   # --- industrial_metals -----------------------------------------------------
   # Industrial metals.
   # The LME's metals themselves - the ETNs (JJN, JJU, JJT) are delisted, and
@@ -581,44 +590,40 @@ assets:
     fetch_interval: 30min
     label: "Rare earths"
   # --- agriculture -----------------------------------------------------------
-  # Agricultural commodities. CORN, WEAT, SOYB and CANE stand in for their
-  # futures until stage 2.
-  - ticker: CORN
-    source: twelvedata
-    provider: twelvedata
+  # Agricultural commodities: CBOT's corn, wheat and soybeans and ICE's sugar,
+  # live from Yahoo one contract at a time (jump/futures.py).
+  - ticker: ZC=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 0.25
+    session_template: cbot_grains
+    fetch_interval: 1h
+    label: "Corn (CBOT)"
+  - ticker: ZW=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 0.25
+    session_template: cbot_grains
+    fetch_interval: 1h
+    label: "Wheat (CBOT)"
+  - ticker: ZS=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 0.25
+    session_template: cbot_grains
+    fetch_interval: 1h
+    label: "Soybeans (CBOT)"
+  - ticker: SB=F
+    source: yahoo
     block: agriculture
     has_volume: true
     tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Corn"
-  - ticker: WEAT
-    source: twelvedata
-    provider: yahoo
-    block: agriculture
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Wheat"
-  - ticker: SOYB
-    source: twelvedata
-    provider: sina
-    block: agriculture
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Soybeans"
-  - ticker: CANE
-    source: twelvedata
-    provider: yahoo
-    block: agriculture
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Sugar"
+    session_template: ice_sugar
+    fetch_interval: 1h
+    label: "Sugar No. 11 (ICE)"
   # Futures, live from Yahoo. History: coffee, cocoa and cotton from Dukascopy's
   # single-contract CFDs (2018), live cattle from Yahoo (2024-05). Each in its
   # exchange's session; a

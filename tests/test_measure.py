@@ -181,14 +181,14 @@ def test_the_instruments_the_live_run_does_not_carry_are_fetched_if_their_provid
 
     basket = load_basket()
     stem = {a.ticker: a.file_stem for a in basket.instruments}
-    for ticker, name in (("^N225", "2026-09.parquet"), ("BNO", "2026-10.open.csv"),
+    for ticker, name in (("^N225", "2026-09.parquet"), ("REMX", "2026-10.open.csv"),
                          ("SPY", "2026-09.parquet")):
         store = bars.store_path(str(tmp_path), stem[ticker])
         os.makedirs(store)
         open(os.path.join(store, name), "w").close()
     out = measure.not_carried(basket, str(tmp_path))
     assert "^N225" in out                       # Yahoo's, no open month: fetched
-    assert "BNO" not in out                     # the live run's open month is there
+    assert "REMX" not in out                    # the live run's open month is there
     assert "SPY" not in out and "XAU/USD" not in out   # Tiingo's and SiftingIO's quotas
     # SiftingIO named, for the metals: Tiingo's stays the live run's.
     out = measure.not_carried(basket, str(tmp_path), keyed=("sifting",))

@@ -1,9 +1,9 @@
 # The new basket
 
-Agreed with the user over 2026-10-10/11, and built in two stages. **Stage 1** (58
-instruments) is in `config/basket.yaml` on the development branch; before it goes live:
-gold and silver round the clock, the final before/after with them, and the user's go.
-**Stage 2** comes after the user's pause. Why each choice holds is in `docs/decisions.md`.
+Agreed with the user over 2026-10-10/11, and built in two stages, both in
+`config/basket.yaml` on the development branch: **stage 1** (58 instruments, gold and
+silver round the clock) and **stage 2** (the nine futures in place of the funds that stood
+in for them). Both wait for the user's go. Why each choice holds is in `docs/decisions.md`.
 
 ## Why change it
 
@@ -118,15 +118,40 @@ way: 3.8 pushes and 10.5 note rows a week (4.6 and 6.7 the year before), the bus
 never saw; each that COMEX's hourly futures can check (18 of 22) moved with them in the
 same hour, silver's −15.3% at 02:00 UTC on 2026-02-05 among them (COMEX −14.8%).
 
-## Stage 2: after the pause
+## Stage 2: built on the development branch (2026-10-12)
 
-- **Futures for the stand-ins**: Brent; the 2-, 10- and 30-year Treasuries; corn, wheat,
-  soybeans, sugar; platinum - each read by contract, as the softs are.
-- **Bund, JGB, gilt**: as their futures, or as yields once the detector scores a move in
-  basis points, which it does not today.
-- **TTF**, Europe's gas.
-- **Voters** for the KOSPI, the TAIEX and the JSE Top 40.
-- **The standing risk**: undocumented endpoints carry most of the basket.
+**The nine futures in place of the stand-in funds**, each read by contract as the softs
+are (`jump/futures.py`): Brent (BZ=F) for BNO; the 2-, 10- and 30-year Treasuries (ZT=F,
+ZN=F, ZB=F) for SHY, IEF and TLT; corn, wheat, soybeans (ZC=F, ZW=F, ZS=F) for CORN, WEAT
+and SOYB; sugar No. 11 (SB=F) for CANE; platinum (PL=F) for PPLT. Still 58. The funds'
+bars stay on disk.
+
+- **Live**: Yahoo's single contracts, hourly with volume, each rolled where its volume
+  moves - on the day Yahoo's own series came onto the contract held now in 2026 (Brent and
+  platinum 09-28, the Treasuries 08-27, wheat 08-12, sugar 09-09); corn and soybeans
+  before July's first notice, past September (and August), as Yahoo's series went.
+  Sessions: NYMEX on Globex (Brent, platinum), CBOT's rates and grains, ICE sugar.
+- **Voters**, each against Yahoo's contract close to close: MarketWatch's continuous
+  series for all nine (0.991-1.000); the FT's own contract for corn, wheat, soybeans and
+  platinum (0.97-0.98); Sina's Brent (0.94) and spot platinum (0.93). Under 0.90 and left
+  out: Wallstreetcn's grains and Brent, Sina's grains, the FT's Treasuries.
+- **History** (the user's: Dukascopy where it reaches further): Dukascopy's CFDs for
+  Brent, the 30-year bond, soybeans and platinum, their switches located; Yahoo's
+  continuous series to 2024-10 for the 2- and 10-year notes, its switches looked for
+  within a business day of each roll; the contract held now, from 2026-01/02, for corn,
+  wheat and sugar - Yahoo's continuous series prints the other month for hours around
+  its switches there, and Dukascopy's sugar is London's white sugar
+  (`tools/futures_history.py`, deleted once done; `docs/decisions.md`).
+
+**Left out** (the user's, 2026-10-12): the **Bund, JGB and gilt** - no free source carries
+their futures live (MarketWatch's Bund only: nine days, no volume; Dukascopy holds the
+Bund's and the gilt's history from 2018), and a yield would need the detector to score
+basis points; **TTF** - Yahoo's is NYMEX's thin look-alike (100 bars in seven weeks), with
+no voter. **No voter** yet for the KOSPI, the TAIEX or the JSE Top 40 (the user's): the
+FT's Top 40 files the official close an hour early, the Taiwan exchange's own feed refuses
+some days from here, nothing usable carries the KOSPI hourly.
+
+**Left**: the user's go, for stages 1 and 2 together.
 
 ## Sources
 

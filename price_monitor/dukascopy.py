@@ -101,6 +101,20 @@ FIRST_MONTH = {
     "XAUUSD": (2003, 5), "XAGUSD": (2003, 5),
 }
 
+# Stage 2's futures as Dukascopy's CFDs, for their history only
+# (tools/futures_history.py): one contract at a time, each switch once. Each is
+# the future's own price in thousandths - Brent 99.8 dollars a barrel, the
+# 30-year bond 107.3 points, soybeans 1,311 cents a bushel, platinum 1,700
+# dollars an ounce in 2026-09, Yahoo's contracts' to 0.01%. Its SUGAR.CMD/USD is
+# London's white sugar (521 dollars a tonne), not New York's No. 11; it carries
+# no corn, wheat, 2- or 10-year note.
+CFDS = {"BZ=F": "BRENTCMDUSD", "ZB=F": "USTBONDTRUSD", "ZS=F": "SOYBEANCMDUSX",
+        "PL=F": "XPTCMDUSD"}
+# Probed 2026-10-12: Brent answered for 2011-01 (2010-01: none), the bond and
+# soybeans for 2018-01 (2017-07: none), platinum from 2021-11.
+FIRST_MONTH.update({"BRENTCMDUSD": (2011, 1), "USTBONDTRUSD": (2018, 1),
+                    "SOYBEANCMDUSX": (2018, 1), "XPTCMDUSD": (2021, 11)})
+
 RECORD = struct.Struct(">iiiiif")   # time, open, close, low, high, volume
 RECORD_SIZE = RECORD.size
 HOUR_SECONDS = 3600
@@ -128,7 +142,7 @@ def symbol_for(ticker: str) -> str | None:
 
 def point_for(symbol: str) -> float:
     """The price unit of the archive's integers for this symbol."""
-    if symbol.endswith("JPY") or symbol in METALS:
+    if symbol.endswith("JPY") or symbol in METALS or symbol in CFDS.values():
         return POINT_THOUSANDTHS
     return POINT_DEFAULT
 

@@ -56,6 +56,24 @@ BACKOFF_SECONDS = 2.0
 _found: "dict[str, str]" = {}
 
 
+# Stage 2's futures the FT carries by contract (2026-10-12): CBOT's grains by their
+# pit roots (CZ26 for Yahoo's ZCZ26), NYMEX's platinum by its electronic name
+# (US@PLF272 for PLF27). Its Treasuries (US@TYZ262, ...) moved with Yahoo's at
+# 0.885-0.89 and are not asked; it holds no Brent or sugar contract.
+FUTURES_ROOTS = {"ZC": "C", "ZW": "W", "ZS": "S"}
+
+
+def futures_symbol(contract: "str | None") -> "str | None":
+    """The FT's name for a stage 2 contract Yahoo names ZCZ26.CBT or PLF27.NYM."""
+    code = (contract or "").split(".")[0]
+    root, month = code[:2], code[2:]
+    if root in FUTURES_ROOTS:
+        return FUTURES_ROOTS[root] + month
+    if root == "PL":
+        return f"US@PL{month}2"
+    return None
+
+
 def cattle_symbol(contract: "str | None") -> "str | None":
     """The FT's name for a live cattle contract: LEZ26.CME is its LCZ26."""
     if not contract or not contract.startswith("LE"):

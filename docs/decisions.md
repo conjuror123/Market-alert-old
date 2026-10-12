@@ -129,10 +129,12 @@ delay.
 through 132 New York funds, so the Nikkei's worst day since 1987 reached it at New York's
 open, and it was crowded by coins and look-alikes. Stage 1 holds 58: 16 stock indices in
 their own hours beside SPY and IWM, four sectors, copper beside the LME's other metals,
-seven pairs, spot gold and silver round the clock, four coins. **Funds stand in** for what
-stage 2 builds - BNO, SHY, IEF, TLT, CORN, WEAT, SOYB, CANE, PPLT - so nothing goes blind
-over the user's pause. The 134 that left keep their bars on
-disk; the code only they used went with them.
+seven pairs, spot gold and silver round the clock, four coins. **Stage 2** (2026-10-12)
+puts the futures in place of the funds that stood in for them - Brent, the 2-, 10- and
+30-year Treasuries, corn, wheat, soybeans, sugar and platinum for BNO, SHY, IEF, TLT,
+CORN, WEAT, SOYB, CANE and PPLT - and leaves out the Bund, JGB, gilt and TTF, which no
+free source carries live (the user's). The 134 that left in stage 1 and the nine funds
+keep their bars on disk; the code only they used went with them.
 
 **One provider per instrument, chosen by measurement**, against the stored bars hour by
 hour in basis points: a feed a few bp off on a thin fund sends alerts for moves that did
@@ -169,6 +171,29 @@ hole. Live cattle rolls twelve business days before its delivery month, when its
 do: held to its last trading day it sat on a contract hardly trading (October 2026's 3,097
 contracts on 10-07 against December's 18,822). Its history was judged against the single
 contracts; its old import is not to be re-run.
+
+**Stage 2's futures roll where their volume moves** (`jump/futures.py`, 2026-10-12): each
+onto the contract held now on the day Yahoo's own series came onto it - Brent and platinum
+09-28, the Treasuries 08-27, wheat 08-12, sugar 09-09 - and corn and soybeans before July's
+first notice, past September (and August), as Yahoo's series went straight to December and
+November. Brent's last trading day is two months before delivery and sugar's the month
+before, so they roll on business days before it, not before the delivery month.
+
+**Stage 2's history is by series** (`tools/futures_history.py`, run once and deleted;
+the user's: Dukascopy where it reaches further). Yahoo keeps no expired contract, and its
+continuous series switches on its own days, inside an hour (the 10-year 2026-08-27 07:00
+UTC opened on September's price and closed on December's: -26 bp against the contract's
+-3), and prints the other month for hours around it (corn -7.4% and back on 2026-06-25).
+So: Dukascopy's CFDs, one contract at a time, for Brent, the 30-year bond, soybeans and
+platinum, their switches looked for among the nights before each roll as the softs' were;
+Yahoo's continuous series to 2024-10 for the 2- and 10-year notes, which Dukascopy does
+not carry, their switches looked for within a business day of each roll - in a wider
+window they did not stand out from the data releases, and 341-349 of 730 days went; and
+for corn, wheat and sugar the contract held now, from the first month it traded at least
+5% of its volume as front (2026-01/02), past the detector's half-year: one contract, no
+switch. Dukascopy's sugar is London's white sugar, and it has no corn or wheat. A Treasury
+switch missed leaves a step of 5-30 bp a quarter in the notes' history; the largest
+readings there are data releases and the Fed, none within three days of a roll.
 
 **The LME's metals are the LME's own, from Sina**: the right instrument with a short record
 (from 2026-04-22) over a longer record of another (Shanghai tin, Kitco, COMEX aluminium).
@@ -300,9 +325,10 @@ not reopen without a second source for those stretches.
 | funds | Yahoo 30-minute, Sina 30-minute and MarketWatch hourly, but the fund's own, and Alpaca's consolidated tape | Sina matches the tape to 0.0 bp |
 | coffee, cocoa, cotton | Sina global futures; Wallstreetcn for cocoa and cotton; the FT for coffee | Sina 0.2–2.2 bp off, hourly correlation 0.96–0.99 |
 | live cattle | MarketWatch continuous; the FT's bars of the store's contract | MarketWatch hourly correlation 0.92; the FT 2.3 bp off |
+| stage 2's futures (Brent, the Treasuries, corn, wheat, soybeans, sugar, platinum) | MarketWatch continuous, each; the FT's bars of the store's contract for the grains and platinum; Sina's Brent and spot platinum | against Yahoo's contract close to close, 2026: MarketWatch 0.991–1.000, the FT 0.97–0.98, Sina 0.93–0.94; under 0.90 and left out: Wallstreetcn's grains (0.11–0.58) and Brent (0.86), Sina's grains (0.78–0.85), the FT's Treasuries (0.885–0.89) |
 | coins | Coinbase and Kraken | other exchanges' dollar pairs, hourly correlation 0.988–1.000 with Binance's |
 | LME metals | Wallstreetcn | the only feed a runner reaches |
-| stock indices abroad | MarketWatch (11), Wallstreetcn (4), the FT (5), Sina for the CSI 300 | each at 0.90 or more against Yahoo's folded bars, 2026-08 to 10; none yet for the KOSPI, TAIEX or JSE Top 40 |
+| stock indices abroad | MarketWatch (11), Wallstreetcn (4), the FT (5), Sina for the CSI 300 | each at 0.90 or more against Yahoo's folded bars, 2026-08 to 10; none for the KOSPI, TAIEX or JSE Top 40 (the user's, 2026-10-12): Wallstreetcn's KOSPI is on another grid (0.65–0.70 at 03:00–04:00 UTC), the FT's Top 40 files the official close in its bar ending 14:00 UTC (its last two hours 0.70 and 0.05, the rest 0.99), the Taiwan exchange's own feed refuses some days; the FT's KOSPI and CNBC's three answer 403 |
 
 ---
 
@@ -397,7 +423,16 @@ act: paid feeds.
 
 **KOSPI's last half hour** (15:00–15:30 Seoul, the closing auction) is not in Yahoo's bars,
 live or history: its close is the 15:00 price and the last half hour falls into its night.
-To act: a source that carries it.
+To act: a source that carries it. The JSE Top 40's closing auction (16:50–17:00
+Johannesburg) is missing the same way: 2026-10-07 closed the store's day at 99,353 against
+the official 99,394.
+
+**The Bund, JGB, gilt and TTF** (stage 2, left out by the user, 2026-10-12). No free source
+carries their futures live: Yahoo has none of the three bonds, MarketWatch only the Bund
+(nine days, no volume), and Dukascopy holds the Bund's and the gilt's history from 2018
+but no live bars; Wallstreetcn has their yields, which the detector would have to score in
+basis points. Yahoo's TTF is NYMEX's look-alike, 100 bars in seven weeks, with no voter.
+To act: a live source, or a reading in basis points.
 
 **What else Wallstreetcn carries**, hourly, about 170 days back, without volume (2026-10-10):
 sugar, lean hogs, wheat, corn, soybeans and soybean oil, the LME's lead and zinc, 38 stock
@@ -410,7 +445,9 @@ points, which the detector does not do.
 
 | instruments | missing before | tried |
 |---|---|---|
-| 7 US funds (XLK, XLE, PPLT, CORN, WEAT, SOYB, CANE) | 2016-01 | HF Data, Twelve Data, Alpaca's tape |
+| 2 US funds (XLK, XLE) | 2016-01 | HF Data, Twelve Data, Alpaca's tape |
+| the 2- and 10-year notes | 2024-10 | Yahoo (730 days, no expired contract), Dukascopy (no note) |
+| corn, wheat, sugar | 2026-01/02 | Yahoo (its continuous series mixes two months around each switch), Dukascopy (no corn or wheat; its sugar is London's white) |
 | live cattle | 2024-05 | Yahoo (730 days), Dukascopy |
 | coffee, cocoa, cotton | 2018-01 | Dukascopy |
 | LME tin, nickel, aluminium, copper | 2026-04-22 | Sina (last 1,023 bars), Wallstreetcn (about 170 days; taken), Eastmoney |

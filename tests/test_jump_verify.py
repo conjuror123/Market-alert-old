@@ -68,8 +68,8 @@ def test_every_instrument_is_asked_of_every_source_of_its_class_but_its_own(bask
     for fund in (a for a in basket.values() if a.session_template == "us_equity"):
         names = [n for n, _, _ in _asked(fund)]
         assert names == [n for n in ("yahoo", "sina", "marketwatch") if n != fund.fetched_from]
-    assert _asked(basket["TLT"]) == [("yahoo", "TLT", "30min"), ("sina", "TLT", "30min"),
-                                     ("marketwatch", "FUND/US/XNAS/TLT", "1h")]
+    assert _asked(basket["TIP"]) == [("yahoo", "TIP", "30min"), ("sina", "TIP", "30min"),
+                                     ("marketwatch", "FUND/US/ARCX/TIP", "1h")]
     # The softs Yahoo serves: Sina's global futures, hourly, and Wallstreetcn's
     # cocoa and cotton (not coffee), each with its own rolls.
     # Coffee: Sina's and the FT's continuous series (Wallstreetcn has none).
@@ -77,6 +77,16 @@ def test_every_instrument_is_asked_of_every_source_of_its_class_but_its_own(bask
     assert _asked(basket["CT=F"]) == [("sina", "CT", "1h"), ("wallstreetcn", "USCT.OTC", "1h")]
     assert _asked(basket["CC=F"])[1] == ("wallstreetcn", "USCC.OTC", "1h")
     assert all(src.own_rolls for src in verify.sources_for(basket["CC=F"]))
+    # Stage 2's futures: MarketWatch's continuous series for each; the FT's bars of
+    # the contract the store holds for the grains and platinum; Sina's Brent and
+    # spot platinum - each with its own rolls, all counted again for nine days.
+    assert [n for n, _, _ in _asked(basket["ZN=F"])] == ["marketwatch"]
+    assert _asked(basket["BZ=F"]) == [("marketwatch", "FUTURE/UK/IFEU/BRN00", "1h"),
+                                      ("sina", "OIL", "1h")]
+    assert [n for n, _, _ in _asked(basket["ZC=F"])] == ["marketwatch", "ft"]
+    assert [n for n, _, _ in _asked(basket["PL=F"])] == ["marketwatch", "ft", "sina"]
+    assert all(src.own_rolls for src in verify.sources_for(basket["PL=F"]))
+    assert verify.recount_days(basket["SB=F"]) == 9
     assert verify.recount_days(basket["CC=F"]) == 79 and verify.recount_days(basket["EUR/USD"]) == 9
     assert verify.recount_days(basket["KC=F"]) == 30                 # the FT's reach
     # Live cattle: MarketWatch's continuous contract, and the FT's of the

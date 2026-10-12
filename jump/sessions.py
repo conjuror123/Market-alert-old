@@ -411,12 +411,22 @@ def main(argv: list[str] | None = None) -> int:
 #   ice_cocoa    ICE cocoa, 04:45-13:30 New York
 #   ice_cotton   ICE cotton No. 2, 21:00-14:20 New York
 #   cme_cattle   CME live cattle, 08:30-13:05 Chicago
+#   nymex_globex Brent and platinum on Globex, 18:00-17:00 New York: the hour's
+#                pause is their night
+#   cbot_rates   the Treasuries on Globex, 17:00-16:00 Chicago
+#   cbot_grains  corn, wheat and soybeans, 19:00-13:20 Chicago; the pause from
+#                07:45 to 08:30 falls inside the session, within two hours
+#   ice_sugar    ICE sugar No. 11, 03:30-13:00 New York
 DAILY_SESSIONS: "dict[str, tuple[str, tuple[int, int], tuple[int, int]]]" = {
     "lme": ("Europe/London", (1, 0), (19, 0)),
     "ice_coffee": ("America/New_York", (4, 15), (13, 30)),
     "ice_cocoa": ("America/New_York", (4, 45), (13, 30)),
     "ice_cotton": ("America/New_York", (21, 0), (14, 20)),
     "cme_cattle": ("America/Chicago", (8, 30), (13, 5)),
+    "nymex_globex": ("America/New_York", (18, 0), (17, 0)),
+    "cbot_rates": ("America/Chicago", (17, 0), (16, 0)),
+    "cbot_grains": ("America/Chicago", (19, 0), (13, 20)),
+    "ice_sugar": ("America/New_York", (3, 30), (13, 0)),
 }
 
 # THE MARKETS ABROAD: a stock index each, on its own exchange's days and hours,

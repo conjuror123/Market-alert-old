@@ -478,7 +478,7 @@ def test_an_instrument_that_fails_to_score_keeps_its_last_events(tmp_path, monke
     from jump.basket import load_basket
 
     basket = load_basket()
-    picked = [a for a in basket.instruments if a.ticker in ("SPY", "CORN")]
+    picked = [a for a in basket.instruments if a.ticker in ("SPY", "TIP")]
     assert len(picked) == 2
     if not all(os.path.exists(os.path.join("data/jump/metrics", f"{a.file_stem}.parquet"))
                for a in picked):
@@ -511,7 +511,7 @@ def test_an_instrument_without_metrics_this_run_keeps_its_last_events(tmp_path, 
     from jump.basket import load_basket
 
     basket = load_basket()
-    picked = [a for a in basket.instruments if a.ticker in ("SPY", "CORN")]
+    picked = [a for a in basket.instruments if a.ticker in ("SPY", "TIP")]
     assert len(picked) == 2
     if not all(os.path.exists(os.path.join("data/jump/metrics", f"{a.file_stem}.parquet"))
                for a in picked):

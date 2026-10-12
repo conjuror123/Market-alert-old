@@ -89,6 +89,17 @@ INDICES = {
     "^TASI.SR": "INDEX/SA//TASI", "^GSPTSE": "INDEX/CA/XTSE/GSPTSE", "^MXX": "INDEX/MX//IPC",
 }
 
+# Stage 2's futures, each its continuous series (the nearest month, changing on its
+# own days): Yahoo's single contract to the cent where both hold the month - hourly
+# moves 0.991-1.000, 93-98% of closes the same, 2026-09-28 to 10-12. Brent is ICE's
+# (BRN00), with the same last trading day as NYMEX's BZ; NYMEX's own is refused (400).
+FUTURES = {
+    "BZ=F": "FUTURE/UK/IFEU/BRN00", "ZT=F": "FUTURE/US/XCBT/TU00",
+    "ZN=F": "FUTURE/US/XCBT/TY00", "ZB=F": "FUTURE/US/XCBT/US00",
+    "ZC=F": "FUTURE/US/XCBT/C00", "ZW=F": "FUTURE/US/XCBT/W00", "ZS=F": "FUTURE/US/XCBT/S00",
+    "SB=F": "FUTURE/US/IFUS/SB00", "PL=F": "FUTURE/US/XNYM/PL00",
+}
+
 
 def fetch_hourly(key: str, session: requests.Session | None = None,
                  now: datetime | None = None, frame: str = "D10") -> list[Candle]:

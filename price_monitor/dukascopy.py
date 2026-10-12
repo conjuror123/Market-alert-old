@@ -101,8 +101,8 @@ FIRST_MONTH = {
     "XAUUSD": (2003, 5), "XAGUSD": (2003, 5),
 }
 
-# Stage 2's futures as Dukascopy's CFDs, for their history only
-# (tools/futures_history.py): one contract at a time, each switch once. Each is
+# Stage 2's futures as Dukascopy's CFDs, for their history only (imported once
+# on 2026-10-12, docs/decisions.md): one contract at a time, each switch once. Each is
 # the future's own price in thousandths - Brent 99.8 dollars a barrel, the
 # 30-year bond 107.3 points, soybeans 1,311 cents a bushel, platinum 1,700
 # dollars an ounce in 2026-09, Yahoo's contracts' to 0.01%. Its SUGAR.CMD/USD is

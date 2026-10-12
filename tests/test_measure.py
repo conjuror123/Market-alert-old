@@ -190,6 +190,9 @@ def test_the_instruments_the_live_run_does_not_carry_are_fetched_if_their_provid
     assert "^N225" in out                       # Yahoo's, no open month: fetched
     assert "BNO" not in out                     # the live run's open month is there
     assert "SPY" not in out and "XAU/USD" not in out   # Tiingo's and SiftingIO's quotas
+    # SiftingIO named, for the metals: Tiingo's stays the live run's.
+    out = measure.not_carried(basket, str(tmp_path), keyed=("sifting",))
+    assert "XAU/USD" in out and "XAG/USD" in out and "SPY" not in out
 
 
 def test_a_store_behind_the_measurement_is_named():

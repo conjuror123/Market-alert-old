@@ -9,9 +9,10 @@ name: Measure
 # from an earlier run and keeps nothing for a later one. A measurement whose own checks fail
 # stops the job before anything is published.
 #
-# Keys: only Alpaca's, for its tape. Never Tiingo, SiftingIO or Twelve Data - their
-# quotas belong to the live run: an instrument the live run does not fetch yet, on one of
-# those, stays where the store has it, and the page names it.
+# Keys: Alpaca's, for its tape; SiftingIO's, only for the instruments the live run does not
+# fetch yet (gold and silver until the merge: two calls a run, the user's 2026-10-12).
+# Never Tiingo or Twelve Data - their quotas belong to the live run: an instrument of
+# theirs the live run does not fetch stays where the store has it, and the page names it.
 #
 # Once, by hand: Settings -> Pages -> Source "GitHub Actions"; and in Settings ->
 # Environments -> github-pages, the branches below allowed to deploy.
@@ -66,10 +67,13 @@ jobs:
 
       # The live run's open months carry only its own basket. An instrument this branch
       # adds has no open month: the bot's own fetch brings it up to now here, where its
-      # provider needs no key (tools/measure.py not_carried). Not committed or saved.
+      # provider needs no key or is SiftingIO (tools/measure.py not_carried). Not
+      # committed or saved.
       - name: Fetch what the live run does not carry
+        env:
+          SIFTING_API_KEY: ${{ secrets.SIFTING_API_KEY }}
         run: |
-          names=$(PYTHONPATH=. python -c 'from tools.measure import not_carried; print(",".join(not_carried()))')
+          names=$(PYTHONPATH=. python -c 'from tools.measure import not_carried; print(",".join(not_carried(keyed=("sifting",))))')
           echo "not carried by the live run: ${names:-none}"
           if [ -n "$names" ]; then
             PYTHONPATH=. python -m jump.backfill --live-pass --instruments "$names" \

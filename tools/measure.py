@@ -361,11 +361,14 @@ def behind(cover: "list[dict]", end: int) -> "list[dict]":
             for c in cover if c["last"] is None or c["last"] < end - BEHIND_DAYS * DAY]
 
 
-def not_carried(basket=None, bars_dir: "str | None" = None) -> "list[str]":
+def not_carried(basket=None, bars_dir: "str | None" = None,
+                keyed: "tuple[str, ...]" = ()) -> "list[str]":
     """The instruments the live run's open months do not carry (no open month in the
-    store) whose own provider needs no key: the workflow brings them up to now with the
-    bot's own fetch. Tiingo's, SiftingIO's and Twelve Data's quotas belong to the live
-    run, so those are left behind and named on the page."""
+    store) whose own provider needs no key, or is one of `keyed`: the workflow brings them
+    up to now with the bot's own fetch. The workflow names SiftingIO, for the two metals
+    the live run does not fetch yet - a page each, two calls a code push (the user's,
+    2026-10-12); Tiingo's and Twelve Data's quotas stay the live run's, and an instrument
+    of theirs is left behind and named on the page."""
     from jump import backfill, bars
 
     basket = basket or load_basket()
@@ -374,7 +377,8 @@ def not_carried(basket=None, bars_dir: "str | None" = None) -> "list[str]":
     for asset in basket.instruments:
         store = bars.store_path(bars_dir, asset.file_stem)
         opened = os.path.isdir(store) and any(n.endswith(".open.csv") for n in os.listdir(store))
-        if not opened and asset.fetched_from not in backfill.PROVIDER_KEYS:
+        free = asset.fetched_from not in backfill.PROVIDER_KEYS or asset.fetched_from in keyed
+        if not opened and free:
             out.append(asset.ticker)
     return out
 

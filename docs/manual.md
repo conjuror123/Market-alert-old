@@ -689,9 +689,9 @@ and found nothing.
 measured on every push of code to the development branch (`.github/workflows/measure.yml`,
 and by hand). The bar store is the checkout's closed months and the live run's open months;
 an instrument the live run does not fetch yet is brought up to now by the bot's own fetch
-(`jump.backfill --live-pass`) where its provider needs no key, and one on Tiingo, SiftingIO
-or Twelve Data stays where the store has it - the page names any instrument with no bar in
-the 4 days to the measurement. The voters' bars are fetched over each instrument's recount
+(`jump.backfill --live-pass`) where its provider needs no key or is SiftingIO (gold and
+silver until the merge: two calls a run), and one on Tiingo or Twelve Data stays where the
+store has it - the page names any instrument with no bar in the 4 days to the measurement. The voters' bars are fetched over each instrument's recount
 window (`tools/voter_bars.py --recount`: 9 days for most, at most 79 but for the CSI 300),
 as far back as the live pass would ask. `tools/measure.py` builds the metrics cold, votes
 the moves the live pass would hold now - each instrument's far moves inside its recount

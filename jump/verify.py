@@ -38,9 +38,7 @@ Sina's. Two vendors printing the same bars agree: each is a voice.
 
 THE VOTE (judge_all, combine) is taken with what the sources serve when it is
 taken: a source that has not shown the move yet counts against, until the
-next count. A source with bars around the move outweighs one that only
-bridges it: the bridging one is an outage. Every source of an instrument is
-asked, or none that run (MAX_REQUESTS): a vote of all of them, not of
+next count. Every source of an instrument is asked, or none that run (MAX_REQUESTS): a vote of all of them, not of
 whichever were asked. With every other source down, the move is uncertain
 until a count after they are back.
 
@@ -54,15 +52,14 @@ below the detector's bottom word, so nothing it flags is missed: a few a day
 across the basket, one request per source and instrument.
 
 ONE SOURCE'S ANSWER (judge). Each feed is compared with itself, so a steady offset
-between them is not a move. CONFIRMED if the source moved the same way
-at least REAL_SHARE as far, from its closes up to LAG_HOURS before the move to
-its closes up to LAG_HOURS after: USD/TRY came back at 11:00 on SiftingIO and
-at 12:00 on Yahoo (2025-03-14). An hour it has no bar for is bridged by its
-nearest bars within STALE_HOURS: on the night of Seoul's martial law
-(2024-12-03) Yahoo has no USD/KRW bar between 07:00 and 15:00, and still
-confirms the +2.5%. UNCONFIRMED if it did not move with it, or has not yet.
-UNKNOWN - an outage - with no bar after the move yet, or silent for
-STALE_HOURS around it.
+between them is not a move. A move is one bar's: the source's own price at
+the same two bars as the store's - its close of the store's previous bar (or
+its open of this one, for an hour measured from its open) and its close of
+this bar (its open, for a session's gap). CONFIRMED if it moved the same way
+at least REAL_SHARE as far; UNCONFIRMED if it did not, or has not yet; UNKNOWN
+- an outage - if it has no bar at either end. No window and no bridge: a
+source an hour late does not see the move, and one with a hole there is out
+(the user's, 2026-10-12).
 
 THE RECORD (VERIFIED_PATH) is what the detector and delivery read. A reading
 is voted on the run that finds it, then again from the bars as they then are
@@ -118,9 +115,9 @@ COLUMNS = ["asset_id", "hour_utc", "check", "verdict", "provider", "verifier", "
 
 CANDIDATE_SIGMA = 4.0
 REAL_SHARE = 0.5
-LAG_HOURS = 1
+LAG_HOURS = 1                     # the overnight rule's own reading only (_night_judge)
 PENDING_HOURS = 24
-STALE_HOURS = 12
+STALE_HOURS = 12                  # likewise
 TAIL_DAYS = 200                   # bars read before the window: the detector's half-year and more
 MAX_REQUESTS = 40
 KEEP_DAYS = 90                    # longer than any recount (the softs' and the LME's, 79 days)
@@ -521,9 +518,105 @@ def candidates(asset: Asset, frame: pd.DataFrame, table, now: int,
 
 def judge(c: dict, v: pd.DataFrame) -> "tuple[str, float, float]":
     """(answer, stored move, the source's move) for one candidate, against the
-    source's hourly bars `v` (hour_utc, open, close) as it serves them now:
-    confirmed, unconfirmed - including a move it has not shown yet - or
-    unknown, with no bars around the move."""
+    source's hourly bars `v` (hour_utc, open, close) as it serves them now. Its
+    move is over the same two bars as the store's: from its close of the store's
+    previous bar - its open of this bar, for an hour measured from its open - to
+    its close of this bar, or its open for a session's gap (a stock index's
+    night runs to its first bar's close). Confirmed if it went the same way at
+    least REAL_SHARE as far, unconfirmed if not; unknown - an outage - if it has
+    no bar at either end."""
+    opens = dict(zip(v["hour_utc"].astype("int64").tolist(), v["open"].tolist()))
+    closes = dict(zip(v["hour_utc"].astype("int64").tolist(), v["close"].tolist()))
+    h, hp = c["hour"], c["prev_hour"]
+    p = math.log(c["price"] / c["prev_close"])
+    start = opens.get(h) if c.get("from_open") else closes.get(hp)
+    end = opens.get(h) if c["check"] == OPEN and not c.get("to_close") else closes.get(h)
+    if start is None or end is None:
+        return UNKNOWN, p, 0.0
+    move = math.log(end / start)
+    if move * p > 0 and abs(move) >= REAL_SHARE * abs(p):
+        return CONFIRMED, p, move
+    return UNCONFIRMED, p, move
+
+
+def switches(store: pd.DataFrame, v: pd.DataFrame, template: str) -> "list[int]":
+    """The first hours of the sessions the source changed contract at:
+    where its median offset to the store stepped by ROLL_STEP_BP or more from
+    the session before. A one-hour bad print in either feed moves one bar, not
+    a session's median."""
+    from jump import sessions
+
+    j = store[["hour_utc", "close"]].merge(v[["hour_utc", "close"]], on="hour_utc",
+                                           suffixes=("_s", "_v"))
+    if j.empty:
+        return []
+    keys = [sessions.session_key(int(h), template) for h in j["hour_utc"]]
+    g = pd.DataFrame({"hour": j["hour_utc"].astype("int64"),
+                      "off": np.log(j["close_v"].to_numpy(float) / j["close_s"].to_numpy(float)),
+                      "key": keys}).dropna(subset=["key"])
+    by = g.groupby("key").agg(off=("off", "median"), first=("hour", "min"),
+                              n=("hour", "size")).sort_index()
+    by = by[by["n"] >= 3]
+    stepped = (by["off"].diff().abs() * 1e4) >= ROLL_STEP_BP
+    return [int(h) for h in by.loc[stepped, "first"]]
+
+
+def crosses(c: dict, at: "list[int]") -> bool:
+    """Whether one of these hours falls inside a move: after the store's
+    previous bar, up to its own."""
+    return any(c["prev_hour"] < h <= c["hour"] for h in at)
+
+
+def _priced(v: pd.DataFrame) -> pd.DataFrame:
+    """A source's bars with a real price only: a zero, negative or
+    missing open or close is not a price, as in the store's bar gate."""
+    prices = v[["open", "close"]].to_numpy(dtype="float64")
+    return v[(np.isfinite(prices) & (prices > 0)).all(axis=1)].reset_index(drop=True)
+
+
+def _count(yes: int, no: int) -> str:
+    return REAL if yes > no else UNCERTAIN if yes == no else NOT_REAL
+
+
+def combine(verdicts: "list[tuple[str, str, float, float]]") -> "tuple[str, float, list, list, list]":
+    """The vote on one move, from every source asked, each (name, answer,
+    stored move, its move). The stored provider is one vote that saw it; a
+    source that confirmed it is another; one that did not move with it, or
+    has not yet, is a vote against. A source with nothing to show - down, no
+    bars around the move, across its own change of contract: an outage - is
+    left out of the count, and still named. Most saw it: real; a tie:
+    uncertain; most did not: not real. With every source asked out, nobody
+    could check it: uncertain. Returns (result, stored move, the sources,
+    their moves - None for an outage -, those that saw it)."""
+    stored = verdicts[0][2] if verdicts else 0.0
+    seen = [v[0] for v in verdicts if v[1] == CONFIRMED]
+    answered = [v for v in verdicts if v[1] != UNKNOWN]
+    result = (UNCERTAIN if verdicts and not answered
+              else _count(1 + len(seen), len(answered) - len(seen)))
+    return (result, stored, [v[0] for v in verdicts],
+            [None if v[1] == UNKNOWN else v[3] for v in verdicts], seen)
+
+
+def judge_all(c: dict, asked: "list[tuple[str, pd.DataFrame | None]]"
+              ) -> "tuple[str, float, list, list, list]":
+    """One candidate put to every source asked, each (name, its bars, or None
+    for a source that was down), and the vote."""
+    p = math.log(c["price"] / c["prev_close"])
+    votes = [(name, UNKNOWN, p, 0.0) if v is None else (name,) + judge(c, v)
+             for name, v in asked]
+    result, stored, names, moves, seen = combine(votes)
+    if result == NOT_REAL and c.get("night_hour") is not None:
+        night = overnight_move(c, asked)
+        if night is not None:
+            return OVERNIGHT, stored, night[0], night[1], night[0]
+    return result, stored, names, moves, seen
+
+
+def _night_judge(c: dict, v: pd.DataFrame) -> "tuple[str, float, float]":
+    """The overnight rule's own reading of a source (overnight_move), as it was
+    before the vote compared the same two bars: its closes up to LAG_HOURS
+    either side of the night and the first hour, else its nearest within
+    STALE_HOURS."""
     stamps = np.sort(v["hour_utc"].to_numpy(dtype="int64"))
     vclose = dict(zip(v["hour_utc"].astype("int64").tolist(), v["close"].tolist()))
     vopen = dict(zip(v["hour_utc"].astype("int64").tolist(), v["open"].tolist()))
@@ -571,96 +664,6 @@ def judge(c: dict, v: pd.DataFrame) -> "tuple[str, float, float]":
     return UNCONFIRMED, p, direct
 
 
-def switches(store: pd.DataFrame, v: pd.DataFrame, template: str) -> "list[int]":
-    """The first hours of the sessions the source changed contract at:
-    where its median offset to the store stepped by ROLL_STEP_BP or more from
-    the session before. A one-hour bad print in either feed moves one bar, not
-    a session's median."""
-    from jump import sessions
-
-    j = store[["hour_utc", "close"]].merge(v[["hour_utc", "close"]], on="hour_utc",
-                                           suffixes=("_s", "_v"))
-    if j.empty:
-        return []
-    keys = [sessions.session_key(int(h), template) for h in j["hour_utc"]]
-    g = pd.DataFrame({"hour": j["hour_utc"].astype("int64"),
-                      "off": np.log(j["close_v"].to_numpy(float) / j["close_s"].to_numpy(float)),
-                      "key": keys}).dropna(subset=["key"])
-    by = g.groupby("key").agg(off=("off", "median"), first=("hour", "min"),
-                              n=("hour", "size")).sort_index()
-    by = by[by["n"] >= 3]
-    stepped = (by["off"].diff().abs() * 1e4) >= ROLL_STEP_BP
-    return [int(h) for h in by.loc[stepped, "first"]]
-
-
-def crosses(c: dict, at: "list[int]") -> bool:
-    """Whether a move's span - from its closes up to LAG_HOURS before to those
-    up to LAG_HOURS after - takes in one of these hours."""
-    lag = LAG_HOURS * HOUR
-    return any(c["prev_hour"] - lag < h <= c["hour"] + lag for h in at)
-
-
-def _priced(v: pd.DataFrame) -> pd.DataFrame:
-    """A source's bars with a real price only: a zero, negative or
-    missing open or close is not a price, as in the store's bar gate."""
-    prices = v[["open", "close"]].to_numpy(dtype="float64")
-    return v[(np.isfinite(prices) & (prices > 0)).all(axis=1)].reset_index(drop=True)
-
-
-def _count(yes: int, no: int) -> str:
-    return REAL if yes > no else UNCERTAIN if yes == no else NOT_REAL
-
-
-def combine(verdicts: "list[tuple[str, str, float, float]]") -> "tuple[str, float, list, list, list]":
-    """The vote on one move, from every source asked, each (name, answer,
-    stored move, its move). The stored provider is one vote that saw it; a
-    source that confirmed it is another; one that did not move with it, or
-    has not yet, is a vote against. A source with nothing to show - down, no
-    bars around the move, across its own change of contract: an outage - is
-    left out of the count, and still named. Most saw it: real; a tie:
-    uncertain; most did not: not real. With every source asked out, nobody
-    could check it: uncertain. Returns (result, stored move, the sources,
-    their moves - None for an outage -, those that saw it)."""
-    stored = verdicts[0][2] if verdicts else 0.0
-    seen = [v[0] for v in verdicts if v[1] == CONFIRMED]
-    answered = [v for v in verdicts if v[1] != UNKNOWN]
-    result = (UNCERTAIN if verdicts and not answered
-              else _count(1 + len(seen), len(answered) - len(seen)))
-    return (result, stored, [v[0] for v in verdicts],
-            [None if v[1] == UNKNOWN else v[3] for v in verdicts], seen)
-
-
-def _around(c: dict, v: pd.DataFrame) -> bool:
-    """Whether a source has bars of its own around the move: within LAG_HOURS
-    of where it starts and of where it ends - not just a bridge across hours
-    it has no bar for."""
-    stamps = v["hour_utc"].to_numpy(dtype="int64")
-    h, hp, lag = c["hour"], c["prev_hour"], LAG_HOURS * HOUR
-    before = (h in set(stamps.tolist())) if c.get("from_open") else \
-        bool(((stamps >= hp - lag) & (stamps <= hp)).any())
-    return before and bool(((stamps >= h) & (stamps <= h + lag)).any())
-
-
-def judge_all(c: dict, asked: "list[tuple[str, pd.DataFrame | None]]"
-              ) -> "tuple[str, float, list, list, list]":
-    """One candidate put to every source asked, each (name, its bars, or None
-    for a source that was down), and the vote. A source with bars of its own
-    around the move outweighs one bridging hours it has none for: USD/INR's
-    night, where Yahoo's last bar is 10:00 and MarketWatch has every hour, is
-    MarketWatch's to judge - a seventeen-hour bridge would read the night's
-    drift as the move - and the bridging one counts as an outage."""
-    p = math.log(c["price"] / c["prev_close"])
-    direct = {name for name, v in asked if v is not None and _around(c, v)}
-    votes = [(name, UNKNOWN, p, 0.0) if v is None or (direct and name not in direct)
-             else (name,) + judge(c, v) for name, v in asked]
-    result, stored, names, moves, seen = combine(votes)
-    if result == NOT_REAL and c.get("night_hour") is not None:
-        night = overnight_move(c, asked)
-        if night is not None:
-            return OVERNIGHT, stored, night[0], night[1], night[0]
-    return result, stored, names, moves, seen
-
-
 def overnight_move(c: dict, asked: "list[tuple[str, pd.DataFrame | None]]"
                    ) -> "tuple[list, list] | None":
     """A session's first hour most feeds did not see move - but did most see
@@ -672,7 +675,7 @@ def overnight_move(c: dict, asked: "list[tuple[str, pd.DataFrame | None]]"
     its last close before the night - or None."""
     whole = dict(c, from_open=False, prev_hour=c["night_hour"], prev_close=c["night_close"])
     p = math.log(c["price"] / c["night_close"])
-    votes = [(name, UNKNOWN, p, 0.0) if v is None else (name,) + judge(whole, v)
+    votes = [(name, UNKNOWN, p, 0.0) if v is None else (name,) + _night_judge(whole, v)
              for name, v in asked]
     if combine(votes)[0] != REAL:
         return None

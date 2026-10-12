@@ -254,9 +254,12 @@ Kraken(-0.10%)`), so a reader weighs it without a key.
 **A vote is taken with what the sources serve at the time**: a source that has not shown
 the move yet counts against until the next count.
 
-**A source sees a move when it moved at least half as far, an hour either side**: of 3,704
-answers on 3,444 moves (2026-10-08), 98% moved 0.8 of it or more, or under 0.2, and no
-source was an hour late as a rule. Which feed was wrong is not asked; bars around the move outweigh a bridge across it.
+**A source sees a move on its own two bars of it** (the user's, 2026-10-12): its price at the
+store's previous bar and at this one moved the same way at least half as far. No bar at
+either end - none served, or no price - is an outage, left out; with nobody left, the move
+is uncertain. A one-hour window and a 12-hour bridge stood here until then, each from one
+case (a late feed, a hole), not a measured rule. Half: answers sat at 0.8 or more or under
+0.2 (3,704 answers, 2026-10-08, under the window). Which feed was wrong is not asked.
 
 **A source with its own contract months is not asked across its own change of contract**
 (Sina's and Wallstreetcn's softs): found as a step of 50 bp or more in the session's median
@@ -355,7 +358,6 @@ Measured or weighed, and not to be raised again.
 | a longer window for weekend gaps | a small gain, real shocks read quieter; one window for every instrument |
 | a fund's night from Yahoo's daily official open | the feeds carry the same tape, so the opening price is no referee |
 | a stale first print found from the bar alone | caught at best 7% of stale prints at 66% precision |
-| a bridge may confirm, never reject | frees one real hour, lets in 34 flags of rollover ticks |
 | holding isolated moves an hour | a third of alerts would be an hour late |
 | a watchdog for the trigger's silence | the external scheduler is the party that knows a call stopped |
 | Finnhub, Metal Sentinel, FXEmpire, Business Insider | quotes, not bars |

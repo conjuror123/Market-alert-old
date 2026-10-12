@@ -271,29 +271,30 @@ def test_a_steady_offset_between_the_feeds_is_not_a_move():
                  "2025-01-08 00:00")[0] == verify.CONFIRMED
 
 
-def test_a_move_yahoo_prints_an_hour_later_is_confirmed():
-    # USD/TRY 2025-03-14: both fell at 10:00; SiftingIO came back at 11:00,
-    # Yahoo at 12:00.
+def test_a_move_is_judged_on_the_sources_own_bars_of_the_same_hour():
+    # USD/TRY 2025-03-14 11:00: SiftingIO +0.30%; Yahoo flat from 10:00 to
+    # 11:00, its +0.31% only at 12:00. Its 11:00 bar decides: not seen.
     assert judge("2025-03-14 11:00", 36.5640, 36.6741,
                  {"2025-03-14 10:00": 36.5290, "2025-03-14 11:00": 36.5270,
-                  "2025-03-14 12:00": 36.6420}, "2025-03-15 00:00")[0] == verify.CONFIRMED
+                  "2025-03-14 12:00": 36.6420}, "2025-03-15 00:00")[0] == verify.UNCONFIRMED
 
 
-def test_martial_law_in_seoul_is_confirmed_though_yahoo_has_no_bar_that_hour():
-    # USD/KRW 2024-12-03 13:00-14:00 UTC: +2.5% in two hours; Yahoo has bars
-    # only either side.
+def test_a_source_with_no_bar_at_either_end_of_the_move_is_an_outage():
+    # USD/KRW 2024-12-03, Seoul's martial law: Yahoo has bars at 07:00 and
+    # 15:00 only. It did not see 13:00 or 14:00: nothing bridges its hole.
     rows = {"2024-12-03 07:00": 1403.10, "2024-12-03 15:00": 1428.64}
     assert judge("2024-12-03 14:00", 1421.00, 1437.45, rows,
-                 "2025-01-08 00:00")[0] == verify.CONFIRMED
+                 "2025-01-08 00:00")[0] == verify.UNKNOWN
     assert judge("2024-12-03 13:00", 1402.97, 1421.00, rows,
-                 "2025-01-08 00:00")[0] == verify.CONFIRMED
-
-
-def test_with_no_bar_that_hour_the_bars_either_side_decide():
-    # USD/INR 2024-12-17 22:00: stored 85.15; Yahoo 84.882 before, 84.884 after.
+                 "2025-01-08 00:00")[0] == verify.UNKNOWN
+    # USD/INR 2024-12-17 22:00: Yahoo's bars at 20:00 and 00:00 only.
     assert judge("2024-12-17 22:00", 84.90735, 85.1495,
                  {"2024-12-17 20:00": 84.882, "2024-12-18 00:00": 84.884},
-                 "2025-01-08 00:00")[0] == verify.UNCONFIRMED
+                 "2025-01-08 00:00")[0] == verify.UNKNOWN
+    # The bar before there, the one after not.
+    assert judge("2024-12-17 22:00", 84.90735, 85.1495,
+                 {"2024-12-17 21:00": 84.882, "2024-12-18 00:00": 84.884},
+                 "2025-01-08 00:00")[0] == verify.UNKNOWN
 
 
 def test_a_source_with_no_bar_after_the_move_has_nothing_to_show():
@@ -335,8 +336,8 @@ def test_an_hour_measured_from_its_own_open_is_judged_from_the_second_sources_op
 
 
 def test_the_move_reported_is_the_second_sources_over_the_same_hours():
-    # Within the lag window Yahoo's best move is its 08:00-10:00 one; the
-    # message reports 08:00 to 09:00, the hours the stored move spans.
+    # The message reports Yahoo's 08:00 to 09:00, the store's two bars; its
+    # 10:00 bar plays no part.
     verdict, _, theirs = judge("2024-12-17 09:00", 84.9198, 84.51605,
                                {"2024-12-17 07:00": 84.95, "2024-12-17 08:00": 84.900,
                                 "2024-12-17 09:00": 84.9255, "2024-12-17 10:00": 84.95},
@@ -611,17 +612,15 @@ def test_a_move_far_only_once_a_bad_stretch_left_the_yardstick_is_voted_on(
         verify.REAL
 
 
-def test_a_move_a_source_prints_an_hour_late_counts_against_until_it_does():
-    # USD/TRY 2025-03-14: SiftingIO came back at 11:00, Yahoo only at 12:00.
-    # At 12:05 Yahoo has not moved yet: a no, until the session's recount.
+def test_a_source_not_serving_the_hour_yet_is_an_outage_until_it_does():
+    # USD/TRY 2025-03-14 11:00: before Yahoo serves its 11:00 bar it is out;
+    # once it does, that bar decides, whatever its 12:00 bar does later.
     rows = {"2025-03-14 10:00": 36.5290, "2025-03-14 11:00": 36.5270,
             "2025-03-14 12:00": 36.6420}
     assert judge("2025-03-14 11:00", 36.5640, 36.6741, rows,
-                 "2025-03-14 12:05")[0] == verify.UNCONFIRMED
+                 "2025-03-14 11:30")[0] == verify.UNKNOWN
     assert judge("2025-03-14 11:00", 36.5640, 36.6741, rows,
-                 "2025-03-14 13:05")[0] == verify.CONFIRMED
-    # Had Yahoo stayed put, not seen - once its 12:00 bar has ended.
-    rows["2025-03-14 12:00"] = 36.5280
+                 "2025-03-14 12:05")[0] == verify.UNCONFIRMED
     assert judge("2025-03-14 11:00", 36.5640, 36.6741, rows,
                  "2025-03-14 13:05")[0] == verify.UNCONFIRMED
 
@@ -691,11 +690,10 @@ def test_an_indexs_night_is_judged_to_its_first_hours_close():
     assert theirs == pytest.approx(math.log(10546.0 / 10780.0))
 
 
-def test_a_source_with_bars_around_the_move_outweighs_one_bridging_a_gap():
+def test_a_source_with_no_bars_at_the_move_is_left_out_of_the_vote():
     # USD/INR's bad print at 22:00: Yahoo's last bar is 10:00, MarketWatch and
-    # Wallstreetcn have every hour and stayed flat. Yahoo could only bridge
-    # seventeen hours: an outage there, left out, and the other two's own
-    # hours are the vote.
+    # Wallstreetcn have every hour and stayed flat. Yahoo is an outage, left
+    # out, and the other two's own hours are the vote.
     def bars_(hours, price=96.1):
         return pd.DataFrame({"hour_utc": [ts(h) for h in hours], "open": price, "close": price})
     c = {"hour": ts("2026-09-30 22:00"), "check": "close", "from_open": False,
@@ -705,7 +703,7 @@ def test_a_source_with_bars_around_the_move_outweighs_one_bridging_a_gap():
     now = ts("2026-10-01 00:05")
     assert judge_all(c, [("yahoo", yahoo), ("marketwatch", mw), ("wallstreetcn", mw)],
                      now)[0] == verify.NOT_REAL
-    # MarketWatch alone against the store, Yahoo's bridge left out: a tie.
+    # MarketWatch alone against the store, Yahoo out: a tie.
     assert judge_all(c, [("yahoo", yahoo), ("marketwatch", mw)], now)[0] == \
         verify.UNCERTAIN
     # Yahoo's 03:00 bar, 0.3% up after the night's drift, does not turn it.
@@ -713,9 +711,9 @@ def test_a_source_with_bars_around_the_move_outweighs_one_bridging_a_gap():
         lambda f: pd.concat([f, bars_(["2026-10-01 03:00"], 96.40)], ignore_index=True))
     assert judge_all(c, [("yahoo", yahoo), ("marketwatch", mw), ("wallstreetcn", mw)],
                      ts("2026-10-01 04:05"))[0] == verify.NOT_REAL
-    # With nobody's bars around the move, the bridge is all there is.
+    # With nobody's bars at the move, nobody could check it: uncertain.
     assert judge_all(c, [("yahoo", yahoo)], ts("2026-10-01 04:05"))[0] == \
-        verify.REAL
+        verify.UNCERTAIN
 
 
 def test_a_vendor_printing_the_stores_own_bars_still_votes(monkeypatch, tmp_path, basket):
@@ -951,8 +949,10 @@ def test_a_broken_bar_from_a_second_source_costs_only_its_instrument(
     verify.verify([asset, other], str(tmp_path / "bars"), None, now=now, path=path)
     doubted = verify.not_real(path)
     assert (other.asset_id, int(hours[bad]), "close") in doubted
-    # The broken bar is left out and the rest of the source's hours decide.
-    assert (asset.asset_id, int(hours[bad]), "close") in doubted
+    # The broken bar is no bar: where the move starts every source is out,
+    # and nobody could check it.
+    assert verify.load(path)[(asset.asset_id, int(hours[bad]), "close")]["verdict"] == \
+        verify.UNCERTAIN
 
 
 # --- the softs: Sina changes contract on its own days --------------------------
@@ -983,6 +983,11 @@ def test_a_move_across_the_change_is_not_judged_by_sina():
     inside = {"hour": ts("2026-07-08 12:00"), "prev_hour": ts("2026-07-08 11:00")}
     assert verify.crosses(across, at)
     assert not verify.crosses(inside, at)
+    # Only the move's own two bars: the hour after the change is inside Sina's
+    # new month, and the bar before it inside its old one.
+    after = {"hour": ts("2026-07-08 09:00"), "prev_hour": ts("2026-07-08 08:00")}
+    before = {"hour": ts("2026-07-07 17:00"), "prev_hour": ts("2026-07-07 16:00")}
+    assert not verify.crosses(after, at) and not verify.crosses(before, at)
 
 
 def test_a_real_gap_across_sinas_change_is_a_tie_not_rejected(monkeypatch, tmp_path, basket):

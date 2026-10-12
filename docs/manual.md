@@ -259,17 +259,15 @@ about an instrument it provides itself: its word is the store's.
 
 **One source's answer** (`judge`). Each feed is compared with itself, so a steady
 offset is not a move.
-- **Saw it:** the source moved the same way at least half as far (`REAL_SHARE`), from its
-  closes up to an hour before the move to its closes up to an hour after (a session's gap
-  to its first open too - not a stock index's, whose night runs to its first bar's close).
-  An hour it has no bar for is bridged by its nearest bars within 12 hours. Measured 2026-10-08 over 3,444
-  moves: answers sit at 0.8 or more or under 0.2, half is in the gap between, and no source
-  is consistently an hour late (`docs/decisions.md`).
+- **Saw it:** its own price at the store's two bars moved the same way at least half as far
+  (`REAL_SHARE`): its close of the store's previous bar (its open of this bar, for an hour
+  measured from its open) to its close of this bar (its open, for a session's gap - not a
+  stock index's, whose night runs to its first bar's close).
 - **Did not:** it did not move with it, or has not yet - the vote is taken with what the
   source serves at the time, and the next count looks again.
-- **Outage:** the source is down, has no bar after the move yet, or is silent for 12 hours
-  around it. For the softs, also a move whose span crosses the source's own change of
-  contract - Sina's, Wallstreetcn's for cocoa and cotton, the FT's for coffee
+- **Outage:** the source is down, or has no bar - or no price - at either end: not served
+  yet, or a hole. No window and no bridge: a source an hour late does not see the move.
+  For the softs, also a move that takes in the source's own change of contract - Sina's, Wallstreetcn's for cocoa and cotton, the FT's for coffee
   (`verify.switches`: a session whose median offset to the store stepped by 50 bp or more) -
   where its move carries the spread between two months. For cattle the FT's contract is
   the one the store holds today, so the step is at the store's own change.
@@ -286,9 +284,7 @@ the count, and named on the line.
 | no other source could answer | uncertain | yes | `⚠️ SiftingIO(+2.10%), Yahoo(outage), MarketWatch(outage)` |
 
 The line names the store's provider first with the stored move, then every source with
-its own move over the same hours, or `(outage)`. A source with bars of its own around the
-move outweighs one bridging a gap: the bridging one is an outage (USD/INR at night:
-Yahoo's last bar is 10:00, MarketWatch has every hour). A rate limit, or no answer to two
+its own move over the same two bars, or `(outage)`. A rate limit, or no answer to two
 requests in a row, stops a source for the run, and the health chat names it. Every source
 of an instrument is asked or none that run: a vote of all of them, not of whichever were
 asked.

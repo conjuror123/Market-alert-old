@@ -258,8 +258,11 @@ the move yet counts against until the next count.
 store's previous bar and at this one moved the same way at least half as far. No bar at
 either end - none served, or no price - is an outage, left out; with nobody left, the move
 is uncertain. A one-hour window and a 12-hour bridge stood here until then, each from one
-case (a late feed, a hole), not a measured rule. Half: answers sat at 0.8 or more or under
-0.2 (3,704 answers, 2026-10-08, under the window). Which feed was wrong is not asked.
+case (a late feed, a hole), not a measured rule. Measured on the 58's voters' bars of
+2026-09-07 to 10-09: every one of 142 source-instrument pairs moves with the store on the
+same hour (median correlation 0.998; an hour off, 0.007), and of 119 moves at 4σ or more no
+verdict or answer changed without them. Half: answers sat at 0.8 or more or under 0.2
+(3,704 answers, 2026-10-08, under the window). Which feed was wrong is not asked.
 
 **A source with its own contract months is not asked across its own change of contract**
 (Sina's and Wallstreetcn's softs): found as a step of 50 bp or more in the session's median

@@ -1,0 +1,95 @@
+name: Measure
+
+# The dashboard: what the detector sends, measured the same way every time the code
+# changes (tools/measure.py), drawn as one page (tools/dashboard.py) and published on
+# GitHub Pages. It reads the bar store and the live run's vote record, writes nothing to
+# the repository, and needs no keys. A measurement whose own checks fail stops the job
+# before anything is published.
+#
+# The page keeps its history on the site: each run reads the published history.json,
+# adds its row and publishes it again.
+#
+# Once, by hand: Settings -> Pages -> Source "GitHub Actions"; and in Settings ->
+# Environments -> github-pages, the branches below allowed to deploy.
+
+on:
+  push:
+    branches: [claude/youthful-pascal-u0rx7u]
+    paths:
+      - "jump/**"
+      - "price_monitor/**"
+      - "config/**"
+      - "tools/**"
+      - ".github/workflows/measure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: measure
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # The month before this one may still be open for its first week; the live run
+      # keeps the open months on its release (tools/hot_bars.sh).
+      - name: Restore the open months of the bars
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BARS_BRANCH: ${{ github.event.repository.default_branch }}
+        run: tools/hot_bars.sh restore
+
+      # The record the live run keeps, not this branch's copy of it.
+      - name: Take the live run's vote record
+        run: |
+          git fetch --depth=1 origin "${{ github.event.repository.default_branch }}"
+          git show FETCH_HEAD:data/jump/verified.csv > "$RUNNER_TEMP/verified.csv"
+
+      - name: Measure
+        run: |
+          PYTHONPATH=. python -m tools.measure "$RUNNER_TEMP/measure.json" \
+            --verified "$RUNNER_TEMP/verified.csv"
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Read the published history
+        run: |
+          curl -fsSL "${{ steps.pages.outputs.base_url }}/history.json" \
+            -o "$RUNNER_TEMP/history.json" || echo "no published history yet"
+
+      - name: Draw the page
+        run: |
+          PYTHONPATH=. python -m tools.dashboard "$RUNNER_TEMP/measure.json" site \
+            --history "$RUNNER_TEMP/history.json"
+
+      - name: Upload the page
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publish
+        id: deploy
+        uses: actions/deploy-pages@v4

@@ -684,9 +684,15 @@ stops short is reported with the part it was in and its minutes.
 the 58 yet (the 172 sent about 9 a week). A quiet day is normal: green runs mean it looked
 and found nothing.
 
-**Checking on it.** `PYTHONPATH=. python tools/stage_report.py` prints rates by word,
-block and channel, and the biggest hours. To run the pass by hand, export the keys and
-run the four commands of section 3.
+**Checking on it.** The dashboard (https://conjuror123.github.io/Market-alert/) is
+measured on every push of code to the development branch (`.github/workflows/measure.yml`,
+and by hand): `tools/measure.py` builds the metrics cold and scores them with `jumps.run`,
+as the bot scores it (the live record applied) and the detector alone, over the year to
+the 1st of the month and the year before, and the archive by year; `tools/dashboard.py`
+draws it, with the history of earlier measurements. Its counts are cross-added, and a
+check that fails stops it from publishing. `PYTHONPATH=. python tools/stage_report.py`
+prints rates by word, block and channel, and the biggest hours. To run the pass by hand,
+export the keys and run the four commands of section 3.
 
 **A repair.** Actions → Price Spike Monitor → Run workflow, on the live branch, with
 `repair` naming the funds (`HYG`). Its log says, per fund, the hours missing, the hours
@@ -717,7 +723,7 @@ health and the calendar go out, Jump's pushes, note and pings do not.
 | `price_monitor/weekly_digest.py`, `economic_calendar.py` | the calendar |
 | `price_monitor/notifier.py`, `health.py`, `__main__.py` | Telegram calls, health, the delivery entry point |
 | `price_monitor/<provider>.py` | one client per provider |
-| `tools/` | `stage_report.py`, `hot_bars.sh`, `run_died.sh` (the health line for a run that could not deliver), `voter_bars.py` (every live voter's bars for a measurement; the backfill's `voter-bars` mode, where the keys are) |
+| `tools/` | `measure.py` and `dashboard.py` (the dashboard), `stage_report.py`, `hot_bars.sh`, `run_died.sh` (the health line for a run that could not deliver), `voter_bars.py` (every live voter's bars for a measurement; the backfill's `voter-bars` mode, where the keys are) |
 
 How far back each record reaches:
 

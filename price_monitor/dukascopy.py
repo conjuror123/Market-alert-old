@@ -3,7 +3,7 @@
 WHY THIS EXISTS. No free live plan serves FX history back to 2003. Dukascopy
 serves the seven majors from then - which is what puts the FX history in the
 same era as the ETFs, so 2008 stops being a crisis the basket can only half
-see. It also carries USD/CNH.
+see. It also carries USD/CNH, and spot gold and silver.
 
 NO NODE, NO KEY, NO ACCOUNT. The popular dukascopy-node package is a wrapper
 around these same plain HTTPS files; there is no API behind it. One file holds
@@ -29,7 +29,9 @@ high >= low.
 THE POINT IS NOT THE SAME FOR EVERY PAIR. It is 1e-5 for the five-decimal
 pairs and 1e-3 for the yen ones - measured: in June 2013 USD/JPY's integers run
 94085..100672, which is 94.085..100.672 and not 0.94085. A single scale puts
-the yen a thousand times too low.
+the yen a thousand times too low. Gold and silver count thousandths of a dollar
+too: so read, gold is 4,040-4,450 and silver 57-66 dollars in August 2026, as
+SiftingIO's and Wallstreetcn's bars say.
 
 FILLER BARS ARE NOT DATA. The archive emits a record for EVERY hour of the
 month, including the ones the market was shut: volume 0.0, and open, high, low
@@ -85,6 +87,7 @@ SYMBOLS = {
     "EUR/USD": "EURUSD", "GBP/USD": "GBPUSD", "USD/JPY": "USDJPY",
     "USD/CHF": "USDCHF", "USD/CAD": "USDCAD", "AUD/USD": "AUDUSD",
     "USD/CNH": "USDCNH",
+    "XAU/USD": "XAUUSD", "XAG/USD": "XAGUSD",
 }
 
 # The earliest month each symbol holds a traded hour, probed rather than
@@ -94,6 +97,8 @@ FIRST_MONTH = {
     "EURUSD": (2003, 5), "GBPUSD": (2003, 5), "USDJPY": (2003, 5),
     "USDCHF": (2003, 5), "USDCAD": (2003, 8), "AUDUSD": (2003, 8),
     "USDCNH": (2012, 4),
+    # Probed 2026-10-12; gold read 340-373 and silver 4.35-4.84 dollars that month.
+    "XAUUSD": (2003, 5), "XAGUSD": (2003, 5),
 }
 
 RECORD = struct.Struct(">iiiiif")   # time, open, close, low, high, volume
@@ -103,7 +108,9 @@ SIDES = ("BID", "ASK")
 
 # Integer prices are in units of the instrument's point.
 POINT_DEFAULT = 1e-5
-POINT_JPY = 1e-3
+POINT_THOUSANDTHS = 1e-3
+# Counted in thousandths beside the yen pairs.
+METALS = ("XAUUSD", "XAGUSD")
 
 # Polite spacing between requests, and how hard to retry a 503.
 REQUEST_DELAY_SECONDS = 1.5
@@ -121,7 +128,9 @@ def symbol_for(ticker: str) -> str | None:
 
 def point_for(symbol: str) -> float:
     """The price unit of the archive's integers for this symbol."""
-    return POINT_JPY if symbol.endswith("JPY") else POINT_DEFAULT
+    if symbol.endswith("JPY") or symbol in METALS:
+        return POINT_THOUSANDTHS
+    return POINT_DEFAULT
 
 
 def first_month(symbol: str) -> tuple[int, int] | None:

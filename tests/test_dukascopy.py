@@ -49,6 +49,15 @@ def test_the_yen_uses_a_different_point_than_everything_else():
     assert dukascopy.point_for("USDCNH") == 1e-5
 
 
+def test_gold_and_silver_count_thousandths_of_a_dollar():
+    # Gold read 4,040-4,450 and silver 57-66 dollars in August 2026, as SiftingIO
+    # and Wallstreetcn said; at the pairs' point they would read 42 and 0.61.
+    payload = encode([(0, 4203390, 4203410, 4201820, 4208160, 3.0)])
+    rows = dukascopy.parse_month(payload, 2026, 10, dukascopy.point_for("XAUUSD"))
+    assert rows[0][4] == pytest.approx(4203.41)
+    assert dukascopy.point_for("XAGUSD") == 1e-3
+
+
 def test_a_yen_month_decodes_to_a_yen_price():
     payload = encode([(0, 100672, 100500, 100400, 100700, 12.0)])
     rows = dukascopy.parse_month(payload, 2013, 6, dukascopy.point_for("USDJPY"))

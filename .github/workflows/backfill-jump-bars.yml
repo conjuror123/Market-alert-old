@@ -20,8 +20,9 @@ name: Backfill Jump Bars
 #                   does not; an empty answer confirms the hole is the
 #                   provider's rather than something our fetching skipped
 #   deepen-dukascopy
-#                   fill the currency pairs below what is stored, from
-#                   Dukascopy, which reaches 2003 and also carries USD/CNH.
+#                   fill the currency pairs, gold and silver below what is
+#                   stored, from Dukascopy, which reaches 2003 and also carries
+#                   USD/CNH.
 #                   Needs no key. Run it ONE PAIR AT A TIME via `instruments`:
 #                   a pair is a few hundred requests, and a failure part way
 #                   through then costs one pair rather than all of them
@@ -54,12 +55,6 @@ name: Backfill Jump Bars
 #                   35 days, uploaded as the artifact `voter-bars` for a
 #                   measurement (tools/voter_bars.py). Writes nothing to the
 #                   store or the record.
-#   metals-probe    one-off, for the basket's stage 1: SiftingIO's and Twelve
-#                   Data's hourly gold and silver, asked two minutes past the next
-#                   hour (six requests at most), against Dukascopy's and
-#                   Wallstreetcn's; uploaded as the artifact `metals-probe`
-#                   (tools/metals_probe.py). Start it while the metals trade
-#                   (Monday 00:00 to Friday 20:00 UTC). Writes nothing to the store.
 
 on:
   workflow_dispatch:
@@ -84,7 +79,6 @@ on:
           - live-pass
           - corporate-actions
           - voter-bars
-          - metals-probe
 
 permissions:
   contents: write
@@ -135,15 +129,13 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           # Deepening asks each pair's archive source, not SiftingIO, but the
           # backfill refuses up front a list holding SiftingIO pairs without it;
-          # the metals probe asks it.
+          # a live pass asks it.
           SIFTING_API_KEY: ${{ secrets.SIFTING_API_KEY }}
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
         run: |
           if [ "${{ github.event.inputs.mode }}" = "corporate-actions" ]; then
             python -m jump.corporate_actions
-          elif [ "${{ github.event.inputs.mode }}" = "metals-probe" ]; then
-            python -m tools.metals_probe metals-probe
           elif [ "${{ github.event.inputs.mode }}" = "voter-bars" ]; then
             python -m tools.voter_bars voter-bars \
               ${{ github.event.inputs.instruments && format('--instruments "{0}"', github.event.inputs.instruments) || '' }}
@@ -158,14 +150,6 @@ jobs:
         with:
           name: voter-bars
           path: voter-bars
-          retention-days: 30
-
-      - name: Upload the metals probe
-        if: always() && github.event.inputs.mode == 'metals-probe'
-        uses: actions/upload-artifact@v4
-        with:
-          name: metals-probe
-          path: metals-probe
           retention-days: 30
 
       - name: Commit the deepened store

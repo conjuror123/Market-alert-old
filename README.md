@@ -67,4 +67,4 @@ channel without stopping the bot, set `jump_alerts_muted: true` in
 | what goes to Telegram | `price_monitor/jump_delivery.py` |
 | the hourly workflow | `.github/workflows/price-monitor.yml` |
 | rates by word and block, the biggest hours | `tools/stage_report.py` |
-| the dashboard: volume and the archive, measured on every code change | `.github/workflows/measure.yml` (`tools/measure.py`, `tools/dashboard.py`), published at https://conjuror123.github.io/Market-alert/ |
+| the dashboard: volume, the votes taken again on the voters' bars, and the archive, measured on every code change | `.github/workflows/measure.yml` (`tools/measure.py`, `tools/dashboard.py`), published at https://conjuror123.github.io/Market-alert/ |

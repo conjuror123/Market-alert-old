@@ -687,11 +687,17 @@ and found nothing.
 
 **Checking on it.** The dashboard (https://conjuror123.github.io/Market-alert/) is
 measured on every push of code to the development branch (`.github/workflows/measure.yml`,
-and by hand): `tools/measure.py` builds the metrics cold and scores them with `jumps.run`,
-as the bot scores it (the live record applied) and the detector alone, over the year to
-the 1st of the month and the year before, and the archive by year; `tools/dashboard.py`
-draws it, with the history of earlier measurements. Its counts are cross-added, and a
-check that fails stops it from publishing. `PYTHONPATH=. python tools/stage_report.py`
+and by hand). The workflow fetches every voter's bars of the last year
+(`tools/voter_bars.py`, each source as far as it reaches; Alpaca's keys only).
+`tools/measure.py` then builds the metrics cold, votes every far move of that year again
+with this code (`verify.candidates`, `verify.judge_found`, a source with no bar an
+outage), and scores with `jumps.run` two ways: the detector alone, over the year to the
+fetch, the year before and the archive by year; and with those votes applied, over the
+voted year. The votes are counted by verdict, by age (older moves have fewer sources that
+still reach them), by source and by block, and listed one by one. `tools/dashboard.py`
+draws it. Each run publishes only its own measurement: nothing is compared with or kept
+from an earlier run, and only the workflow writes the page. Its counts are cross-added,
+and a check that fails stops it from publishing. `PYTHONPATH=. python tools/stage_report.py`
 prints rates by word, block and channel, and the biggest hours. To run the pass by hand,
 export the keys and run the four commands of section 3.
 

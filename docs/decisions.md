@@ -189,6 +189,11 @@ xid, 24 trading days back - cattle by the contract the store holds, coffee only
 continuous. Of the largest moves of 2026-09-10 to 10-09 it saw 10 of cattle's 11 and 19 of
 coffee's 20, and denied none.
 
+**Gold and silver from SiftingIO**, its commodities endpoint, spot round the clock: asked at
+04:02 UTC on 2026-10-12 it held the bar that ended at 04:00, and over 799 hours it moved
+with Dukascopy's at 0.9992 and 0.9980 (medians 0.25 and 1.06 bp). Twelve Data's plan
+refuses silver, and its gold fills the weekends with bars.
+
 **Every coin is its USDT pair on Binance**: one exchange, one quote currency; before 2018,
 the deepest dollar exchange that passes the splice gates.
 

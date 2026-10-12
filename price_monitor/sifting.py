@@ -1,4 +1,4 @@
-"""SiftingIO REST client, used for the currency pairs.
+"""SiftingIO REST client, used for the currency pairs and spot gold and silver.
 
 WHY THE PAIRS LIVE HERE. Measured on 2026-09-30: the
 free tier serves the bar of the hour that is still forming, so the bar that
@@ -7,6 +7,13 @@ to - the Nordic and EM ones Tiingo and Dukascopy do not (BRL, INR, KRW); and
 against the stored bars the eight held pairs agree to a median of 0.11 to 0.35
 bps over three hundred hours. Moving them here also frees eight of Tiingo's
 fifty hourly requests for funds.
+
+GOLD AND SILVER TOO, from its commodities endpoint (docs/decisions.md, "Gold and
+silver from SiftingIO"). Asked at 04:02 UTC on 2026-10-12, it held the bar that
+ended at 04:00 and the forming one, 117-118 hours a week with no Saturday bars,
+and moved with Dukascopy's at 0.9992 (gold) and 0.9980 (silver) over 799 hours,
+medians 0.25 and 1.06 bps. It keeps a thin bar in the metals' daily break (21:00
+UTC in New York's summer) that Dukascopy and Wallstreetcn leave empty.
 
 NOT FOR THIN FUNDS. Its equity bars are "aggregated, derived" rather than the
 consolidated tape, and on the thin commodity funds they drift from it - UGA by a
@@ -22,10 +29,10 @@ at most 2000 bars and carries `meta.next_cursor` while more remain.
 LIMITS. The free tier is 10,000 calls a MONTH and a few a second. The response's
 `X-Quota-Remaining` is NOT the month: after a run's 16 requests it said 4 while the
 account showed 181 for the month (2026-10-06), so it counts a short window; the
-month is on the account page only. Seven pairs asked once an hour through the
-FX week are about 3,600 a month (sixteen and USD/BRL were about 8,700 until
-stage 1). A 429 means the budget or the burst is spent, and RateLimited stops the run for
-this provider rather than retrying into it.
+month is on the account page only. Seven pairs and the two metals asked once an
+hour through the FX week are about 4,600 a month (sixteen pairs and USD/BRL were
+about 8,700 until stage 1). A 429 means the budget or the burst is spent, and
+RateLimited stops the run for this provider rather than retrying into it.
 """
 from __future__ import annotations
 
@@ -42,6 +49,9 @@ log = logging.getLogger("price_monitor.sifting")
 BASE_URL = "https://api.sifting.io/v1"
 FX_ENDPOINT = "/hist/forex/{pair}/bars"
 STOCK_ENDPOINT = "/hist/stocks/{ticker}/bars"
+COMMODITY_ENDPOINT = "/hist/commodities/{symbol}/bars"
+# Spelled as pairs, served by the commodities endpoint.
+COMMODITIES = {"XAU/USD", "XAG/USD"}
 
 # This app's interval names -> SiftingIO's.
 INTERVAL_CODES = {"30min": "30m", "1h": "1h"}
@@ -153,8 +163,12 @@ def fetch_full_history(
         raise ExchangeError(f"Unsupported SiftingIO interval '{interval}'") from None
     end = end or datetime.now(timezone.utc)
     start = end - timedelta(days=max(days, 1.0 / 24))
-    path = (FX_ENDPOINT.format(pair=fx_pair(symbol)) if is_fx(symbol)
-            else STOCK_ENDPOINT.format(ticker=symbol))
+    if symbol in COMMODITIES:
+        path = COMMODITY_ENDPOINT.format(symbol=fx_pair(symbol))
+    elif is_fx(symbol):
+        path = FX_ENDPOINT.format(pair=fx_pair(symbol))
+    else:
+        path = STOCK_ENDPOINT.format(ticker=symbol)
     params = {"start": _stamp(start), "end": _stamp(end), "interval": code,
               "limit": PAGE_LIMIT}
     candles: list[Candle] = []

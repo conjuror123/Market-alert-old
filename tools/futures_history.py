@@ -14,7 +14,8 @@ Yahoo's two years), by series (HISTORY):
   time; its stray closes reset (futures.reset_stray_closes) and its volume - a tick
   count - scaled to the contract's over the overlap, so the thin-bar rule reads
   both alike. Its switches, at a session's start, are looked for among the nights
-  in the weeks before each roll, as the softs' were (futures.locate_switches).
+  in the weeks before each roll, as the softs' were (futures.locate_switches) -
+  soybeans' in the last weeks of the months it switches in (CFD_SWITCHES).
 - "continuous": Yahoo's continuous series, back 730 days, its flips and sparse
   months dropped (futures.clean_continuous) - the 2- and 10-year notes, whose
   series switched in 2026 on this one's roll day, inside an hour (the 10-year
@@ -69,6 +70,14 @@ CFD_MIN_HOURS = 60
 # hourly moves past 2% (-19.6% and back on 02-27; a zero on 03-13) against 0-3 a
 # quarter after, and its 2018-Q3/Q4 no bars.
 CFD_FROM = {"ZB=F": date(2019, 1, 1)}
+# A CFD that does not switch near this series' rolls, looked for in the last
+# CFD_BEFORE business days of the months it switches in, and CFD_AFTER after:
+# soybeans' moves to each of the seven listed months 5 business days before the
+# month ends (on its last business day to 2019-07) - against Yahoo's daily series,
+# 26 departures of 60-790 bp - while this series rolls mid-month, before November,
+# January, March, May and July only.
+CFD_SWITCHES = {"ZS=F": "ZGJMNQV"}
+CFD_BEFORE, CFD_AFTER = 12, 2
 # Dukascopy's archive answers 503 for minutes at a time: a month it gives up on is
 # asked again after MONTH_PAUSE seconds, MONTH_TRIES times; each month fetched is
 # kept in --cache, so a run that stops is resumed rather than repeated.
@@ -120,6 +129,23 @@ def archive(ticker: str, today: date, session, cache: "str | None" = None
     # A price is positive: the bond's CFD printed a zero (2018-03-13).
     prices = frame[["open", "high", "low", "close"]]
     return frame[(prices > 0).all(axis=1)].reset_index(drop=True), source
+
+
+def cfd_windows(months: str, first: date, last: date) -> "list[tuple[date, date]]":
+    """The last CFD_BEFORE business days of each month in `months` (month codes)
+    and CFD_AFTER after, between `first` and `last`."""
+    out = []
+    for year in range(first.year, last.year + 1):
+        for code in months:
+            month = futures.MONTH_CODES.index(code) + 1
+            end = date(year + month // 12, month % 12 + 1, 1) - timedelta(days=1)
+            while end.weekday() >= 5:
+                end -= timedelta(days=1)
+            lo = futures._business_days_from(end, -CFD_BEFORE)
+            hi = futures._business_days_from(end, CFD_AFTER)
+            if hi >= first and lo <= last:
+                out.append((lo, hi))
+    return sorted(out)
 
 
 def own_history(contract: pd.DataFrame, seam: int) -> pd.DataFrame:
@@ -180,6 +206,9 @@ def build(asset, today: date, session, bars_dir: str, dry_run: bool,
     # series rolls (the softs'); Yahoo's notes inside an hour, on this series' roll day.
     how = dict(before=1, after=1, rolls_only=True) if plan == "continuous" else \
         dict(rolls_only=True, nights_only=True)
+    if ticker in CFD_SWITCHES and len(below):
+        first = pd.Timestamp(int(below["hour_utc"].min()), unit="s").date()
+        how["windows"] = cfd_windows(CFD_SWITCHES[ticker], first, front_day)
     below, nights, dropped, found = futures.locate_switches(below, ticker, template, front_day,
                                                             **how)
     for line in found:

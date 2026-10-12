@@ -353,14 +353,16 @@ def switch_windows(ticker: str, first: date, last: date, before: int = SWITCH_BE
 
 def locate_switches(frame: pd.DataFrame, ticker: str, template: str, seam: date,
                     before: int = SWITCH_BEFORE, after: int = SWITCH_AFTER,
-                    rolls_only: bool = False, nights_only: bool = False
+                    rolls_only: bool = False, nights_only: bool = False,
+                    windows: "list[tuple[date, date]] | None" = None
                     ) -> "tuple[pd.DataFrame, list[str], list[tuple[date, date]], list[str]]":
     """The archive's history below the seam with its switches handled: the frame
     without the bars of a switch inside a session and without the windows where
     none stands out; the session dates of switches on a session's first bar
     (roll nights); the windows dropped; a line per window found. `nights_only`:
     a CFD's switch, at a session's start - only the nights are compared, with a
-    typical night's move."""
+    typical night's move. `windows`: where to look, when the archive does not
+    switch near this series' rolls (switch_windows otherwise)."""
     from jump import sessions
 
     out = frame.sort_values("hour_utc").reset_index(drop=True)
@@ -376,7 +378,9 @@ def locate_switches(frame: pd.DataFrame, ticker: str, template: str, seam: date,
     start, stop = day.iloc[0], day.iloc[-1]
     keep = np.ones(len(out), dtype=bool)
     nights, dropped, found = [], [], []
-    for lo, hi in switch_windows(ticker, start, max(stop, seam), before, after, rolls_only):
+    if windows is None:
+        windows = switch_windows(ticker, start, max(stop, seam), before, after, rolls_only)
+    for lo, hi in windows:
         inside = ((day >= lo) & (day <= hi)).to_numpy()
         if not inside.any():
             continue                    # past the archive's end

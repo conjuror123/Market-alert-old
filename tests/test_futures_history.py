@@ -20,3 +20,19 @@ def test_the_contract_held_now_counts_from_the_first_month_it_traded():
     own = futures_history.own_history(contract, seam)
     assert pd.to_datetime(own["hour_utc"].min(), unit="s").strftime("%Y-%m") == "2026-02"
     assert len(own) == 100
+
+
+def test_soybeans_cfd_is_looked_for_where_it_switches():
+    # Dukascopy's soybeans moved to August on 2022-07-22, 5 business days before
+    # July ended (-790 bp against Yahoo's daily series), while this series rolls
+    # mid-month and not before August: its own windows never held that night.
+    from datetime import date
+
+    from jump import futures
+    switch = date(2022, 7, 22)
+    own = futures.switch_windows("ZS=F", date(2022, 1, 1), date(2022, 12, 31), rolls_only=True)
+    assert not any(lo <= switch <= hi for lo, hi in own)
+    cfd = futures_history.cfd_windows(futures_history.CFD_SWITCHES["ZS=F"],
+                                      date(2022, 1, 1), date(2022, 12, 31))
+    assert any(lo <= switch <= hi for lo, hi in cfd)
+    assert len(cfd) == 7

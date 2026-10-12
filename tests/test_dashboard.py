@@ -1,30 +1,34 @@
-"""tools/dashboard.py: the page and its history across changes."""
+"""tools/dashboard.py: the page from one measurement, and nothing kept between runs."""
 import json
+import os
 
 from tools import dashboard
 
 
-def _result(commit="abc1234", pushes=3.7):
-    window = {"name": "year to 2026-10-01"}
-    v = {"pushes_a_week": pushes, "rows_a_week": 10.4, "busiest_week": {"pushes": 14}}
-    return {"meta": {"commit": commit, "subject": "a change", "measured_at": "2026-10-12 09:00 UTC",
+def _result():
+    return {"meta": {"commit": "abc1234", "subject": "a change", "measured_at": "2026-10-12 09:00 UTC",
                      "instruments": 58, "levels": [4.5, 6.4, 9.0, 12.7]},
-            "windows": [window], "volume": {"bot": {window["name"]: v}}}
+            "windows": [{"name": "year to 2026-10-12 09:00"}], "votes": None}
 
 
-def test_a_measurement_adds_its_row_and_a_rerun_of_the_commit_replaces_it():
-    history = dashboard.with_history([], _result("aaa"))
-    history = dashboard.with_history(history, _result("bbb", 3.9))
-    assert [h["commit"] for h in history] == ["aaa", "bbb"]
-    history = dashboard.with_history(history, _result("bbb", 4.1))
-    assert [h["commit"] for h in history] == ["aaa", "bbb"]
-    assert history[-1]["pushes_a_week"] == 4.1
+def _payload(page):
+    return json.loads(page.split('<script id="payload" type="application/json">')[1]
+                      .split("</script>")[0])
 
 
 def test_the_page_carries_the_numbers_and_cannot_be_closed_early_by_them():
     result = _result()
     result["meta"]["subject"] = "</script><b>x</b>"
-    page = dashboard.render(result, dashboard.with_history([], result))
+    page = dashboard.render(result)
     assert "__PAYLOAD__" not in page
-    payload = page.split('<script id="payload" type="application/json">')[1].split("</script>")[0]
-    assert json.loads(payload)["m"]["meta"]["subject"] == "</script><b>x</b>"
+    assert _payload(page) == result
+
+
+def test_a_run_writes_only_its_own_page_and_measurement(tmp_path):
+    measured = tmp_path / "m.json"
+    measured.write_text(json.dumps(_result()))
+    site = tmp_path / "site"
+    assert dashboard.main([str(measured), str(site)]) == 0
+    assert sorted(os.listdir(site)) == ["index.html", "latest.json"]
+    assert json.loads((site / "latest.json").read_text()) == _result()
+    assert _payload((site / "index.html").read_text()) == _result()

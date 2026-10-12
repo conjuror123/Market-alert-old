@@ -64,7 +64,7 @@ history from Dukascopy, Wallstreetcn and Sina as voters.
 **Gate B** (the user's): a keyed probe for gold and silver, yes; platinum to stage 2 with
 PPLT standing in, yes; the KOSPI, TAIEX and JSE Top 40 without a voter, fine for now.
 
-**Left**: the final before/after with gold and silver in, and the user's go.
+**Left**: the user's go.
 
 ## The levels, thought through again (2026-10-11)
 
@@ -111,6 +111,12 @@ New York's open.
 **The user's answer**: 4.5 / 6.4 / 9.0 / 12.7, both faults fixed. Measured again with
 exactly those levels and the fixed code: 3.6 pushes and 10.0 note rows a week (4.4 and 6.3
 the year before), the busiest week 14 (65).
+
+**The final count** (2026-10-12), spot gold and silver in place of GLD and SLV, the same
+way: 3.8 pushes and 10.5 note rows a week (4.6 and 6.7 the year before), the busiest week
+14 (68). The metals' pushes rise from 16 to 29 (7 to 17), many in Asian hours the funds
+never saw; each that COMEX's hourly futures can check (18 of 22) moved with them in the
+same hour, silver's −15.3% at 02:00 UTC on 2026-02-05 among them (COMEX −14.8%).
 
 ## Stage 2: after the pause
 

@@ -45,9 +45,9 @@ detector:
   levels: [4.5, 6.4, 9.0, 12.7]   # noticeable, high, major, extreme, in sigmas
 ```
 
-The bottom level sets how much you hear: 4.5 gives about 3.6 pushes and 10 note rows a
-week, 3.9 about 6.5 and 15, 6 about 1.3 and 3 (the stage report's count over the year to
-2026-10-05). Which words push is `PUSH_TIERS` in `jump/routing.py`. To silence the
+The bottom level sets how much you hear: 4.5 gives about 3.8 pushes and 10.5 note rows a
+week, 3.9 about 7.0 and 15.8, 6 about 1.4 and 3.3 (the stage report's count over the year
+to 2026-10-05). Which words push is `PUSH_TIERS` in `jump/routing.py`. To silence the
 channel without stopping the bot, set `jump_alerts_muted: true` in
 `config/config.yaml`.
 

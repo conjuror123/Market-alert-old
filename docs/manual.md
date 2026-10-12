@@ -677,11 +677,10 @@ has 12 of the job's 20 minutes: past them it is stopped, and delivery, health an
 commit still run. Each part of it (fetch, pipeline, jumps) notes its start, so a step that
 stops short is reported with the part it was in and its minutes.
 
-**Expected volume.** About 4 pushes and 10 note rows a week: 3.6 and 10.0 over the year to
-2026-10-05, 4.4 and 6.3 over the year to 2025-10-05, by the stage report's count
-(24-hour events, without the vote; GLD and SLV standing in for gold and silver). The
-basket of 172 at 6σ, counted the same way, made 4.0 and 10.8 (`docs/basket-proposal.md`,
-gate D). How many messages that makes, replayed through delivery, is not measured for
+**Expected volume.** About 4 pushes and 10 note rows a week: 3.8 and 10.5 over the year to
+2026-10-05, 4.6 and 6.7 over the year to 2025-10-05, by the stage report's count
+(24-hour events, without the vote). The basket of 172 at 6σ, counted the same way, made
+4.0 and 10.8 (`docs/basket-proposal.md`, gate D). How many messages that makes, replayed through delivery, is not measured for
 the 58 yet (the 172 sent about 9 a week). A quiet day is normal: green runs mean it looked
 and found nothing.
 

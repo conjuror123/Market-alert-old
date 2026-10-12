@@ -43,6 +43,7 @@ import argparse
 import os
 import shutil
 import sys
+import time
 from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
@@ -52,6 +53,7 @@ from jump import bars, futures, sessions
 from jump.backfill import verify_alignment
 from jump.basket import load_basket
 from price_monitor import dukascopy, yahoo
+from price_monitor.models import ExchangeError
 
 HISTORY = {"BZ=F": "cfd", "ZB=F": "cfd", "ZS=F": "cfd", "PL=F": "cfd",
            "ZT=F": "continuous", "ZN=F": "continuous",
@@ -62,6 +64,10 @@ STAGE_2 = tuple(HISTORY)
 OWN_SHARE = 0.05
 # The splice's check: the archive against the contract held now over these last days.
 ALIGN_DAYS = 30
+# Dukascopy's archive answers 503 for minutes at a time: a month it gives up on is
+# asked again after MONTH_PAUSE seconds, MONTH_TRIES times; each month fetched is
+# kept in --cache, so a run that stops is resumed rather than repeated.
+MONTH_TRIES, MONTH_PAUSE = 6, 120
 DAY = 86400
 
 
@@ -69,13 +75,39 @@ def _frame(candles) -> pd.DataFrame:
     return bars.to_hourly(bars.candles_to_frame(candles))
 
 
-def archive(ticker: str, today: date, session) -> "tuple[pd.DataFrame, str]":
+def _cfd_month(symbol: str, start: date, session, cache: "str | None", today: date
+               ) -> pd.DataFrame:
+    stop = date(start.year + start.month // 12, start.month % 12 + 1, 1)
+    path = os.path.join(cache, f"{symbol}-{start:%Y-%m}.parquet") if cache else None
+    if path and os.path.exists(path):
+        return pd.read_parquet(path)
+    for attempt in range(MONTH_TRIES):
+        try:
+            frame = _frame(dukascopy.fetch_history(symbol, start, min(stop, today + timedelta(days=1)),
+                                                   session))
+            break
+        except ExchangeError as exc:
+            if attempt == MONTH_TRIES - 1:
+                raise
+            print(f"   {exc}; again in {MONTH_PAUSE} s", flush=True)
+            time.sleep(MONTH_PAUSE)
+    if path and stop <= today:                   # a whole month, which no longer changes
+        os.makedirs(cache, exist_ok=True)
+        frame.to_parquet(path, index=False)
+    return frame
+
+
+def archive(ticker: str, today: date, session, cache: "str | None" = None
+            ) -> "tuple[pd.DataFrame, str]":
     """The archive's continuous record to today, and which archive it is."""
     symbol = dukascopy.CFDS.get(ticker)
     if symbol:
-        first = date(*dukascopy.first_month(symbol), 1)
-        frame = _frame(dukascopy.fetch_history(symbol, first, today + timedelta(days=1),
-                                               session))
+        month = date(*dukascopy.first_month(symbol), 1)
+        parts = []
+        while month <= today:
+            parts.append(_cfd_month(symbol, month, session, cache, today))
+            month = date(month.year + month.month // 12, month.month % 12 + 1, 1)
+        frame = pd.concat([p for p in parts if not p.empty], ignore_index=True)
         source = "dukascopy"
     else:
         frame = _frame(yahoo.fetch_full_history(ticker, "1h", days=729, session=session))
@@ -96,7 +128,8 @@ def own_history(contract: pd.DataFrame, seam: int) -> pd.DataFrame:
     return contract[month >= first].reset_index(drop=True)
 
 
-def build(asset, today: date, session, bars_dir: str, dry_run: bool) -> int:
+def build(asset, today: date, session, bars_dir: str, dry_run: bool,
+          cache: "str | None" = None) -> int:
     ticker, template = asset.ticker, asset.session_template
     held, front_day = futures.front_contract(ticker, today)
     seam = sessions.daily_session_open(front_day, template)
@@ -111,7 +144,7 @@ def build(asset, today: date, session, bars_dir: str, dry_run: bool) -> int:
               f"{pd.to_datetime(store['hour_utc'].min(), unit='s'):%Y-%m-%d} "
               f"({len(store)} hours, {len(own)} as front)")
         return _write(asset, store, [], plan, bars_dir, dry_run)
-    record, source = archive(ticker, today, session)
+    record, source = archive(ticker, today, session, cache)
     print(f"{ticker}: {held} from {front_day} ({len(own)} hours); {source} "
           f"{len(record)} hours from "
           f"{pd.to_datetime(record['hour_utc'].min(), unit='s'):%Y-%m-%d}")
@@ -175,12 +208,14 @@ def main(argv: "list[str] | None" = None) -> int:
     parser.add_argument("tickers", nargs="+", choices=STAGE_2, metavar="TICKER")
     parser.add_argument("--bars-dir", default=bars.DEFAULT_BARS_DIR)
     parser.add_argument("--dry-run", action="store_true", help="report, write nothing")
+    parser.add_argument("--cache", default=None,
+                        help="a folder for the archive's whole months, kept between runs")
     args = parser.parse_args(argv)
     basket = {a.ticker: a for a in load_basket().instruments}
     today = datetime.now(timezone.utc).date()
     session = requests.Session()
     failed = [t for t in args.tickers
-              if build(basket[t], today, session, args.bars_dir, args.dry_run)]
+              if build(basket[t], today, session, args.bars_dir, args.dry_run, args.cache)]
     return 1 if failed else 0
 
 

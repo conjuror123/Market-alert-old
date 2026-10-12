@@ -354,7 +354,7 @@ def switch_windows(ticker: str, first: date, last: date, before: int = SWITCH_BE
 def locate_switches(frame: pd.DataFrame, ticker: str, template: str, seam: date,
                     before: int = SWITCH_BEFORE, after: int = SWITCH_AFTER,
                     rolls_only: bool = False, nights_only: bool = False,
-                    windows: "list[tuple[date, date]] | None" = None
+                    windows: "list[tuple[date, date]] | None" = None, confirm=None
                     ) -> "tuple[pd.DataFrame, list[str], list[tuple[date, date]], list[str]]":
     """The archive's history below the seam with its switches handled: the frame
     without the bars of a switch inside a session and without the windows where
@@ -362,7 +362,9 @@ def locate_switches(frame: pd.DataFrame, ticker: str, template: str, seam: date,
     (roll nights); the windows dropped; a line per window found. `nights_only`:
     a CFD's switch, at a session's start - only the nights are compared, with a
     typical night's move. `windows`: where to look, when the archive does not
-    switch near this series' rolls (switch_windows otherwise)."""
+    switch near this series' rolls (switch_windows otherwise). `confirm(session,
+    move)`: whether a night that stands out is a switch rather than the market's
+    move - a window whose night it refuses is dropped."""
     from jump import sessions
 
     out = frame.sort_values("hour_utc").reset_index(drop=True)
@@ -370,7 +372,8 @@ def locate_switches(frame: pd.DataFrame, ticker: str, template: str, seam: date,
         return out, [], [], []
     key = out["hour_utc"].map(lambda h: sessions.session_key(int(h), template))
     first_bar = key.ne(key.shift(1)).to_numpy()
-    move = np.log(out["close"] / out["close"].shift(1)).abs()
+    signed = np.log(out["close"] / out["close"].shift(1))
+    move = signed.abs()
     if nights_only:
         move = move.where(first_bar)
     typical = float(move.median())
@@ -385,8 +388,12 @@ def locate_switches(frame: pd.DataFrame, ticker: str, template: str, seam: date,
         if not inside.any():
             continue                    # past the archive's end
         w = move[inside].dropna().sort_values(ascending=False)
-        if len(w) >= 2 and w.iloc[0] >= SWITCH_CLEAR * w.iloc[1] and \
-                w.iloc[0] >= SWITCH_TYPICAL * typical:
+        clear = len(w) >= 2 and w.iloc[0] >= SWITCH_CLEAR * w.iloc[1] and \
+            w.iloc[0] >= SWITCH_TYPICAL * typical
+        if clear and confirm is not None:
+            top = int(w.index[0])
+            clear = first_bar[top] and confirm(key.iloc[top], float(signed.iloc[top]))
+        if clear:
             at = int(w.index[0])
             when = pd.Timestamp(int(out.loc[at, "hour_utc"]), unit="s", tz="UTC")
             if first_bar[at] and key.iloc[at] is not None:

@@ -12,10 +12,11 @@ Yahoo's two years), by series (HISTORY):
 - "cfd": Dukascopy's CFD (price_monitor.dukascopy.CFDS: Brent from 2011, the
   30-year bond and soybeans from 2018, platinum from 2021-11), one contract at a
   time; its stray closes reset (futures.reset_stray_closes) and its volume - a tick
-  count - scaled to the contract's over the overlap, so the thin-bar rule reads
-  both alike. Its switches, at a session's start, are looked for among the nights
+  count - scaled month by month to the contract's median, so the thin-bar rule
+  reads both alike. Its switches, at a session's start, are looked for among the nights
   in the weeks before each roll, as the softs' were (futures.locate_switches) -
-  soybeans' in the last weeks of the months it switches in (CFD_SWITCHES).
+  soybeans' in the last weeks of the months it switches in (CFD_SWITCHES),
+  Brent's around each expiry and confirmed against Yahoo's daily series (CONFIRM).
 - "continuous": Yahoo's continuous series, back 730 days, its flips and sparse
   months dropped (futures.clean_continuous) - the 2- and 10-year notes, whose
   series switched in 2026 on this one's roll day, inside an hour (the 10-year
@@ -47,6 +48,7 @@ import sys
 import time
 from datetime import date, datetime, timedelta, timezone
 
+import numpy as np
 import pandas as pd
 import requests
 
@@ -78,6 +80,21 @@ CFD_FROM = {"ZB=F": date(2019, 1, 1)}
 # January, March, May and July only.
 CFD_SWITCHES = {"ZS=F": "ZGJMNQV"}
 CFD_BEFORE, CFD_AFTER = 12, 2
+# Brent's CFD moves on ICE's last trading day or the session after - the business
+# day before the 15th day before the delivery month to the February 2016
+# contract, the last business day two months before it from March 2016 - and
+# Brent rolls every month, so a wide window holds the month's news too: the 18
+# business days before each roll took 2020-03-09's -24% and 2019-09-16's Abqaiq
+# for switches and dropped 3,037 days. Looked for from BRENT_BEFORE business days
+# before to BRENT_AFTER after, and confirmed (CONFIRM).
+BRENT_BEFORE, BRENT_AFTER = 2, 3
+# A switch moves the CFD and not Yahoo's daily series; the market moves both. A
+# night is taken for the switch only if the CFD's gap to Yahoo's daily close, at
+# the hour the settlement falls in, moves that session the same way by at least
+# CONFIRM_SHARE of the night and CONFIRM_BP (Brent's typical day: 20 bp): of the
+# 84 nights that stood out, 44 - 2023-04-03's OPEC+ cut, 580 bp, moved the gap 21.
+CONFIRM = {"BZ=F": ("America/New_York", 14)}
+CONFIRM_SHARE, CONFIRM_BP = 0.5, 80
 # Dukascopy's archive answers 503 for minutes at a time: a month it gives up on is
 # asked again after MONTH_PAUSE seconds, MONTH_TRIES times; each month fetched is
 # kept in --cache, so a run that stops is resumed rather than repeated.
@@ -148,6 +165,53 @@ def cfd_windows(months: str, first: date, last: date) -> "list[tuple[date, date]
     return sorted(out)
 
 
+def brent_last_trading_day(year: int, month: int) -> date:
+    """ICE Brent's last trading day for the contract delivering in (year, month)."""
+    if (year, month) < (2016, 3):
+        day = date(year, month, 1) - timedelta(days=15)
+        while day.weekday() >= 5:
+            day -= timedelta(days=1)
+        return futures._business_days_from(day, -1)
+    year, month = (year, month - 2) if month > 2 else (year - 1, month + 10)
+    day = date(year + month // 12, month % 12 + 1, 1) - timedelta(days=1)
+    while day.weekday() >= 5:
+        day -= timedelta(days=1)
+    return day
+
+
+def brent_windows(first: date, last: date) -> "list[tuple[date, date]]":
+    out = []
+    for year in range(first.year, last.year + 2):
+        for month in range(1, 13):
+            ltd = brent_last_trading_day(year, month)
+            lo = futures._business_days_from(ltd, -BRENT_BEFORE)
+            hi = futures._business_days_from(ltd, BRENT_AFTER)
+            if hi >= first and lo <= last:
+                out.append((lo, hi))
+    return sorted(out)
+
+
+def settle_confirm(ticker: str, template: str, record: pd.DataFrame, session):
+    """CONFIRM's test: the session's step in the record's gap to Yahoo's daily close."""
+    tz, hour = CONFIRM[ticker]
+    local = pd.to_datetime(record["hour_utc"], unit="s", utc=True).dt.tz_convert(tz)
+    at = record[local.dt.hour == hour]
+    keys = at["hour_utc"].map(lambda h: sessions.session_key(int(h), template))
+    mine = at.assign(key=keys).dropna(subset=["key"]).groupby("key")["close"].last()
+    daily = yahoo.fetch_full_history(ticker, "1d", days=6000, session=session)
+    theirs = pd.Series({datetime.fromtimestamp(c.open_time, timezone.utc).date().isoformat(): c.close
+                        for c in daily})
+    both = pd.concat([mine.rename("mine"), theirs.rename("theirs")], axis=1, join="inner").dropna()
+    step = np.log(both["mine"] / both["theirs"]).diff()
+
+    def confirm(key, move: float) -> bool:
+        if key is None or key not in step.index or not np.isfinite(step[key]):
+            return False
+        return bool(np.sign(step[key]) == np.sign(move) and
+                    abs(step[key]) >= max(CONFIRM_SHARE * abs(move), CONFIRM_BP / 1e4))
+    return confirm
+
+
 def own_history(contract: pd.DataFrame, seam: int) -> pd.DataFrame:
     """The contract held now, from the first month it traded at least OWN_SHARE
     of its median hourly volume as front."""
@@ -197,18 +261,27 @@ def build(asset, today: date, session, bars_dir: str, dry_run: bool,
         return 1
     below = record[record["hour_utc"] < seam].reset_index(drop=True)
     if source == "dukascopy":
-        shared = record[record["volume"] > 0].merge(
-            own.loc[own["volume"] > 0, ["hour_utc", "volume"]], on="hour_utc", suffixes=("", "_own"))
-        below["volume"] *= float(shared["volume_own"].median() / shared["volume"].median())
+        # A tick count, whose scale changes over the years (Brent's hour a median
+        # 22 million in 2012, a few hundred from 2013-03): each month scaled to the
+        # contract's median, so the thin-bar rule reads a month against itself
+        # (Brent's 2013-Q2 was 56% thin against 2012's counts).
+        month = pd.to_datetime(below["hour_utc"], unit="s").dt.strftime("%Y-%m")
+        level = below["volume"].where(below["volume"] > 0).groupby(month).transform("median")
+        below["volume"] *= float(own.loc[own["volume"] > 0, "volume"].median()) / level
+        below["volume"] = below["volume"].fillna(0.0)
         below, strays = futures.reset_stray_closes(below)
         print(f"   {strays} stray closes set to the next open")
     # A CFD switches at a session's start, 2 to 12 business days before this
     # series rolls (the softs'); Yahoo's notes inside an hour, on this series' roll day.
     how = dict(before=1, after=1, rolls_only=True) if plan == "continuous" else \
         dict(rolls_only=True, nights_only=True)
-    if ticker in CFD_SWITCHES and len(below):
-        first = pd.Timestamp(int(below["hour_utc"].min()), unit="s").date()
+    first = pd.Timestamp(int(record["hour_utc"].min()), unit="s").date()
+    if ticker in CFD_SWITCHES:
         how["windows"] = cfd_windows(CFD_SWITCHES[ticker], first, front_day)
+    if ticker == "BZ=F":
+        how["windows"] = brent_windows(first, front_day)
+    if ticker in CONFIRM:
+        how["confirm"] = settle_confirm(ticker, template, record, session)
     below, nights, dropped, found = futures.locate_switches(below, ticker, template, front_day,
                                                             **how)
     for line in found:

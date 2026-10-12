@@ -244,3 +244,20 @@ def test_a_switch_inside_an_hour_drops_that_hour_and_an_unclear_window_goes():
     out, _, dropped, _ = futures.locate_switches(
         frame, "ZN=F", "cbot_rates", date(2026, 8, 27), before=1, after=1, rolls_only=True)
     assert dropped == [] and len(out) == len(frame)
+
+
+def test_a_night_the_confirmation_refuses_is_the_markets_and_its_window_goes():
+    # Brent's CFD: 2023-04-03's OPEC+ cut stood out in its window at 580 bp, and
+    # its gap to Yahoo's series moved 21 - the market, which moved both. A night
+    # the confirmation refuses is no switch; the window is dropped.
+    frame = _rates([("2026-08-19 22:00", 0.03)])          # the first bar of 08-20's session
+    window = [(date(2026, 8, 18), date(2026, 8, 21))]
+    out, nights, dropped, _ = futures.locate_switches(
+        frame, "ZB=F", "cbot_rates", date(2026, 12, 1), nights_only=True, windows=window,
+        confirm=lambda key, move: False)
+    assert nights == [] and dropped == window
+    seen = []
+    out, nights, dropped, _ = futures.locate_switches(
+        frame, "ZB=F", "cbot_rates", date(2026, 12, 1), nights_only=True, windows=window,
+        confirm=lambda key, move: seen.append((key, round(move, 2))) or True)
+    assert nights == ["2026-08-20"] and dropped == [] and seen == [("2026-08-20", 0.03)]

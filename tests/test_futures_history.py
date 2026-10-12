@@ -36,3 +36,15 @@ def test_soybeans_cfd_is_looked_for_where_it_switches():
                                       date(2022, 1, 1), date(2022, 12, 31))
     assert any(lo <= switch <= hi for lo, hi in cfd)
     assert len(cfd) == 7
+
+
+def test_brents_last_trading_day_follows_ices_rule_of_its_time():
+    # To the February 2016 contract: the business day before the 15th day before
+    # the delivery month (the 17th of July 2011 a Sunday: the 15th, then the 14th).
+    # From March 2016: the last business day two months before it.
+    from datetime import date
+    assert futures_history.brent_last_trading_day(2011, 7) == date(2011, 6, 15)
+    assert futures_history.brent_last_trading_day(2011, 8) == date(2011, 7, 14)
+    assert futures_history.brent_last_trading_day(2016, 2) == date(2016, 1, 14)
+    assert futures_history.brent_last_trading_day(2016, 3) == date(2016, 1, 29)
+    assert futures_history.brent_last_trading_day(2026, 12) == date(2026, 10, 30)

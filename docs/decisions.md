@@ -129,9 +129,9 @@ delay.
 through 132 New York funds, so the Nikkei's worst day since 1987 reached it at New York's
 open, and it was crowded by coins and look-alikes. Stage 1 holds 58: 16 stock indices in
 their own hours beside SPY and IWM, four sectors, copper beside the LME's other metals,
-seven pairs, four coins. **Funds stand in** for what stage 2 builds - BNO, SHY, IEF, TLT,
-CORN, WEAT, SOYB, CANE, PPLT, and GLD and SLV until gold and silver are read round the
-clock - so nothing goes blind over the user's pause. The 134 that left keep their bars on
+seven pairs, spot gold and silver round the clock, four coins. **Funds stand in** for what
+stage 2 builds - BNO, SHY, IEF, TLT, CORN, WEAT, SOYB, CANE, PPLT - so nothing goes blind
+over the user's pause. The 134 that left keep their bars on
 disk; the code only they used went with them.
 
 **One provider per instrument, chosen by measurement**, against the stored bars hour by
@@ -192,7 +192,10 @@ coffee's 20, and denied none.
 **Gold and silver from SiftingIO**, its commodities endpoint, spot round the clock: asked at
 04:02 UTC on 2026-10-12 it held the bar that ended at 04:00, and over 799 hours it moved
 with Dukascopy's at 0.9992 and 0.9980 (medians 0.25 and 1.06 bp). Twelve Data's plan
-refuses silver, and its gold fills the weekends with bars.
+refuses silver, and its gold fills the weekends with bars. Their history is Dukascopy's from
+2003; it leaves the daily break (an hour from 17:00 New York) empty where SiftingIO serves
+a thin bar, so the hour after it scores its own hour in the history - a small difference,
+left as served. They keep the pairs' week but are voted on by Wallstreetcn and Sina.
 
 **Every coin is its USDT pair on Binance**: one exchange, one quote currency; before 2018,
 the deepest dollar exchange that passes the splice gates.

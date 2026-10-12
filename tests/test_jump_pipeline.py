@@ -17,7 +17,7 @@ def test_the_parallel_path_writes_exactly_what_the_serial_one_does(tmp_path):
     from jump import pipeline as pl
 
     basket = load_basket()
-    picked = [a for a in basket.instruments if a.ticker in ("SPY", "GLD")]
+    picked = [a for a in basket.instruments if a.ticker in ("SPY", "CORN")]
     if len(picked) < 2 or not all(
             os.path.isdir(bars.store_path(bars.DEFAULT_BARS_DIR, a.file_stem))
             for a in picked):
@@ -56,7 +56,7 @@ def test_a_single_worker_falls_back_to_the_serial_path(tmp_path, monkeypatch):
 
 # --- extending the stored metrics instead of recomputing them ---------------
 
-def _small_basket(tickers=("SPY", "GLD")):
+def _small_basket(tickers=("SPY", "CORN")):
     basket = load_basket()
     picked = [a for a in basket.instruments if a.ticker in tickers]
     if len(picked) < len(tickers) or not all(
@@ -356,8 +356,8 @@ def test_the_recomputed_tail_does_not_duplicate_or_lose_an_hour():
 def test_one_instruments_error_leaves_the_others_and_its_stored_metrics(tmp_path, monkeypatch):
     from jump import pipeline as pl
 
-    small = _small_basket(("SPY", "GLD"))
-    spy, gld = sorted(small.instruments, key=lambda a: a.ticker != "SPY")
+    small = _small_basket(("SPY", "CORN"))
+    spy, corn = sorted(small.instruments, key=lambda a: a.ticker != "SPY")
     stale = tmp_path / f"{spy.file_stem}.parquet"
     pd.DataFrame({"hour_utc": [1]}).to_parquet(stale)
     real = pl.build_asset_metrics
@@ -370,7 +370,7 @@ def test_one_instruments_error_leaves_the_others_and_its_stored_metrics(tmp_path
     monkeypatch.setattr(pl, "build_asset_metrics", broken_for_spy)
     failures = []
     built = pl.build_all(small, bars.DEFAULT_BARS_DIR, str(tmp_path), ("cfg", "run"), failures)
-    assert list(built) == [gld.asset_id]
+    assert list(built) == [corn.asset_id]
     assert failures == [(spy.asset_id, "a bad bar")]
     assert pd.read_parquet(stale)["hour_utc"].tolist() == [1]     # kept as it was
 

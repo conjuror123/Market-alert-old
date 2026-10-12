@@ -50,21 +50,21 @@ in `config/basket.yaml`'s history).
 ## Stage 1: built on the development branch (2026-10-11)
 
 **58 instruments**: 30 kept; 9 funds standing in for stage 2's futures (BNO, SHY, IEF, TLT,
-CORN, WEAT, SOYB, CANE, PPLT); 19 new - the 16 indices, LME copper, and XAU/USD and XAG/USD
-(GLD and SLV until then). 133 of the 172 and DBC left; their bars stay on disk.
+CORN, WEAT, SOYB, CANE, PPLT); 19 new - the 16 indices, LME copper, and XAU/USD and
+XAG/USD. 133 of the 172, DBC, GLD and SLV left; their bars stay on disk.
 
 Built: a calendar per exchange for the 16 markets; their history from Yahoo (12 back to
 2024-10, the CSI 300, BIST 100, TSX and IPC 58 days); copper from Sina with Wallstreetcn's
 bars below; voters for 13 indices; the indices named by their own name in messages; the
 levels at 4.5 / 6.4 / 9 / 12.7σ; an index's night run to its first hour's close; the code
-only the departed instruments used removed.
+only the departed instruments used removed; spot gold and silver from SiftingIO (the probe
+of 2026-10-12: on time, 0.998-0.999 against Dukascopy; Twelve Data refuses silver), their
+history from Dukascopy, Wallstreetcn and Sina as voters.
 
 **Gate B** (the user's): a keyed probe for gold and silver, yes; platinum to stage 2 with
 PPLT standing in, yes; the KOSPI, TAIEX and JSE Top 40 without a voter, fine for now.
 
-**Left**: gold and silver - the probe of SiftingIO and Twelve Data (2026-10-12 00:02 UTC),
-a provider, Dukascopy's history, Wallstreetcn as voter, in place of GLD and SLV; then the
-final before/after and the user's go.
+**Left**: the final before/after with gold and silver in, and the user's go.
 
 ## The levels, thought through again (2026-10-11)
 

@@ -89,8 +89,8 @@ class DailyQuotaExhausted(PermanentExchangeError):
 # --- the archive's share of the key -------------------------------------------
 #
 # The hourly run asks for its funds in one request, at most a whole minute's
-# eight credits, at about :05 past the hour: four funds since stage 1, up to
-# 4 x 24 credits a day. A history walk (jump.backfill --extend-history, --fill-gaps)
+# eight credits, at about :05 past the hour: two funds since stage 1, up to
+# 2 x 24 credits a day. A history walk (jump.backfill --extend-history, --fill-gaps)
 # on the same key paces itself to about seven a minute and would otherwise run
 # until the day's 800 are gone - leaving the hourly run's funds stale every hour
 # it overlapped and dark until midnight UTC after it. So a walk, and only a

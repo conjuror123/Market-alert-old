@@ -21,7 +21,7 @@ shared percentage.
 |---|---|
 | equity | 6 US funds; 16 stock indices abroad, each in its own exchange's hours |
 | credit, rates | 7 US funds |
-| precious, industrial metals, energy, agriculture | 10 US funds, 4 LME metals, coffee, cocoa, cotton, live cattle |
+| precious, industrial metals, energy, agriculture | spot gold and silver round the clock, 8 US funds, 4 LME metals, coffee, cocoa, cotton, live cattle |
 | FX | 7 pairs, round the clock |
 | crypto | 4 coins |
 
@@ -44,9 +44,9 @@ Secrets (GitHub → Settings → Secrets → Actions):
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | the channel (required) |
 | `TELEGRAM_HEALTH_CHAT_ID` | health and provider failures (optional) |
 | `TIINGO_API_KEY` | 13 funds |
-| `ALPACA_KEY_ID`, `ALPACA_SECRET_KEY` | the consolidated tape's vote on all 23 funds; history from 2016 |
-| `SIFTING_API_KEY` | the 7 FX pairs |
-| `TWELVEDATA_API_KEY` | 4 thin funds; archive and gap-fill |
+| `ALPACA_KEY_ID`, `ALPACA_SECRET_KEY` | the consolidated tape's vote on all 21 funds; history from 2016 |
+| `SIFTING_API_KEY` | the 7 FX pairs, spot gold and silver |
+| `TWELVEDATA_API_KEY` | 2 thin funds; archive and gap-fill |
 | `FRED_API_KEY` | the VIX series |
 
 Yahoo, Sina, Binance, MarketWatch, Wallstreetcn, the FT, Coinbase, Kraken and Cboe need no key. A
@@ -104,12 +104,12 @@ standing in, a few minutes of it; that bar heals on the next fetch.
 |---|---|---|
 | Tiingo | 13 funds | IEX price matches the consolidated tape for these |
 | Alpaca | — | the consolidated tape (SIP) from 2016, for history and the vote, 15 minutes behind |
-| Twelve Data | 4 funds (UNG GLD SLV CORN) | consolidated tape for thin funds; one batched request a run |
-| Sina Finance | 1 fund (SOYB); LME tin, nickel, aluminium, copper | US half-hour bars (consolidated); LME three-month contract, last 1,023 hourly bars |
+| Twelve Data | 2 funds (UNG CORN) | consolidated tape for thin funds; one batched request a run |
+| Sina Finance | 1 fund (SOYB); LME tin, nickel, aluminium, copper | US half-hour bars (consolidated); LME three-month contract, last 1,023 hourly bars; a voter on spot gold and silver (London's) |
 | Yahoo | 5 funds; coffee, cocoa, cotton, live cattle; 16 stock indices abroad | futures from the front contract, rolled before first notice (cattle twelve business days before its delivery month, `jump/futures.py`); the indices at 30 minutes (15 for the Nifty) folded onto the hour, their history from the backfill's `deepen-yahoo` (hourly bars filed by the hour they end in, kept where they pass the import gate) |
-| SiftingIO | 7 FX pairs | the bar closed at :00 is served by :05 |
+| SiftingIO | 7 FX pairs; spot gold and silver | the bar closed at :00 is served by :05; the metals from its commodities endpoint (`sifting.COMMODITIES`) |
 | Binance | 4 coins | each coin as its USDT pair, via `data-api.binance.vision` (reachable from US runners) |
-| Wallstreetcn | — | a voter on the LME's metals, cocoa, cotton, the pairs and 4 indices, hourly without volume, about 170 days back; the LME's history below Sina's (`deepen-wallstreetcn`: gated on the overlap, a session's first bar 1% off and back within the hour left out). What else it carries: `docs/decisions.md`, "What else Wallstreetcn carries" |
+| Wallstreetcn | — | a voter on the LME's metals, cocoa, cotton, the pairs, gold, silver and 4 indices, hourly without volume, about 170 days back; the LME's history below Sina's (`deepen-wallstreetcn`: gated on the overlap, a session's first bar 1% off and back within the hour left out). What else it carries: `docs/decisions.md`, "What else Wallstreetcn carries" |
 | FT | — | the vote on live cattle, asked for the contract the store holds, coffee, its continuous series, and 5 stock indices abroad (`ft.INDICES`): hourly, 24 trading days back, without volume (`price_monitor/ft.py`) |
 | Dukascopy, Bitstamp, Bitfinex | — | history only |
 | HF Data | — | funds' history to 2020, imported once (its client is gone) |
@@ -230,7 +230,7 @@ the channel gives it; a source added there is asked from the next run.
 |---|---|
 | currency pairs (7, SiftingIO) | Yahoo hourly FX (729 days back), MarketWatch (`price_monitor/marketwatch.py`, 9 days back, every hour) and Wallstreetcn (`price_monitor/wallstreetcn.py`, 170 days back) |
 | spot gold and silver (SiftingIO, `verify._TICKER_CLASS`) | Wallstreetcn (`XAUUSD.OTC`, 170 days back) and Sina's London metals (`verify.SINA_METALS`, its last 1,023 bars, counted as 60 days): the pairs' week, not their voters, as Yahoo and MarketWatch carry no spot metal |
-| funds (23) | Yahoo 30-minute bars folded to the hour (59 days back), Sina 30-minute US bars (77 days back), MarketWatch hourly (`FUND/US/<exchange>/<ticker>`, 9 days back) - two of these for a fund Yahoo or Sina serves, all three for the rest - and Alpaca's consolidated tape (`Alpaca_SIP`, from 2016, fifteen minutes behind), for every fund |
+| funds (21) | Yahoo 30-minute bars folded to the hour (59 days back), Sina 30-minute US bars (77 days back), MarketWatch hourly (`FUND/US/<exchange>/<ticker>`, 9 days back) - two of these for a fund Yahoo or Sina serves, all three for the rest - and Alpaca's consolidated tape (`Alpaca_SIP`, from 2016, fifteen minutes behind), for every fund |
 | coffee, cocoa, cotton (Yahoo) | Sina global futures, hourly (79 days back: coffee and cocoa from 2026-05-12, cotton from 07-20); for cocoa and cotton also Wallstreetcn (170 days back), for coffee the FT's continuous series (`price_monitor/ft.py`, 24 trading days back), each changing contract on its own days too |
 | live cattle (Yahoo) | MarketWatch continuous contract, hourly (9 days back), and the FT's bars of the contract the store holds (24 trading days back) |
 | coins (4, Binance) | Coinbase's dollar pairs, hourly (`price_monitor/coinbase.py`, a year back) and Kraken's (`kraken.py`, 29 days back): a wick on Binance alone is real there and not the market's |
@@ -632,10 +632,10 @@ and 79 s, the vote 14 and 27 s, metrics 20 s rebuilt cold and 14 s extended, eve
 
 | provider | limit | use |
 |---|---|---|
-| Tiingo | 50/hour, 1,000/day | 13 requests a run in session, ~120 a day; the full dividend refresh (backfill workflow, `corporate-actions`) asks all 23 funds at 45 an hour, about half an hour, and starts only when the hourly run leaves Tiingo alone that long: from 3 h after a close to the next session's first hour |
+| Tiingo | 50/hour, 1,000/day | 13 requests a run in session, ~120 a day; the full dividend refresh (backfill workflow, `corporate-actions`) asks all 21 funds at 45 an hour, about half an hour, and starts only when the hourly run leaves Tiingo alone that long: from 3 h after a close to the next session's first hour |
 | Alpaca | 200/min | the tape's vote, within the vote's 40 sources a run |
-| Twelve Data | 800/day, 8/min | one batch of 4 a run, in a background thread: keep at most 8 instruments on it, as one batch is a minute's credits; a history walk (`--extend-history`, `--fill-gaps`) waits out :03–:12 past each hour and stops at 600 a day (`twelvedata.ARCHIVE_CREDIT_CAP`), so run one a day |
-| SiftingIO | 10,000/month | ~3,600/month (7 pairs, skipped outside the FX week) |
+| Twelve Data | 800/day, 8/min | one batch of 2 a run, in a background thread: keep at most 8 instruments on it, as one batch is a minute's credits; a history walk (`--extend-history`, `--fill-gaps`) waits out :03–:12 past each hour and stops at 600 a day (`twelvedata.ARCHIVE_CREDIT_CAP`), so run one a day |
+| SiftingIO | 10,000/month | ~4,600/month (7 pairs and 2 metals, skipped outside the FX week) |
 | Yahoo, Sina, MarketWatch, Wallstreetcn, the FT | none published | live fetch, dividend check, the vote (at most 40 sources a run, all sources together) |
 | Binance | 6,000 weight/min per address | 4 a run |
 | Coinbase, Kraken | per second, per address | the coins' vote: on the run after a coin moved 4σ or more, and at 00:05 UTC for 29 days after; Coinbase serves 300 hours a request, so a coin's recount is up to 3 (25 Coinbase requests at 00:05 on 2026-10-09) |
@@ -728,8 +728,9 @@ How far back each record reaches:
 
 | instruments | from | built from |
 |---|---|---|
-| 23 US funds | 2002–2010 for 16, 2016 for 7 | HF Data, Twelve Data, Alpaca's tape; the first bar of 9,783 mornings of 2016–2022 mended from the tape (`docs/decisions.md`, "The funds' wrong opens of 2016–2022 were mended from the tape") |
+| 21 US funds | 2002–2010 for 14, 2016 for 7 | HF Data, Twelve Data, Alpaca's tape; the first bar of 9,783 mornings of 2016–2022 mended from the tape (`docs/decisions.md`, "The funds' wrong opens of 2016–2022 were mended from the tape") |
 | 7 FX pairs | 2003; USD/CNH 2012 | Dukascopy to Twelve Data's first bar, about 2020-01 - the majors only to 2012, then FXCM (bars that open at the previous close) to 2020-01; the majors' 2012 Sunday opens from Dukascopy; then live |
+| spot gold and silver | 2003-05 | Dukascopy's archive below SiftingIO's first bar (`deepen-dukascopy`, gated on the overlap); then SiftingIO. Dukascopy leaves the daily break (an hour from 17:00 New York) empty where SiftingIO serves a thin bar |
 | 4 coins | 2013–2020 by listing | Binance; earlier from Bitstamp, Bitfinex, Coinbase |
 | coffee, cocoa, cotton | 2018-01 | Dukascopy CFDs, then the listed contract; cocoa's 2026-07-21 to 08-10, the roll window where no CFD switch could be located, from the December contract (rolled into on 07-21) |
 | live cattle | 2024-05 | Yahoo |

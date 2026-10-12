@@ -37,8 +37,9 @@ BLOCK_MIN_MEMBERS = 2
 #
 # `provider` is who actually answers the request, and that CAN change: see
 # docs/manual.md, "Data in", for the current split. It defaults
-# to `source`, which is why the crypto rows need no provider line.
-SOURCES = ("twelvedata", "binance", "yahoo", "sina")
+# to `source`, which is why the crypto rows need no provider line. Gold's and
+# silver's stores began with SiftingIO (stage 1), so they are named for it.
+SOURCES = ("twelvedata", "binance", "yahoo", "sina", "sifting")
 
 # Who can be asked for bars. Wider than SOURCES because a provider may serve an
 # instrument whose history came from somewhere else.

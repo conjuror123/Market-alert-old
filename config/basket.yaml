@@ -179,10 +179,11 @@ session_templates:
 # backfills have room (docs/manual.md, "Running it"):
 #   Tiingo       13 IEX-safe funds, of its 50 requests an hour;
 #   Alpaca       the consolidated tape's vote on every fund;
-#   Twelve Data  4 thin funds that need the consolidated tape - one batched
-#                request a run (4 of its 8 credits a minute), in a thread beside
+#   Twelve Data  2 thin funds that need the consolidated tape - one batched
+#                request a run (2 of its 8 credits a minute), in a thread beside
 #                the other providers;
-#   SiftingIO    the 7 FX pairs, about 3,600 of 10,000 a month;
+#   SiftingIO    the 7 FX pairs and spot gold and silver, about 4,600 of 10,000
+#                a month;
 #   Yahoo        the 16 stock indices, 4 futures and 5 funds - at most 25
 #                requests a run;
 #   Sina         the LME's 4 metals and 1 fund; Yahoo's and Sina's funds
@@ -502,25 +503,24 @@ assets:
     fetch_interval: 30min
     label: "Natural gas"
   # --- precious_metals -------------------------------------------------------
-  # Precious metals. GLD and SLV until gold and silver are read round the clock
-  # (stage 1, task 6); PPLT stands in for platinum's futures until stage 2.
-  - ticker: GLD
-    source: twelvedata
-    provider: twelvedata
+  # Precious metals. Spot gold and silver round the clock on the pairs' week, from
+  # SiftingIO's commodities endpoint over Dukascopy's history from 2003; PPLT
+  # stands in for platinum's futures until stage 2.
+  - ticker: XAU/USD
+    source: sifting
     block: precious_metals
-    has_volume: true
+    has_volume: false
     tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
+    session_template: fx_continuous
+    fetch_interval: 1h
     label: "Gold"
-  - ticker: SLV
-    source: twelvedata
-    provider: twelvedata
+  - ticker: XAG/USD
+    source: sifting
     block: precious_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
+    has_volume: false
+    tick_size: 0.0001
+    session_template: fx_continuous
+    fetch_interval: 1h
     label: "Silver"
   - ticker: PPLT
     source: twelvedata

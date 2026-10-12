@@ -64,6 +64,7 @@ STAGE_2 = tuple(HISTORY)
 OWN_SHARE = 0.05
 # The splice's check: the archive against the contract held now over these last days.
 ALIGN_DAYS = 30
+CFD_MIN_HOURS = 60
 # Dukascopy's archive answers 503 for minutes at a time: a month it gives up on is
 # asked again after MONTH_PAUSE seconds, MONTH_TRIES times; each month fetched is
 # kept in --cache, so a run that stops is resumed rather than repeated.
@@ -153,8 +154,12 @@ def build(asset, today: date, session, bars_dir: str, dry_run: bool,
         print(f"   {flips} flipped hours dropped; sparse months dropped: {' '.join(sparse) or 'none'}")
     # Over the last ALIGN_DAYS: an archive keeps its own months for a while after
     # this series' roll (Dukascopy's soybeans on another month until about 09).
+    # Dukascopy publishes a month's hours once it has ended: a seam in its last
+    # weeks (Brent's and platinum's, 09-28) leaves a few days to check, so a CFD
+    # needs CFD_MIN_HOURS of them.
     since = max(seam, now - ALIGN_DAYS * DAY)
-    check = verify_alignment(record[record["hour_utc"] >= since], own[own["hour_utc"] >= since])
+    check = verify_alignment(record[record["hour_utc"] >= since], own[own["hour_utc"] >= since],
+                             min_hours=CFD_MIN_HOURS if source == "dukascopy" else 0)
     print(f"   over the last {ALIGN_DAYS} days: {check['hours']} hours shared, correlation "
           f"{check['correlation']:.4f}, median gap {check['median_bp']:.1f} bp")
     if not check["ok"]:

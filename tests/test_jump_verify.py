@@ -1036,6 +1036,18 @@ def test_a_first_hour_the_feeds_saw_happen_overnight_moves_into_the_night():
     assert moves == pytest.approx([np.log(174.83 / 166.83)] * 2)
 
 
+def test_the_overnight_check_reads_each_feeds_own_bars_at_the_night():
+    # A feed with no bar at the night's last hour - only the hour before it - has
+    # no close there: an outage in the overnight check, its night not counted.
+    early = {k: v for k, v in TAPE.items() if k != "2020-03-06 20:00"}
+    early["2020-03-06 19:00"] = (167.60, 166.83)
+    verdict, _, names, moves, _ = judge_all(
+        TLH_FIRST_HOUR, [("yahoo", bars_of(TAPE)), ("sina", bars_of(early))],
+        ts("2020-03-09 18:00"))
+    assert verdict == verify.OVERNIGHT and names == ["yahoo"]
+    assert moves == pytest.approx([np.log(174.83 / 166.83)])
+
+
 def test_a_first_hour_moves_into_the_night_only_if_most_saw_the_whole_move():
     # Two feeds never saw the price get there at all: with the store and the
     # one that did, a tie - no correction, and the hour stays not real.

@@ -304,8 +304,9 @@ open on Yahoo and Wallstreetcn.
 voters saw the move from the previous session's close to that bar's close, the store
 one of them, the move happened in the night. The store's first print was a stale one at
 the old price (TLH 2020-03-09: gap +0.03%, first hour +3.8%; the tape opened +4.65%).
-The verdict carries each source's night, its open of the hour over its last close
-before. `jumps` (`with_nights`) puts the median of them in the gap, payout adjustment
+Each source is read on its own bars, exactly as for a vote (its close of the last bar
+before the night, its close of the first hour; missing either, it is an outage). The
+verdict carries each source's night, its open of the hour over that close. `jumps` (`with_nights`) puts the median of them in the gap, payout adjustment
 kept, and the rest of the move from the previous close in the hour: the total stays the
 store's. A gap left unscored stays so. Kept for good, like a move not real, and not
 a doubt: the message is not marked. Only readings at 4σ or more are asked, so a stale

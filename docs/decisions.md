@@ -262,7 +262,11 @@ case (a late feed, a hole), not a measured rule. Measured on the 58's voters' ba
 2026-09-07 to 10-09: every one of 142 source-instrument pairs moves with the store on the
 same hour (median correlation 0.998; an hour off, 0.007), and of 119 moves at 4σ or more no
 verdict or answer changed without them. Half: answers sat at 0.8 or more or under 0.2
-(3,704 answers, 2026-10-08, under the window). Which feed was wrong is not asked.
+(3,704 answers, 2026-10-08, under the window). Which feed was wrong is not asked. The
+overnight first-hour check reads the same exact bars, and the reading is close to close
+everywhere: an open-to-close hour would lose the steps between bars, which another feed
+also saw in 16 of the 31 over 2σ in the 35 days to 2026-10-12 (thin funds, LME tin, Tokyo
+after lunch).
 
 **A source with its own contract months is not asked across its own change of contract**
 (Sina's and Wallstreetcn's softs): found as a step of 50 bp or more in the session's median

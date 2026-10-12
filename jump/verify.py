@@ -77,9 +77,10 @@ its words (_BEFORE_THE_VOTE).
 
 OVERNIGHT, for a session's first hour: most feeds did not see the hour move,
 but most saw the move from the previous session's close to that bar's close,
-the store one of them. The move happened in the night, and the store's first
-print was a stale one at the old price; jump.jumps moves it into the gap with
-the feeds' night. Kept for good, like a move not real.
+the store one of them - each on its own bars there, exactly as judge reads
+them, an outage without them. The move happened in the night, and the store's
+first print was a stale one at the old price; jump.jumps moves it into the gap
+with the feeds' night. Kept for good, like a move not real.
 
     python -m jump.verify               one pass, as the hourly run makes it
 
@@ -115,9 +116,7 @@ COLUMNS = ["asset_id", "hour_utc", "check", "verdict", "provider", "verifier", "
 
 CANDIDATE_SIGMA = 4.0
 REAL_SHARE = 0.5
-LAG_HOURS = 1                     # the overnight rule's own reading only (_night_judge)
 PENDING_HOURS = 24
-STALE_HOURS = 12                  # likewise
 TAIL_DAYS = 200                   # bars read before the window: the detector's half-year and more
 MAX_REQUESTS = 40
 KEEP_DAYS = 90                    # longer than any recount (the softs' and the LME's, 79 days)
@@ -612,70 +611,20 @@ def judge_all(c: dict, asked: "list[tuple[str, pd.DataFrame | None]]"
     return result, stored, names, moves, seen
 
 
-def _night_judge(c: dict, v: pd.DataFrame) -> "tuple[str, float, float]":
-    """The overnight rule's own reading of a source (overnight_move), as it was
-    before the vote compared the same two bars: its closes up to LAG_HOURS
-    either side of the night and the first hour, else its nearest within
-    STALE_HOURS."""
-    stamps = np.sort(v["hour_utc"].to_numpy(dtype="int64"))
-    vclose = dict(zip(v["hour_utc"].astype("int64").tolist(), v["close"].tolist()))
-    vopen = dict(zip(v["hour_utc"].astype("int64").tolist(), v["open"].tolist()))
-    h, hp, lag, stale = c["hour"], c["prev_hour"], LAG_HOURS * HOUR, STALE_HOURS * HOUR
-    p = math.log(c["price"] / c["prev_close"])
-
-    # Where the market was before the move: for an hour measured from its own
-    # open, the source's open of that hour; else its closes up to an
-    # hour before, or else its last one, if recent enough.
-    if c.get("from_open"):
-        if h not in vopen:
-            return UNKNOWN, p, 0.0
-        befores = [vopen[h]]
-    else:
-        befores = [vclose[int(t)] for t in stamps[(stamps >= hp - lag) & (stamps <= hp)]]
-    if not befores:
-        earlier = stamps[stamps <= hp]
-        if not len(earlier) or hp - int(earlier[-1]) > stale:
-            return UNKNOWN, p, 0.0
-        befores = [vclose[int(earlier[-1])]]
-
-    # ... and after it: its open at a session's first print (not where the
-    # night runs to its first bar's close), its closes up to an hour after, or
-    # else its first one, once it has one.
-    at_open = c["check"] == OPEN and h in vopen and not c.get("to_close")
-    afters = [vopen[h]] if at_open else []
-    afters += [vclose[int(t)] for t in stamps[(stamps >= h) & (stamps <= h + lag)]]
-    if not afters:
-        later = stamps[stamps > h]
-        if not len(later) or int(later[0]) - h > stale:
-            return UNKNOWN, p, 0.0
-        afters = [vclose[int(later[0])]]
-
-    moves = [math.log(b / a) for a in befores for b in afters]
-    with_it = max(moves, key=lambda m: m * np.sign(p))
-    # The move it is reported with is the source's own over the same span
-    # - or its nearest bars either side; the lag window only decides.
-    start = befores[0] if c.get("from_open") else \
-        vclose.get(hp, vclose[int(stamps[stamps <= hp][-1])] if (stamps <= hp).any() else befores[-1])
-    end = vopen[h] if at_open else \
-        vclose.get(h, vclose[int(stamps[stamps >= h][0])] if (stamps >= h).any() else afters[0])
-    direct = math.log(end / start)
-    if with_it * p > 0 and abs(with_it) >= REAL_SHARE * abs(p):
-        return CONFIRMED, p, direct
-    return UNCONFIRMED, p, direct
-
-
 def overnight_move(c: dict, asked: "list[tuple[str, pd.DataFrame | None]]"
                    ) -> "tuple[list, list] | None":
     """A session's first hour most feeds did not see move - but did most see
     the move from the previous session's close to this bar's close, the
     store one of them and an outage left out? Then it happened overnight: the
     store's first print was a stale one at the old price (TLH 2020-03-09:
-    gap +0.03%, first hour +3.8%; the tape opened +4.65%). Returns the names
-    of the feeds that saw it and each one's night - its open of the hour over
-    its last close before the night - or None."""
+    gap +0.03%, first hour +3.8%; the tape opened +4.65%). Each feed on its own
+    bars, as judge reads them: its close of the last bar before the night and
+    its close of the first hour; one missing either is an outage. Returns the
+    names of the feeds that saw it and each one's night - its open of the hour
+    over its close of the last bar before the night - or None."""
     whole = dict(c, from_open=False, prev_hour=c["night_hour"], prev_close=c["night_close"])
     p = math.log(c["price"] / c["night_close"])
-    votes = [(name, UNKNOWN, p, 0.0) if v is None else (name,) + _night_judge(whole, v)
+    votes = [(name, UNKNOWN, p, 0.0) if v is None else (name,) + judge(whole, v)
              for name, v in asked]
     if combine(votes)[0] != REAL:
         return None
@@ -683,15 +632,13 @@ def overnight_move(c: dict, asked: "list[tuple[str, pd.DataFrame | None]]"
     for (name, v), vote in zip(asked, votes):
         if vote[1] != CONFIRMED:
             continue
-        stamps = v["hour_utc"].to_numpy(dtype="int64")
-        opens = dict(zip(stamps.tolist(), v["open"].tolist()))
-        before = stamps[(stamps <= c["night_hour"])
-                        & (stamps >= c["night_hour"] - STALE_HOURS * HOUR)]
-        if c["hour"] not in opens or not len(before):
+        hours = v["hour_utc"].astype("int64").tolist()
+        opens = dict(zip(hours, v["open"].tolist()))
+        closes = dict(zip(hours, v["close"].tolist()))
+        if c["hour"] not in opens or c["night_hour"] not in closes:
             continue
-        last = float(v.loc[v["hour_utc"] == before.max(), "close"].iloc[0])
         names.append(name)
-        nights.append(math.log(opens[c["hour"]] / last))
+        nights.append(math.log(opens[c["hour"]] / closes[c["night_hour"]]))
     return (names, nights) if names else None
 
 

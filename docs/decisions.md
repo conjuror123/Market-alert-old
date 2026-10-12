@@ -215,6 +215,19 @@ contract's -3), and prints the other month for hours around it (corn -7.4% and b
   5% of its volume as front (2026-01/02), past the detector's half-year: one contract, no
   switch. Dukascopy's sugar is London's white sugar, and it has no corn or wheat.
 
+**Each provider's calls are counted, not estimated** (`jump/usage.py`, 2026-10-12; the
+user's). The keyed providers vote within the room their limits leave. Whether they fit
+can't be judged without knowing what is spent. The keys are used only by this
+repository's workflows, so our own count is the truth for what we spend:
+- every run writes it, by day and purpose, into its workflow's usage file;
+- the limits and their shares are one table (`config/provider_limits.csv`), which the
+  caps are read from;
+- the providers' own figures are checked against ours where their meaning is known:
+  Twelve Data's credits left in the day. SiftingIO's month is on its account page only,
+  and Tiingo's header is recorded until its window is known.
+- The 30 days before the files existed are added up from the runs' logs
+  (`tools/usage_from_logs.py`, run once and deleted).
+
 **The LME's metals are the LME's own, from Sina**: the right instrument with a short record
 (from 2026-04-22) over a longer record of another (Shanghai tin, Kitco, COMEX aluminium).
 

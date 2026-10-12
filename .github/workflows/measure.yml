@@ -76,7 +76,8 @@ jobs:
           names=$(PYTHONPATH=. python -c 'from tools.measure import not_carried; print(",".join(not_carried(keyed=("sifting",))))')
           echo "not carried by the live run: ${names:-none}"
           if [ -n "$names" ]; then
-            PYTHONPATH=. python -m jump.backfill --live-pass --instruments "$names" \
+            PYTHONPATH=. python -m jump.backfill --live-pass --usage-purpose dashboard \
+              --instruments "$names" \
               || echo "::warning::the fetch failed; the page names the instruments behind"
           fi
 
@@ -87,7 +88,24 @@ jobs:
         env:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
-        run: PYTHONPATH=. python -m tools.voter_bars "$RUNNER_TEMP/voters" --recount
+        run: PYTHONPATH=. python -m tools.voter_bars "$RUNNER_TEMP/voters" --recount --purpose dashboard
+
+      # What each provider was asked, by day (jump.usage): the live branch's usage files,
+      # where the hourly run writes them; the checkout's where it has none yet.
+      - name: Read the usage files
+        env:
+          LIVE: ${{ github.event.repository.default_branch }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/usage"
+          cp data/jump/usage/*.csv "$RUNNER_TEMP/usage/" 2>/dev/null || true
+          if git fetch -q --depth=1 origin "$LIVE"; then
+            for f in hourly manual; do
+              if git show "origin/$LIVE:data/jump/usage/$f.csv" > "$RUNNER_TEMP/live.csv" 2>/dev/null; then
+                mv "$RUNNER_TEMP/live.csv" "$RUNNER_TEMP/usage/$f.csv"
+              fi
+            done
+          fi
+          ls -l "$RUNNER_TEMP/usage"
 
       # Alpaca's keys again: without them the vote would not ask its tape.
       - name: Measure
@@ -96,7 +114,7 @@ jobs:
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
         run: |
           PYTHONPATH=. python -m tools.measure "$RUNNER_TEMP/measure.json" \
-            --voters "$RUNNER_TEMP/voters"
+            --voters "$RUNNER_TEMP/voters" --usage "$RUNNER_TEMP/usage"
 
       - name: Configure Pages
         id: pages

@@ -32,3 +32,8 @@ def test_a_run_writes_only_its_own_page_and_measurement(tmp_path):
     assert sorted(os.listdir(site)) == ["index.html", "latest.json"]
     assert json.loads((site / "latest.json").read_text()) == _result()
     assert _payload((site / "index.html").read_text()) == _result()
+
+
+def test_the_page_has_a_place_for_the_provider_limits():
+    page = dashboard.render(_result())
+    assert '<table id="t-limits">' in page and "M.limits" in page

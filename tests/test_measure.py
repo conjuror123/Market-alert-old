@@ -243,3 +243,28 @@ def test_the_checks_hold_on_consistent_counts_and_fail_on_a_broken_one():
     result = _result(ev)
     result["coverage"].append({"ticker": "GLD", "first": None, "last": None})
     assert not measure.checks(result)[0]["ok"]
+
+
+def test_provider_limits_set_each_window_against_what_was_asked(tmp_path):
+    # Tiingo's day: the last 30 days, its latest and its peak; SiftingIO's month:
+    # the last two months; Tiingo's hour: its shares only (its own 429 guards it).
+    from datetime import datetime, timezone
+
+    (tmp_path / "hourly.csv").write_text(
+        "day,provider,purpose,calls,left,left_at\n"
+        "2026-10-10,tiingo,fetch,120,,\n2026-10-11,tiingo,fetch,110,,\n"
+        "2026-10-11,tiingo,votes,15,,\n2026-10-12,tiingo,fetch,40,,\n"
+        "2026-09-30,sifting,fetch,300,,\n2026-10-12,sifting,fetch,150,,\n")
+    (tmp_path / "manual.csv").write_text(
+        "day,provider,purpose,calls,left,left_at\n2026-10-11,tiingo,manual,12,,\n")
+    end = int(datetime(2026, 10, 12, 18, tzinfo=timezone.utc).timestamp())
+    got = {(x["provider"], x["window"]): x for x in measure.provider_limits(str(tmp_path), end)}
+    day = got[("tiingo", "day")]
+    assert len(day["series"]) == 30 and day["periods_counted"] == 3
+    assert day["latest"] == {"period": "2026-10-12", "calls": 40, "by_purpose": {"fetch": 40}}
+    assert day["peak"]["period"] == "2026-10-11" and day["peak"]["calls"] == 137
+    assert day["peak"]["by_purpose"] == {"fetch": 110, "manual": 12, "votes": 15}
+    month = got[("sifting", "month")]
+    assert [(x["period"], x["calls"]) for x in month["series"]] == [("2026-09", 300),
+                                                                  ("2026-10", 150)]
+    assert got[("tiingo", "hour")]["series"] == [] and got[("tiingo", "hour")]["limit"] == 50

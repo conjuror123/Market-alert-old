@@ -77,7 +77,8 @@ def dump(instruments, out_dir: str, days: "float | None", session=None,
 
 
 def main(argv: "list[str] | None" = None) -> int:
-    import requests
+    from jump.backfill import record_usage
+    from jump.usage import Usage
 
     parser = argparse.ArgumentParser(description="Every live voter's bars, for a measurement")
     parser.add_argument("out_dir")
@@ -87,12 +88,19 @@ def main(argv: "list[str] | None" = None) -> int:
                      help="each instrument's recount window, as the live pass asks")
     parser.add_argument("--bars-dir", default=bars.DEFAULT_BARS_DIR)
     parser.add_argument("--instruments", default="", help="comma-separated tickers")
+    parser.add_argument("--purpose", choices=("manual", "dashboard"), default="manual",
+                        help="what its calls are counted as (jump.usage)")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     wanted = {t.strip() for t in args.instruments.split(",") if t.strip()}
     instruments = [a for a in load_basket().instruments if not wanted or a.ticker in wanted]
-    failed = dump(instruments, args.out_dir, None if args.recount else args.days,
-                  requests.Session(), bars_dir=args.bars_dir)
+    usage = Usage()
+    try:
+        failed = dump(instruments, args.out_dir, None if args.recount else args.days,
+                      usage.session(args.purpose), bars_dir=args.bars_dir)
+    finally:
+        log.info(usage.line())
+        record_usage(usage)
     print(f"{len(failed)} source(s) failed")
     return 0
 

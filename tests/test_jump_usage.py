@@ -106,3 +106,158 @@ def test_the_fts_host_is_ft():
     usage = Usage()
     _ask(usage.session(), "https://markets.ft.com/data/chartapi/series")
     assert usage.line() == "requests: ft 1"
+
+
+def test_calls_are_counted_by_purpose_and_twelve_datas_in_credits():
+    # A batch of seven funds is one request and seven credits; the vote's calls are
+    # its own, apart from the fetch's.
+    usage = Usage()
+    _ask(usage.session(), "https://api.twelvedata.com/time_series?symbol=A,B,C,D,E,F,G",
+         headers={"api-credits-left": "793"})
+    _ask(usage.session("votes"), "https://api.tiingo.com/iex/spy")
+    _ask(usage.session("votes"), "https://api.tiingo.com/iex/qqq")
+    _ask(usage.session(), "https://api.twelvedata.com/time_series?symbol=UNG",
+         headers={"api-credits-used": "1"})
+    assert usage.spent == {("twelvedata", "fetch"): 8, ("tiingo", "votes"): 2}
+    assert usage.line() == "requests: tiingo 2, twelvedata 2 (left 793)"
+
+
+def test_an_unknown_purpose_is_refused():
+    import pytest
+    with pytest.raises(ValueError):
+        Usage().session("sightseeing")
+
+
+def test_a_runs_count_is_added_to_its_days_rows(tmp_path):
+    from datetime import datetime, timezone
+
+    from jump import usage as u
+    path = str(tmp_path / "hourly.csv")
+    first = Usage()
+    _ask(first.session(), "https://api.twelvedata.com/time_series?symbol=UNG",
+         headers={"api-credits-left": "799"})
+    first.record(path, now=datetime(2026, 10, 12, 9, 5, tzinfo=timezone.utc))
+    second = Usage()
+    _ask(second.session(), "https://api.twelvedata.com/time_series?symbol=UNG",
+         headers={"api-credits-left": "798"})
+    _ask(second.session("votes"), "https://api.sifting.io/v1/fx")
+    second.record(path, now=datetime(2026, 10, 12, 10, 5, tzinfo=timezone.utc))
+    third = Usage()
+    _ask(third.session(), "https://api.twelvedata.com/time_series?symbol=UNG")
+    third.record(path, now=datetime(2026, 10, 13, 0, 5, tzinfo=timezone.utc))
+    table = u.read(path)
+    rows = {(r.day, r.provider, r.purpose): (r.calls, r.left, r.left_at)
+            for r in table.itertuples()}
+    assert rows == {("2026-10-12", "twelvedata", "fetch"): (2, "798", "10:05"),
+                    ("2026-10-12", "sifting", "votes"): (1, "", ""),
+                    ("2026-10-13", "twelvedata", "fetch"): (1, "", "")}
+
+
+def test_no_usage_file_named_writes_nothing(tmp_path, monkeypatch):
+    monkeypatch.delenv("USAGE_FILE", raising=False)
+    usage = Usage()
+    _ask(usage.session(), "https://api.tiingo.com/iex/spy")
+    assert usage.record() is None and list(tmp_path.iterdir()) == []
+
+
+def test_every_workflows_file_is_read_together(tmp_path):
+    from jump import usage as u
+    (tmp_path / "hourly.csv").write_text(
+        "day,provider,purpose,calls,left,left_at\n2026-10-12,tiingo,fetch,90,,\n")
+    (tmp_path / "manual.csv").write_text(
+        "day,provider,purpose,calls,left,left_at\n2026-10-12,tiingo,manual,12,,\n")
+    table = u.read_all(str(tmp_path))
+    from datetime import datetime, timezone
+    assert u.spent_in(table, "tiingo", "day", datetime(2026, 10, 12, 23, tzinfo=timezone.utc)) == 102
+
+
+def test_the_limits_file_reads_an_undecided_share_as_none():
+    from jump import usage as u
+    table = u.limits()
+    tiingo_day = table[(table.provider == "tiingo") & (table.window == "day")].iloc[0]
+    assert tiingo_day.limit == 1000 and tiingo_day.votes == 0
+    assert set(table.window) <= {"minute", "hour", "day", "month"}
+
+
+def _table(rows):
+    import pandas as pd
+    from jump import usage as u
+    return pd.DataFrame(rows, columns=u.COLUMNS).astype({"calls": int})
+
+
+def test_a_day_past_four_fifths_of_its_limit_is_named_once():
+    from datetime import datetime, timezone
+
+    import pandas as pd
+    from jump import usage as u
+    now = datetime(2026, 10, 12, 18, tzinfo=timezone.utc)
+    limits = pd.DataFrame([{"provider": "tiingo", "window": "day", "limit": 1000, "live": 0,
+                            "manual": 0, "dashboard": 0, "votes": 0}])
+    before = _table([["2026-10-12", "tiingo", "fetch", 790, "", ""]])
+    after = _table([["2026-10-12", "tiingo", "fetch", 810, "", ""]])
+    later = _table([["2026-10-12", "tiingo", "fetch", 830, "", ""]])
+    assert u.warnings(before, after, limits, now) == ["tiingo: 810 of 1,000 this day (81%)"]
+    assert u.warnings(after, later, limits, now) == []
+
+
+def test_sifting_is_counted_by_its_month():
+    from datetime import datetime, timezone
+
+    import pandas as pd
+    from jump import usage as u
+    now = datetime(2026, 10, 30, 12, tzinfo=timezone.utc)
+    limits = pd.DataFrame([{"provider": "sifting", "window": "month", "limit": 10000,
+                            "live": 0, "manual": 0, "dashboard": 0, "votes": 0}])
+    before = _table([["2026-09-30", "sifting", "fetch", 9000, "", ""],
+                     ["2026-10-29", "sifting", "fetch", 7990, "", ""]])
+    after = _table([["2026-09-30", "sifting", "fetch", 9000, "", ""],
+                    ["2026-10-29", "sifting", "fetch", 7990, "", ""],
+                    ["2026-10-30", "sifting", "fetch", 20, "", ""]])
+    assert u.warnings(before, after, limits, now) == ["sifting: 8,010 of 10,000 this month (80%)"]
+
+
+def test_twelve_datas_count_ahead_of_ours_is_named_once():
+    # It says 760 credits left of 800 - 40 used - when we counted 10: another
+    # caller on the key, or one of ours not counted.
+    from datetime import datetime, timezone
+
+    import pandas as pd
+    from jump import usage as u
+    now = datetime(2026, 10, 12, 18, tzinfo=timezone.utc)
+    limits = pd.DataFrame([{"provider": "twelvedata", "window": "day", "limit": 800,
+                            "live": 0, "manual": 0, "dashboard": 0, "votes": 0}])
+    before = _table([["2026-10-12", "twelvedata", "fetch", 9, "791", "17:05"]])
+    after = _table([["2026-10-12", "twelvedata", "fetch", 10, "760", "18:05"]])
+    assert u.warnings(before, after, limits, now) == [
+        "twelvedata counts 40 today, we counted 10: another caller on the key, "
+        "or one of ours not counted"]
+    again = _table([["2026-10-12", "twelvedata", "fetch", 11, "759", "19:05"]])
+    assert u.warnings(after, again, limits, now) == []
+
+
+def test_the_hourly_run_records_its_count_and_names_what_it_crossed(tmp_path, monkeypatch):
+    # Through main: the count lands in the workflow's usage file whatever the run
+    # did, and what it crossed goes to the health chat.
+    from jump import backfill
+    from jump import usage as u
+
+    usage_file = tmp_path / "usage" / "hourly.csv"
+    usage_file.parent.mkdir()
+    usage_file.write_text("day,provider,purpose,calls,left,left_at\n")
+    monkeypatch.setenv("USAGE_FILE", str(usage_file))
+    sent = []
+    monkeypatch.setattr(backfill, "send_ops_alert", sent.append)
+    monkeypatch.setattr(u, "limits", lambda path=None: __import__("pandas").DataFrame(
+        [{"provider": "binance", "window": "day", "limit": 1, "live": 0, "manual": 0,
+          "dashboard": 0, "votes": 0}]))
+
+    def run(argv, usage):
+        _ask(usage.session(), "https://data-api.binance.vision/api/v3/klines")
+        return 0
+
+    monkeypatch.setattr(backfill, "_main", run)
+    assert backfill.main([]) == 0
+    table = u.read(str(usage_file))
+    assert list(table[["provider", "purpose", "calls"]].itertuples(index=False, name=None)) \
+        == [("binance", "fetch", 1)]
+    assert len(sent) == 1 and "binance: 1 of 1 this day (100%)" in sent[0]

@@ -76,6 +76,7 @@ p{margin:0}
 a{color:var(--series)}
 section{margin-top:40px}
 .note{color:var(--muted);font-size:.85rem;max-width:84ch;margin-bottom:12px}
+.dim{color:var(--muted)}
 .panel{background:var(--surface);border:1px solid var(--ring);border-radius:6px;padding:16px}
 .tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-top:20px}
 .tile .k{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
@@ -199,6 +200,17 @@ footer{margin-top:48px;color:var(--muted);font-size:.82rem;max-width:90ch}
       <div class="tablebox"><table id="t-checks"></table></div>
     </div>
   </div>
+</section>
+
+<section id="limits">
+  <h2>Provider limits</h2>
+  <p class="note">Each keyed provider's limit and how it is shared
+  (<code>config/provider_limits.csv</code>), against what was asked: the usage files
+  (<code>data/jump/usage</code>, written by the hourly run and the history walks), the last 30
+  days of a day's limit and the last two months of a month's. Twelve Data counts credits, one
+  per symbol. An hour's or a minute's limit is the provider's own 429, shown with its shares.
+  A day or month past 80% of its limit goes to the health chat.</p>
+  <div class="tablebox"><table id="t-limits"></table></div>
 </section>
 
 <section id="coverage">
@@ -416,6 +428,21 @@ table($("t-big"), [["word","Word"],["hours","Hours",true]],
 // checks
 table($("t-checks"), [["ok","",false,v => v ? '<span class="status ok">✓ held</span>' : '<span class="status bad">✕ failed</span>'],
   ["name","Check"],["detail","Compared"]], M.checks);
+
+// provider limits
+const lim = M.limits || [];
+const pct = (c, l) => c == null || !l ? "–" : `${n0(c)} <span class="dim">(${Math.round(100 * c / l)}%)</span>`;
+if (lim.length) table($("t-limits"), [["provider","Provider"],["window","Window"],["limit","Limit",true,n0],
+  ["live","Live",true,n0],["manual","Manual",true,n0],["dashboard","Dashboard",true,n0],["votes","Votes",true,n0],
+  ["latest","Latest",true,(v, r) => r.latestCalls == null ? "–" : `${pct(r.latestCalls, r.limit)} <span class="dim">${esc(r.latestPeriod)}</span>`],
+  ["peak","Peak",true,(v, r) => r.peakCalls == null ? "–" : `${pct(r.peakCalls, r.limit)} <span class="dim">${esc(r.peakPeriod)}</span>`],
+  ["counted","Counted",true,n0],["note","Note",false,null,"long"]],
+  lim.map(l => ({provider: l.provider, window: l.window, limit: l.limit, live: l.live, manual: l.manual,
+    dashboard: l.dashboard, votes: l.votes, note: l.note, counted: l.periods_counted,
+    latest: l.latest ? l.latest.calls : null, latestCalls: l.latest ? l.latest.calls : null,
+    latestPeriod: l.latest ? l.latest.period : "", peak: l.peak ? l.peak.calls : null,
+    peakCalls: l.peak ? l.peak.calls : null, peakPeriod: l.peak ? l.peak.period : ""})));
+else $("limits").insertAdjacentHTML("beforeend", '<p class="note">No limits measured this run.</p>');
 
 // coverage
 table($("t-cover"), [["ticker","Instrument"],["name","Name"],["block","Block"],["provider","Feed"],

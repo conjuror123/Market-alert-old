@@ -1236,6 +1236,37 @@ def deepen_from_yahoo(asset: Asset, path: str, session: "requests.Session | None
             "from": day(frame["hour_utc"].min()), "to": day(frame["hour_utc"].max())}
 
 def main(argv: list[str] | None = None) -> int:
+    """One run, its calls counted (jump.usage) whatever way it ends, and added to
+    the run's usage file when the workflow names one."""
+    usage = Usage()
+    try:
+        return _main(argv, usage)
+    finally:
+        record_usage(usage)
+
+
+def record_usage(usage: Usage, now: "datetime | None" = None) -> None:
+    """Add the run's count to its usage file (USAGE_FILE), and say on the health
+    chat what that newly crossed (jump.usage.warnings). Never fails the run."""
+    from jump import usage as usage_mod
+
+    if not os.environ.get(usage_mod.USAGE_FILE_ENV, "").strip():
+        return
+    try:
+        directory = os.path.dirname(os.environ[usage_mod.USAGE_FILE_ENV].strip()) \
+            or usage_mod.USAGE_DIR
+        before = usage_mod.read_all(directory)
+        usage.record(now=now)
+        notes = usage_mod.warnings(before, usage_mod.read_all(directory),
+                                   usage_mod.limits(), now)
+    except Exception as exc:
+        log.warning("usage not recorded - %s", exc)
+        return
+    if notes:
+        send_ops_alert("⚠️ <b>Provider limits</b>\n" + "\n".join(f"• {quote(n)}" for n in notes))
+
+
+def _main(argv: "list[str] | None", usage: Usage) -> int:
     parser = argparse.ArgumentParser(description="Fetch Jump's hourly bars into the store")
     parser.add_argument("--instruments", default="",
                         help="Comma-separated tickers; the whole basket by default")
@@ -1276,6 +1307,10 @@ def main(argv: list[str] | None = None) -> int:
                         help="the ordinary hourly fetch without the VIX, for "
                              "trying a provider change from the backfill "
                              "workflow on a few named instruments")
+    parser.add_argument("--usage-purpose", choices=("fetch", "votes", "manual", "dashboard"),
+                        default=None,
+                        help="what this run's calls are counted as (jump.usage); "
+                             "the hourly pass is fetch, any other mode manual")
     parser.add_argument("--repair", action="store_true",
                         help="fill the named funds' missing hours of the last "
                              "REPAIR_DAYS from Yahoo, gated on agreeing with the "
@@ -1288,6 +1323,10 @@ def main(argv: list[str] | None = None) -> int:
     twelvedata.archive_mode = bool(args.extend_history or args.fill_gaps)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    purpose = args.usage_purpose or ("manual" if (
+        args.extend_history or args.fill_gaps or args.deepen_dukascopy or args.deepen_alpaca
+        or args.deepen_wallstreetcn or args.deepen_yahoo or args.repair or args.live_pass)
+        else "fetch")
     if args.live_pass:
         args.skip_vix = True
     basket = load_basket()
@@ -1304,7 +1343,7 @@ def main(argv: list[str] | None = None) -> int:
             log.error("TWELVEDATA_API_KEY is not set")
             return 2
         table = _sessions.load_sessions()
-        session = requests.Session()
+        session = usage.session(purpose)
         filled = unfilled = 0
         td_spent = False
         for asset in instruments:
@@ -1357,7 +1396,7 @@ def main(argv: list[str] | None = None) -> int:
             log.error("ALPACA_KEY_ID / ALPACA_SECRET_KEY are not set")
             return 2
         auth = alpaca.headers(key, secret)
-        session = requests.Session()
+        session = usage.session(purpose)
         total = 0
         for asset in instruments:
             path = bars.store_path(args.bars_dir, asset.file_stem)
@@ -1392,7 +1431,7 @@ def main(argv: list[str] | None = None) -> int:
         # carries. Run per pair from the workflow - each is a few hundred
         # requests, and a failure part way through then costs one pair rather
         # than all of them.
-        session = requests.Session()
+        session = usage.session(purpose)
         total = 0
         for asset in instruments:
             path = bars.store_path(args.bars_dir, asset.file_stem)
@@ -1417,7 +1456,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.deepen_wallstreetcn:
-        session = requests.Session()
+        session = usage.session(purpose)
         total = 0
         for asset in (a for a in instruments if a.ticker in wallstreetcn.LME):
             path = bars.store_path(args.bars_dir, asset.file_stem)
@@ -1442,7 +1481,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.deepen_yahoo:
-        session = requests.Session()
+        session = usage.session(purpose)
         total = 0
         for asset in (a for a in instruments if a.fetched_from == "yahoo"
                       and _sessions.is_exchange_template(a.session_template)):
@@ -1470,7 +1509,7 @@ def main(argv: list[str] | None = None) -> int:
             log.error("--repair needs --instruments: it writes into the store")
             return 2
         table = _sessions.load_sessions()
-        session = requests.Session()
+        session = usage.session(purpose)
         failed = 0
         for asset in instruments:
             path = bars.store_path(args.bars_dir, asset.file_stem)
@@ -1512,8 +1551,7 @@ def main(argv: list[str] | None = None) -> int:
                       PROVIDER_KEYS[provider][0])
     alpaca_gone = False
 
-    usage = Usage()
-    session = usage.session()
+    session = usage.session(purpose)
     # Loaded once. A missing table is not an error here - it only means no
     # instrument can be skipped, which is the safe direction.
     try:
@@ -1573,7 +1611,7 @@ def main(argv: list[str] | None = None) -> int:
             from concurrent.futures import ThreadPoolExecutor
             pool = ThreadPoolExecutor(max_workers=1)
             td_thread = pool.submit(fetch_twelvedata_live, due, args.bars_dir, api_key,
-                                    session=usage.session(),
+                                    session=usage.session(purpose),
                                     recount={a.asset_id: voted(a) for a in due})
             pool.shutdown(wait=False)
 
@@ -1812,7 +1850,8 @@ def main(argv: list[str] | None = None) -> int:
     vote: list[str] = []
     if session_table and not args.instruments and not args.extend_history:
         try:
-            r = verify.verify(basket.instruments, args.bars_dir, session_table, session,
+            r = verify.verify(basket.instruments, args.bars_dir, session_table,
+                              usage.session("votes"),
                               blocked=({"yahoo"} if yahoo_gone else set()) | set(silent))
             for name in (r or {}).get("stopped", []):
                 vote.append(f"{name} stopped for the run (a rate limit, or no answer twice "

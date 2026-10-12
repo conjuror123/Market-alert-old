@@ -440,6 +440,18 @@ def hourly_run_asks_tiingo(basket, start: datetime, seconds: float, bars_dir: st
 
 
 def main(argv: list[str] | None = None) -> int:
+    """The table refreshed, its calls counted as manual and recorded (jump.usage)."""
+    from jump.backfill import record_usage
+    from jump.usage import Usage
+
+    usage = Usage()
+    try:
+        return _main(argv, usage.session("manual"))
+    finally:
+        record_usage(usage)
+
+
+def _main(argv: "list[str] | None", session: requests.Session) -> int:
     import argparse
 
     from jump import bars
@@ -470,7 +482,6 @@ def main(argv: list[str] | None = None) -> int:
 
     basket = load_basket()
     funds = _funds(basket)
-    session = requests.Session()
 
     if args.add_missing:
         return add_missing_from_yahoo(funds, basket.acquire_since, args.out, session)

@@ -126,6 +126,8 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_HEALTH_CHAT_ID: ${{ secrets.TELEGRAM_HEALTH_CHAT_ID }}
           REPAIR: ${{ github.event.inputs.repair }}
+          # What the run asks of each provider, by day (jump.usage).
+          USAGE_FILE: data/jump/usage/hourly.csv
         run: |
           stage() { echo "$1 $(date +%s)" >> "$RUNNER_TEMP/jump-stages"; }
           set +e
@@ -223,6 +225,9 @@ jobs:
           # detector leaves the moves voted not real out on every runner, so
           # an uncommitted vote would be a move scored again.
           if [ -f data/jump/verified.csv ]; then git add data/jump/verified.csv; fi
+          # Every run, and small: what each provider was asked, by day
+          # (jump.usage) - the limits are counted against it.
+          if [ -f data/jump/usage/hourly.csv ]; then git add data/jump/usage/hourly.csv; fi
           # Open months live on the release, not in git: once it holds them,
           # any still tracked leave the tree (they stay on disk, gitignored).
           if [ "${{ steps.hot_save.outcome }}" = "success" ]; then

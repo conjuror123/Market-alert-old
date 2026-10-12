@@ -93,6 +93,10 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
+    # What the walk asks of each provider, by day (jump.usage): its own file,
+    # beside the hourly run's, so the two never commit the same row.
+    env:
+      USAGE_FILE: data/jump/usage/manual.csv
     # A deepening is many sequential requests - Twelve Data's at most 600 a
     # day (ARCHIVE_CREDIT_CAP), Dukascopy's throttled archive - and a partial
     # run is fine because the commit step keeps whatever arrived.

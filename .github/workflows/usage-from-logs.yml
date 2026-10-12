@@ -1,0 +1,46 @@
+name: Usage from logs
+
+# One-off (deleted with tools/usage_from_logs.py once its rows are committed): each
+# provider's calls a day over the last 30 days, added up from the runs' own logs - the
+# starting point of data/jump/usage (jump.usage). And Twelve Data's own count of today,
+# from its usage endpoint. Writes nothing to the repository: the rows are printed and
+# kept as an artifact.
+
+on:
+  push:
+    branches: [claude/youthful-pascal-u0rx7u]
+    paths:
+      - "tools/usage_from_logs.py"
+      - ".github/workflows/usage-from-logs.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  usage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Add up the logs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: PYTHONPATH=. python -m tools.usage_from_logs "$RUNNER_TEMP/usage" --days 30
+      # Its own figure of the day, beside ours: what the endpoint says it counted.
+      - name: Twelve Data's own count
+        env:
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+        run: |
+          curl -sS -D - "https://api.twelvedata.com/api_usage?apikey=${TWELVEDATA_API_KEY}" \
+            | grep -iv "apikey" || echo "::warning::no answer from Twelve Data's usage endpoint"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: usage-from-logs
+          path: ${{ runner.temp }}/usage

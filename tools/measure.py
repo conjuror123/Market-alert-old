@@ -40,7 +40,7 @@ import logging
 import os
 import subprocess
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
@@ -500,6 +500,41 @@ def measure(bars_dir: str, voters_dir: "str | None", work_dir: str) -> dict:
     return result
 
 
+def provider_limits(usage_dir: str, end: int, days: int = 30) -> "list[dict]":
+    """Each keyed provider's limit per window (jump.usage.limits) against what was
+    asked (the usage files): the last `days` days to `end` for a day's limit, the
+    last two months for a month's. An hour's or a minute's limit is the provider's
+    own 429; it is shown with its shares only."""
+    from jump import usage as u
+
+    table = u.read_all(usage_dir)
+    last = datetime.fromtimestamp(end, timezone.utc).date()
+    out = []
+    for row in u.limits().itertuples():
+        mine = table[table["provider"] == row.provider] if not table.empty else table
+        if row.window == "day":
+            periods = [(last - timedelta(days=k)).isoformat() for k in range(days - 1, -1, -1)]
+            of = lambda p: mine[mine["day"] == p]          # noqa: E731
+        elif row.window == "month":
+            first = last.replace(day=1)
+            periods = [(first - timedelta(days=1)).strftime("%Y-%m"), first.strftime("%Y-%m")]
+            of = lambda p: mine[mine["day"].str[:7] == p]   # noqa: E731
+        else:
+            periods, of = [], None
+        series = [{"period": p, "calls": int(of(p)["calls"].sum()),
+                   "by_purpose": {k: int(v) for k, v in of(p).groupby("purpose")["calls"].sum().items()}}
+                  for p in periods]
+        counted = [x for x in series if x["calls"]]
+        out.append({"provider": row.provider, "window": row.window, "limit": int(row.limit),
+                    "live": int(row.live), "manual": int(row.manual),
+                    "dashboard": int(row.dashboard), "votes": int(row.votes),
+                    "note": "" if pd.isna(row.note) else str(row.note),
+                    "series": series, "periods_counted": len(counted),
+                    "latest": series[-1] if series else None,
+                    "peak": max(counted, key=lambda x: x["calls"]) if counted else None})
+    return out
+
+
 def main(argv: "list[str] | None" = None) -> int:
     from jump import bars
 
@@ -508,10 +543,15 @@ def main(argv: "list[str] | None" = None) -> int:
     parser.add_argument("--bars-dir", default=bars.DEFAULT_BARS_DIR)
     parser.add_argument("--voters", default=None,
                         help="tools/voter_bars.py's output; without it, no votes")
+    parser.add_argument("--usage", default=None,
+                        help="the usage files (jump.usage); the checkout's by default")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s %(message)s")
+    from jump import usage as u
+
     with tempfile.TemporaryDirectory() as tmp:
         result = measure(args.bars_dir, args.voters, tmp)
+    result["limits"] = provider_limits(args.usage or u.USAGE_DIR, result["meta"]["end"])
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=1, default=int)
     failed = [c for c in result["checks"] if not c["ok"]]

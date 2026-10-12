@@ -171,9 +171,31 @@ daily-session market (whose calendars, but the markets abroad's, don't know holi
 **Requests** (`jump/usage.py`): every answer the fetch, the vote and the VIX get, a 429
 included, is counted by provider on its HTTP session and logged once at the end of the fetch, with the quota left
 where the provider's answer says it: `requests: tiingo 27 (left 4973), sifting 16 (left 4), …`.
-Log only; nothing is sent. SiftingIO's "left" is a short window, not its 10,000 a month:
+SiftingIO's "left" is a short window, not its 10,000 a month:
 4 after a run's 16 requests while its account page showed 181 for the month
 (2026-10-06). The month is on the account page only.
+
+**Limits** (`config/provider_limits.csv`, `data/jump/usage/`). The limits file holds each
+keyed provider's limit per window and its shares:
+- the hourly run's, at its most;
+- room kept for history walks, gap fills, repairs and the dividend table;
+- the dashboard's, on each code push to dev;
+- the votes', empty until decided, read as 0.
+
+Each run also writes what it asked into its workflow's usage file: one row per UTC day,
+provider and purpose (fetch, votes, manual, dashboard), with the last figure left the
+provider gave.
+- The hourly run writes `hourly.csv` (`USAGE_FILE`, committed every run).
+- The history walks (`backfill-jump-bars.yml`) write `manual.csv`. Two workflows
+  committing the same row would stop each other's push.
+- Twelve Data is counted in credits, one per symbol, so its batch of seven is seven.
+- The dashboard's own calls are logged, not written, since the measure run commits
+  nothing.
+
+A run that takes a day or month past 80% of a limit says so on the health chat, once.
+So does a day on which Twelve Data's own count (its limit less `api-credits-left`) runs
+20 credits ahead of ours: another caller on the key, or one of ours not counted. The page
+sets the last 30 days against each limit.
 
 **Repair** (`backfill.repair_from_yahoo`), by hand: a fund's in-session hours missing in
 the last 58 days are filled from Yahoo's 30-minute bars, folded to the hour, only if
@@ -600,6 +622,7 @@ topped up daily from the live feed.
 | `data/economic_calendar/` | release archive | every run |
 | `data/jump/corporate_actions.csv`, `dividend_checks.csv` | payouts, how far each fund is confirmed | every run |
 | `data/jump/verified.csv` | the sources' votes | every run |
+| `data/jump/usage/hourly.csv`, `manual.csv` | each provider's calls a day, by purpose | every run; a history walk's |
 | `data/jump/sessions/nyse.csv`, `<exchange code>.csv` | NYSE schedule, the markets abroad's | when extended |
 | `data/jump/bars/*/YYYY-MM.csv`, `YYYY.parquet` | settled bars | when a month or year settles |
 | `data/jump/bars/*/YYYY-MM.open.csv` | open months | no: release `bars-live-<branch>`; the backfill reads the default branch's |
@@ -731,7 +754,7 @@ health and the calendar go out, Jump's pushes, note and pings do not.
 | `jump/versioning.py`, `windows.py` | config hashes; the pipeline's warm lead |
 | `jump/cboe.py`, `fred.py`, `vix.py`, `ewma.py`, `zscore.py` | the VIX line on the note |
 | `jump/atomic.py` | safe writes |
-| `jump/usage.py` | the fetch's requests per provider, logged |
+| `jump/usage.py` | each provider's calls per run, logged and added to the usage files; the limits and their warnings |
 | `jump/audit.py` | the coverage report, `data/jump/coverage.md` |
 | `price_monitor/jump_delivery.py` | messages and the week |
 | `price_monitor/weekly_digest.py`, `economic_calendar.py` | the calendar |

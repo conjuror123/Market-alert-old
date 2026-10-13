@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -186,6 +186,17 @@ def test_the_bund_gilt_and_ttf_roll_by_their_exchanges_rules():
     assert futures.front_contract("RLI=F", date(2026, 11, 20)) == ("RLIH27.ICE", date(2026, 11, 20))
     assert date(2026, 10, 29) in futures.last_trading_days("TFM=F", 2026, 2026)   # TFMX26
     assert futures.front_contract("TFM=F", date(2026, 10, 30))[0] == "TFMZ26.NDX"
+
+
+def test_ttfs_roll_nights_hold_marketwatchs_change_of_month():
+    # MarketWatch's TTF is on the next month from the last trading day itself, and
+    # a session earlier where a holiday moves that day: September 2026's last
+    # traded on 08-27, London's bank holiday on 08-31 counted out, and its value
+    # changed that day. The nights into 08-27, 08-28 and 08-31 are not scored.
+    days = [date(2026, 8, 3) + timedelta(i) for i in range(40)]
+    rolled = futures.roll_sessions("TFM=F", [d for d in days if d.weekday() < 5])
+    assert {"2026-08-27", "2026-08-28", "2026-08-31"} <= rolled
+    assert "2026-08-26" not in rolled
 
 
 def test_a_future_without_volume_has_no_thin_bars():

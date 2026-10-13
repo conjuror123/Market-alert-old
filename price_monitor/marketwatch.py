@@ -97,6 +97,9 @@ INDICES = {
     "^TASI.SR": "INDEX/SA//TASI", "^GSPTSE": "INDEX/CA/XTSE/GSPTSE", "^MXX": "INDEX/MX//IPC",
     "^KS11": "INDEX/KR/XKRX/180721", "^J200.JO": "INDEX/XX/XJSE/168635",
     "^BVSP": "INDEX/BR/BVMF/BVSP",
+    # Yahoo's to the cent at 10:00-12:00 Taipei; its 13:00 bar, the closing
+    # auction's, is another grid's (0.46) and not asked about (jump.verify).
+    "^TWII": "INDEX/TW/XTAI/Y9999",
 }
 
 # Stage 2's futures, each its continuous series (the nearest month, changing on its

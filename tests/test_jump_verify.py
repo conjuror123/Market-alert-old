@@ -140,14 +140,21 @@ def test_every_instrument_is_asked_of_every_source_that_moves_with_it_but_its_ow
 
 def test_each_recount_runs_while_its_closest_reaching_source_serves_the_hour(basket):
     # MarketWatch's nine days wherever it votes; the coins' Kraken 29; the LME's
-    # Wallstreetcn 79 (copper's Yahoo reaches further); the CSI 300's Sina.
+    # Wallstreetcn 79 (copper's Yahoo reaches further); the CSI 300's Sina a year,
+    # held inside the record.
     days = {t: verify.recount_days(basket[t]) for t in (
         "EUR/USD", "XAU/USD", "KC=F", "CC=F", "SB=F", "LE=F", "^BVSP", "^KS11", "^TWII",
         "BTC/USDT", "SND", "CAD", "000300.SS")}
     assert days == {"EUR/USD": 9, "XAU/USD": 9, "KC=F": 9, "CC=F": 9, "SB=F": 9, "LE=F": 9,
                     "^BVSP": 9, "^KS11": 9, "^TWII": 9, "BTC/USDT": 29, "SND": 79,
-                    "CAD": 79, "000300.SS": 365}
-    assert verify.recount_days(basket["SND"]) < verify.KEEP_DAYS
+                    "CAD": 79, "000300.SS": 89}
+
+
+def test_every_recount_is_held_inside_the_record(basket):
+    # A vote the record no longer holds is due again on every run: the CSI 300's
+    # moves 90-365 days old were put to Sina, and re-read from Yahoo, each hour.
+    voted = [a for a in basket.values() if verify.sources_for(a)]
+    assert all(verify.recount_days(a) < verify.KEEP_DAYS for a in voted)
 
 
 def test_the_keyed_providers_vote_only_with_their_keys_and_a_share_of_their_allowance(
@@ -1168,7 +1175,8 @@ def test_the_indices_abroad_are_voted_by_the_sources_that_move_with_them(basket)
     assert asked["000300.SS"] == [("sina", "sh000300", "1h")]
     assert [n for n, _, _ in asked["^NSEI"]] == ["marketwatch", "wallstreetcn"]
     assert asked["^BVSP"] == [("marketwatch", "INDEX/BR/BVMF/BVSP", "1h"), ("ft", "570637", "1h")]
-    assert asked["^TWII"] == [("twse", "TAIEX", "1h")]
+    assert asked["^TWII"] == [("marketwatch", "INDEX/TW/XTAI/Y9999", "1h"),
+                              ("twse", "TAIEX", "1h")]
     assert asked["^KS11"] == [("marketwatch", "INDEX/KR/XKRX/180721", "1h"),
                               ("naver", "KOSPI", "1h")]
     assert asked["^J200.JO"] == [("marketwatch", "INDEX/XX/XJSE/168635", "1h")]
@@ -1187,9 +1195,15 @@ def test_a_source_is_not_asked_about_a_move_in_its_skipped_hour(basket):
     assert ft_.skips(basket["^FTSE"], move("2026-12-01 16:00"))      # 16:00 GMT
     assert not ft_.skips(basket["^FTSE"], move("2026-07-01 14:00"))
     assert not ft_.skips(basket["^BVSP"], move("2026-07-01 15:00"))  # not its hour there
-    twse = verify.sources_for(basket["^TWII"])[0]
-    assert twse.skips(basket["^TWII"], move("2026-10-12 05:00"))     # 13:00 Taipei
-    assert not twse.skips(basket["^TWII"], move("2026-10-12 04:00"))
+    for src in verify.sources_for(basket["^TWII"]):               # MarketWatch, TWSE
+        assert src.skips(basket["^TWII"], move("2026-10-12 05:00"))  # 13:00 Taipei
+        assert not src.skips(basket["^TWII"], move("2026-10-12 04:00"))
+    # The FT's Euro-Bund index has no bar before 13:00 UTC: the Bund's
+    # 08:00-14:00 Frankfurt is not put to it (the outage on 2026-09-30 09:00).
+    bund = verify.sources_for(basket["FGBL=F"])[0]
+    assert bund.skips(basket["FGBL=F"], move("2026-09-30 07:00"))      # 09:00 CEST
+    assert bund.skips(basket["FGBL=F"], move("2026-12-01 13:00"))      # 14:00 CET
+    assert not bund.skips(basket["FGBL=F"], move("2026-09-30 13:00"))  # 15:00 CEST
     sina = verify.sources_for(basket["000300.SS"])[0]
     assert sina.skips(basket["000300.SS"], move("2026-10-12 03:00"))  # 11:00 Shanghai
     assert not sina.skips(basket["000300.SS"], move("2026-10-12 05:00"))
@@ -1278,6 +1292,39 @@ def test_the_keyed_fund_voters_keep_the_regular_session_only(monkeypatch):
         v = verify.fetch_verifier(name, "UNG", "30min", 2, None, now)
         assert v["hour_utc"].tolist() == [at(13, 0), at(14, 0)]
         assert v["open"].tolist() == [10.0, 10.5]
+
+
+def test_a_move_no_source_is_asked_about_is_not_voted(basket):
+    # The CSI 300's one voter, Sina, is not asked about 11:00 (the lunch
+    # break's bar): a move there has no vote to take - counted, the store
+    # alone would make it real. Its 13:00 move is asked about.
+    from datetime import date
+    from zoneinfo import ZoneInfo
+
+    from jump import sessions
+    from jump.corporate_actions import Dividends
+    asset = basket["000300.SS"]
+    shanghai = ZoneInfo("Asia/Shanghai")
+    days = [d for d in (date(2026, 5, 4) + timedelta(days=k) for k in range(140))
+            if sessions.trades_on(d, "shanghai")]
+    rng = np.random.default_rng(4)
+    rows, price = [], 4000.0
+    for n, day in enumerate(days):
+        for hour in (9, 10, 11, 13, 14):
+            o = price
+            jump = 0.96 if n == len(days) - 1 and hour in (11, 13) else 1.0
+            price = o * jump * np.exp(rng.normal(0, 0.001))
+            stamp = int(datetime(day.year, day.month, day.day, hour, tzinfo=shanghai).timestamp())
+            rows.append({"hour_utc": stamp, "open": o, "high": max(o, price), "low": min(o, price),
+                         "close": price, "volume": 0.0, "n_src": 1})
+    frame = pd.DataFrame(rows)
+    last = int(frame["hour_utc"].iloc[-1])
+    paid = Dividends(steps={}, splits={}, checked_through={})
+    asked = verify.candidates(asset, frame, sessions.load_sessions(), last + 2 * HOUR,
+                              basket=load_basket(), dividends=paid)
+    local = {datetime.fromtimestamp(c["hour"], shanghai).hour for c in asked
+             if datetime.fromtimestamp(c["hour"], shanghai).date() == days[-1]}
+    assert local == {13}
 
 
 def test_an_indexs_night_is_asked_about_to_its_first_hours_close(basket):

@@ -67,9 +67,14 @@ MONTH_CODES = "FGHJKMNQUVXZ"
 # (price_monitor.marketwatch.STORE): the Bund and the gilt one contract at a time,
 # rolled where their volume moves - the Bund three business days before its last
 # trading day, the gilt five before its first notice day (two business days
-# before the delivery month); TTF as MarketWatch's continuous series, which holds
-# the nearest month to its last trading day, the second-last business day of the
-# month before delivery - only its roll nights are taken from here.
+# before the delivery month); TTF as MarketWatch's continuous series - only its roll
+# nights are taken from here. That series is on the next month from the last trading
+# day itself (the second-last business day of the month before delivery): its daily
+# value there is already the next month's, a session before Yahoo's TTF=F changes,
+# 2024-26 - and a session earlier still where a holiday moves that day (2026-08-27,
+# before London's bank holiday). So its last day on the expiring month is the business
+# day before (roll_ltd 1), and the nights into that day, the last trading day and the
+# day after are left unscored.
 #
 # Stage 2's (2026-10-12): each held month and roll set where the volume moves -
 # Yahoo's own series came onto the contract held now on the same day: Brent and
@@ -97,7 +102,7 @@ SPECS: "dict[str, dict]" = {
                    suffix="EUX"),
     "RLI=F": dict(listed="HMUZ", ltd_back=2, held="HMUZ", roll_back=7, suffix="ICE"),
     "TFM=F": dict(listed=MONTH_CODES, ltd_months=1, ltd_back=1, held=MONTH_CODES,
-                  roll_back=None, suffix="NDX"),
+                  roll_ltd=1, suffix="NDX"),
 }
 
 # Volume under this share of the series' trailing median is a quote, not a

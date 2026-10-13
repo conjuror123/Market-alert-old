@@ -88,8 +88,9 @@ sessions.last_close: the NYSE close for funds, a daily-session market's own
 close, 00:00 UTC for coins and pairs) - its own provider re-read first
 (recount_hours, jump.backfill) - until the closest-reaching of its
 sources no longer serves its hour (recount_days: nine days wherever MarketWatch
-votes, 29 for the coins, 79 for the LME, 365 for the CSI 300); after that the
-further ones would vote alone, and the vote stands. A
+votes, 29 for the coins, 79 for the LME), held inside the record's KEEP_DAYS
+(the CSI 300's Sina reaches a year, counted to 89); after that the further
+ones would vote alone, and the vote stands. A
 source that corrects its bars turns the vote back; a bar that heals into no far
 move loses its vote. A move not real is kept for good, because the detector rescores the whole history
 every run; the rest go after KEEP_DAYS. A record from before the vote reads in
@@ -145,7 +146,7 @@ TAIL_DAYS = 200                   # bars read before the window: the detector's 
 # minutes, and the whole run takes about three (2026-10-13).
 MAX_REQUESTS = 120
 VOTE_SECONDS = 300
-KEEP_DAYS = 90                    # longer than the LME's recount, 79 days
+KEEP_DAYS = 90                    # longer than any recount (recount_days)
 
 # One source's answer about a move (judge).
 CONFIRMED, UNCONFIRMED, UNKNOWN = "confirmed", "unconfirmed", "unknown"
@@ -311,12 +312,14 @@ SOURCES: "tuple[Source, ...]" = (
     # the lunch break: 0.69 there, 0.98 in the afternoon (the user's, 2026-10-13).
     Source("sina", "Sina", 365, "1h", sina.CN_INDICES, skip_hours={"000300.SS": (11,)}),
     # MarketWatch: the pairs, the funds by their listing exchange, the indices,
-    # live cattle's continuous contract; the futures' continuous series.
+    # live cattle's continuous contract; the futures' continuous series. Its
+    # TAIEX apart from 13:00, as the exchange's: 1.00 at 10:00-12:00 Taipei, 0.46
+    # there (2026-10-13).
     Source("marketwatch", "MarketWatch", 9, "1h", {
         **{t: "CURRENCY/US/XTUP/" + _pair(t) for t in PAIRS},
         **{t: "FUND/US/{}/{}".format(MARKETWATCH_FUND_EXCHANGE.get(t, "ARCX"), t)
            for t in FUNDS},
-        **marketwatch.INDICES, "LE=F": MARKETWATCH_CATTLE}),
+        **marketwatch.INDICES, "LE=F": MARKETWATCH_CATTLE}, skip_hours={"^TWII": (13,)}),
     Source("marketwatch", "MarketWatch", 9, "1h",
            {**marketwatch.FUTURES, **marketwatch.METALS, **marketwatch.SOFTS}, own_rolls=True),
     # Wallstreetcn: the pairs and spot metals, the indices, the LME, its
@@ -332,9 +335,13 @@ SOURCES: "tuple[Source, ...]" = (
     # an outage (own_rolls) - and five indices. Europe's three end their last
     # hour before the closing auction that Yahoo's bar holds: 0.08-0.19 in that
     # hour, so not asked about a move in it (the user's, 2026-10-13).
+    # Its S&P Euro-Bund index has bars only at 13:00-17:00 UTC (15:00-19:00
+    # Frankfurt in summer, 14:00 on in winter if held to UTC): the Bund's
+    # 08:00-14:00 is never served, and not asked about (2026-10-13).
     Source("ft", "FT", 30, "1h",
            {**ft.SOFTS, **ft.FUTURES_CONTINUOUS, "LE=F": _ft_cattle,
-            **{t: _ft_future for t in ("ZC=F", "ZW=F", "ZS=F", "PL=F")}}, own_rolls=True),
+            **{t: _ft_future for t in ("ZC=F", "ZW=F", "ZS=F", "PL=F")}}, own_rolls=True,
+           skip_hours={"FGBL=F": (8, 9, 10, 11, 12, 13, 14)}),
     Source("ft", "FT", 30, "1h", ft.INDICES,
            skip_hours={"^STOXX50E": (17,), "^FTSE": (16,), "^SSMI": (17,)}),
     # Every exchange's trades: another source than the IEX feeds the funds are
@@ -408,8 +415,11 @@ def _day(text: str) -> int:
 def recount_days(asset: Asset) -> float:
     """How long a reading's vote is counted again: while the closest-reaching
     of the instrument's sources still serves its hour. After that, the
-    further ones would vote alone, and the vote stands as it is."""
-    return min(src.days for src in sources_for(asset))
+    further ones would vote alone, and the vote stands as it is. Held inside
+    the record's KEEP_DAYS: a vote it no longer holds would be due on every
+    run (the CSI 300's Sina reaches a year; the store's own Yahoo re-reads 59
+    days)."""
+    return min(min(src.days for src in sources_for(asset)), KEEP_DAYS - 1)
 
 
 def due(row: "dict | None", closed: "int | None") -> bool:
@@ -602,7 +612,8 @@ def candidates(asset: Asset, frame: pd.DataFrame, table, now: int,
     yardstick and the nights moved (jump.jumps._flag): with the `record`, a
     move far only against that yardstick - lifted once a bad print left it -
     is a candidate too. The raw yardstick's stay, so a move voted not real is
-    still asked about, and its vote counted again rather than lost."""
+    still asked about, and its vote counted again rather than lost. A move
+    none of the instrument's sources is asked about (skip_hours) is not one."""
     from jump import jumps, pipeline
     from jump.basket import load_basket
 
@@ -677,7 +688,11 @@ def candidates(asset: Asset, frame: pd.DataFrame, table, now: int,
             out.append({"hour": int(h[i]), "check": OPEN, "from_open": False,
                         "prev_hour": int(h[i - 1]), "prev_close": float(close[i - 1]),
                         "price": float(opened[i])})
-    return out
+    # A move none of its sources is asked about (Source.skip_hours) has no vote
+    # to take: counted, the store alone would make it real (the CSI 300's 11:00,
+    # the TAIEX's 13:00).
+    voters = sources_for(asset)
+    return [c for c in out if any(not src.skips(asset, c) for src in voters)] if voters else out
 
 
 # --- the verdict ---------------------------------------------------------------

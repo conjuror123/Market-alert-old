@@ -151,12 +151,12 @@ without volume, so no thin-bar rule:
   with MarketWatch's contract, 0.998 and 0.7 bp over the gilt's 60); the Bund voted by the FT's S&P
   Euro-Bund futures index (0.95, four bars a day), the gilt by none;
 - TTF as MarketWatch's continuous series (it names no single month), its roll nights
-  unscored from the exchange's rule; no hourly history anywhere, so it scores once it has
-  its half-year window (about 2027-04);
+  unscored from the exchange's rule; no hourly history anywhere, so it scores with a young
+  yardstick from its first days, its half-year window full about 2027-04;
 - the JGB as its yield, as no source carries the future: its move read and said in basis
   points (`unit: bp`). Wallstreetcn's yield is 0.4 bp from MarketWatch's at the median but
   holds only 104 days and moves with it at 0.70 hour by hour (both a bp or so an hour);
-  not spliced. Like TTF it scores from about 2027-04.
+  not spliced. Like TTF it scores young until about 2027-04.
 
 The rates block then holds six beside TIP.
 
@@ -324,7 +324,9 @@ down turns a clear vote into a tie. When none can answer, the move is uncertain.
 **A vote is taken when the move is found, then at each end of its market's session, while
 its closest source still reaches the hour**: 9 days wherever MarketWatch votes, 29 for
 coins, 79 for the LME. Further back the further sources would vote alone. The record keeps
-a vote 90 days. Kept when MarketWatch joined gold, silver and the softs (the user's,
+a vote 90 days, and every recount is held inside it: the CSI 300's Sina reaches a year, and
+its moves 90-365 days old, no longer in the record, were voted again on every run until
+2026-10-13; counted to 89 days since. Kept when MarketWatch joined gold, silver and the softs (the user's,
 2026-10-12: "keep the shortest reach"), which cut their recount from 60, 30 and 79 days to
 9.
 
@@ -380,7 +382,9 @@ count against one.
   UNG and platinum (spot); Wallstreetcn's natural gas future on UNG and Brent on Brent; the
   FT's Brent and cocoa; MarketWatch's coffee, cocoa and cotton; Yahoo's copper (COMEX) on
   the LME's; Alpaca's, Bitstamp's, Bitfinex's and Yahoo's dollar pairs on the coins;
-  MarketWatch's KOSPI, JSE Top 40 and Bovespa; Naver's KOSPI; the Taiwan exchange's TAIEX.
+  MarketWatch's KOSPI, JSE Top 40 and Bovespa; Naver's KOSPI; the Taiwan exchange's TAIEX;
+  MarketWatch's TAIEX apart from 13:00 (2026-10-13, the user's "fix the for later": Yahoo's
+  to the cent at 10:00-12:00 Taipei over 10 days, 0.46 at 13:00).
 - **A bad hour skipped, not the source** (the user's): the FT on the Euro Stoxx 50 (17:00
   local, 0.19), FTSE 100 (16:00, 0.08) and SMI (17:00, 0.15), whose last bar ends before
   the closing auction Yahoo's holds (0.92-0.94 overall, that hour in); the Taiwan
@@ -391,10 +395,9 @@ count against one.
   last bar 3.5 days old).
 - **Left out:** MarketWatch's Bitcoin, Kraken's own pair under another vendor's name, which
   would give Kraken two votes; Sina's COMEX gold and silver and natural gas, a second Sina
-  voice where its spot or the fund itself votes; MarketWatch's TAIEX (0.86, its 13:00 hour
-  0.47), not in the user's skipped hours; the keyed providers on the coins, which keep six
-  free voters each.
-- **Still none or one:** the TAIEX, JSE Top 40, Nikkei, ASX 200, Hang Seng, BIST 100,
+  voice where its spot or the fund itself votes; the keyed providers on the coins, which
+  keep six free voters each.
+- **Still none or one:** the JSE Top 40, Nikkei, ASX 200, Hang Seng, BIST 100,
   sugar and the Treasuries have one voter; MarketWatch is often Yahoo's upstream to the cent.
 
 **The keyed providers vote within a share of their allowance** (the user's, 2026-10-12).
@@ -569,11 +572,17 @@ the source audit of 2026-10-13):
 
 The user's, 2026-10-13: add everything good, and look for what is missing later.
 
-**TTF's switch day.** MarketWatch's continuous series is taken to change month the session
-after the expiring month's last trading day (`futures.SPECS`), and those nights are left
-unscored; its first change in the store, around 2026-10-30, shows whether it does. TTF scores
-only from about 2027-04, so a wrong day costs nothing before then. To act: move its
-`roll_back` to the day seen.
+**TTF's switch day** (answered 2026-10-13). MarketWatch's daily TTF is Yahoo's TTF=F to
+the cent on other days (2021-26), but on the last trading day it is already the next
+month's and Yahoo's changes the session after: the two differ by the spread on those two
+days, the way the season makes it (into winter +115 and +104 bp, out of it -55 and -386).
+Where a holiday moves the last trading day, MarketWatch's change moves with it: 2026-08-27,
+London's bank holiday on 08-31 counted out. So TTF is taken to be on the next month from
+its last trading day (`futures.SPECS`, `roll_ltd` 1), and the nights into the day before,
+the day and the day after are unscored: three a month, not two. Two cases stay open: a change inside
+the session rather than at its open (the 10-29 change shows which), and a holiday on a
+Monday last trading day (next 2027-08-30), whose Friday is not covered. To act: mark that
+hour, or that Friday, if either is seen.
 
 **What else Wallstreetcn carries**, hourly, about 170 days back, without volume (2026-10-10):
 sugar, lean hogs, wheat, corn, soybeans and soybean oil, the LME's lead and zinc, 38 stock

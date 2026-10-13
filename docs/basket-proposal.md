@@ -155,7 +155,7 @@ until they hold half a year of bars.
 
 **Voters** for every instrument since the source audit of 2026-10-13 (`docs/decisions.md`,
 "Every source on every instrument"): the KOSPI from MarketWatch and Naver, the TAIEX from
-the Taiwan exchange (not its 13:00 hour), the JSE Top 40 from MarketWatch.
+the Taiwan exchange and MarketWatch (not its 13:00 hour), the JSE Top 40 from MarketWatch.
 
 **Left**: the user's go, for stages 1 and 2 together.
 

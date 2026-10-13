@@ -12,16 +12,15 @@ minute files. Inside the session's hours only (the gate drops the rest).
 THE SPLICE is made only if, over the hours both hold since the seam, the CFD
 passes the gates every splice passes (jump.backfill.verify_alignment).
 
-ITS SWITCHES. The CFD changes contract on its own day each quarter; the step is
-the calendar spread, a few bp now and up to SPREAD_SEEN in the years of negative
-yields. Found against MarketWatch's daily continuous series (the settlement):
-the CFD's close at the settlement hour over that day's settlement, whose step
-from one session to the next is the spread when either changes contract, and
-nothing else. In the weeks before each expiry (WINDOW), the session the CFD's
-own night carries a step of the ratio at least STEP_BP and half its night is
-the CFD's switch: a roll night, written to data/jump/rolls.csv and left
-unscored (jump.futures.roll_sessions). A window with no such step is kept as it
-is: a switch there moved the price by less than STEP_BP.
+ITS SWITCHES. The CFD changes contract on its own day each quarter: the Bund's
+in an hour of the business day before its last trading day, the gilt's around
+its first notice day. The step is the calendar spread - 50-200 bp in 2018-25, a
+few bp in 2026 - so a switch is a large hourly move in those days that
+MarketWatch's daily settlements confirm (the CFD over the settlement steps that
+day; the market moves both). Dropped inside a session, a roll night at or
+outside its start (written to data/jump/rolls.csv, left unscored by
+jump.futures.roll_sessions). Where none is confirmed, the spread was too small
+to tell, and to matter.
 
 Its stray closes - a close far from both its own bar's open and the next open,
 the next bar taking it back - are set to the next open, as stage 2's were. Its
@@ -33,7 +32,6 @@ work is committed (the manual's rule).
 from __future__ import annotations
 
 import argparse
-import json
 import lzma
 import os
 import shutil
@@ -49,16 +47,27 @@ import requests
 from jump import bars, futures, sessions
 from jump.backfill import verify_alignment
 from jump.basket import load_basket
-from price_monitor import dukascopy, marketwatch
+from price_monitor import dukascopy
 from price_monitor.models import Candle, ExchangeError
 
 CFD = {"FGBL=F": "BUNDTREUR", "RLI=F": "UKGILTTRGBP"}
 FIRST = date(2018, 5, 1)
-# MarketWatch's continuous series, daily, with its settlement's local hour.
-DAILY = {"FGBL=F": ("FUTURE/DE/XEUR/FGBL00", "Europe/Berlin", 17),
-         "RLI=F": ("FUTURE/UK/IFEU/RLI00", "Europe/London", 16)}
-WINDOW_BEFORE, WINDOW_AFTER = 15, 3      # business days around each last trading day
-STEP_BP, STEP_SHARE = 8.0, 0.5
+# Where each CFD changes contract: the Bund's in an hour of the business day before
+# its last trading day (2018-09-05 -156 bp at 14:00 UTC, 2018-12-05 +50 bp,
+# 2019-03-06 -148 bp; MarketWatch's daily series the day after), the gilt's from
+# two business days before its first notice day to that day, in an hour or at the
+# open (2018-08-28 -65 bp at 15:00 London, 2020-05-28 -82 bp at the open,
+# 2025-11-26 -201 bp); looked for from SWITCH_DAYS business days before to after
+# each edge (switch_edges), a day wider for the gilt.
+SWITCH_DAYS = {"FGBL=F": (2, 0), "RLI=F": (3, 1)}
+SWITCH_TYPICAL, TOP_HOURS = 4.0, 3
+# MarketWatch's continuous series, daily: its settlement, and the local hour whose
+# bar closes nearest it (the Bund 17:15 Frankfurt, the gilt 16:15 London).
+DAILY = {"FGBL=F": ("FUTURE/DE/XEUR/FGBL00", "Europe/Berlin", 16),
+         "RLI=F": ("FUTURE/UK/IFEU/RLI00", "Europe/London", 15)}
+# The settlement ratio moves 18 bp a day at the standard deviation (the gilt,
+# 2018-26); a switch is confirmed past CONFIRM_BP and half the hour's move.
+CONFIRM_SHARE, CONFIRM_BP = 0.5, 30.0
 STRAY_MULT, STRAY_FLOOR = 8.0, 0.002
 MIN_HOURS = 50
 MONTH_TRIES, MONTH_PAUSE = 6, 60
@@ -118,9 +127,13 @@ def _minute_day(symbol: str, day: date, side: str, session) -> "dict[int, tuple]
     raise ExchangeError(f"{symbol} {day}: no answer for its {side} minutes")
 
 
-def this_month(symbol: str, today: date, session) -> pd.DataFrame:
+def this_month(symbol: str, today: date, session, cache: "str | None" = None) -> pd.DataFrame:
     """The month not yet ended, from its daily minute files to yesterday: each
-    minute's mid of the bid and ask, folded to the hour."""
+    minute's mid of the bid and ask, folded to the hour. Kept in `cache` as
+    SYMBOL-YYYY-MM-days.parquet, and read from there when it is."""
+    path = os.path.join(cache, f"{symbol}-{today:%Y-%m}-days.parquet") if cache else None
+    if path and os.path.exists(path):
+        return pd.read_parquet(path)
     candles = []
     day = today.replace(day=1)
     while day < today:
@@ -133,7 +146,11 @@ def this_month(symbol: str, today: date, session) -> pd.DataFrame:
                 candles.append(Candle(open_time=t, open=o, high=h, low=low, close=c,
                                       volume=0.0, close_time=t + 60))
         day += timedelta(days=1)
-    return _frame(candles)
+    frame = _frame(candles)
+    if path:
+        os.makedirs(cache, exist_ok=True)
+        frame.to_parquet(path, index=False)
+    return frame
 
 
 def archive(ticker: str, today: date, session, cache: "str | None") -> pd.DataFrame:
@@ -142,24 +159,11 @@ def archive(ticker: str, today: date, session, cache: "str | None") -> pd.DataFr
     while month < today.replace(day=1):
         parts.append(_month(symbol, month, cache))
         month = date(month.year + month.month // 12, month.month % 12 + 1, 1)
-    parts.append(this_month(symbol, today, session))
+    parts.append(this_month(symbol, today, session, cache))
     frame = pd.concat([p for p in parts if not p.empty], ignore_index=True)
     frame = frame.drop_duplicates("hour_utc", keep="last").sort_values("hour_utc")
     prices = frame[["open", "high", "low", "close"]]
     return frame[(prices > 0).all(axis=1)].reset_index(drop=True)
-
-
-def daily_settlements(ticker: str, session) -> pd.Series:
-    """MarketWatch's daily continuous closes, by the session date."""
-    key = DAILY[ticker][0]
-    query = marketwatch._query(key, "P10Y")
-    query["Step"] = "P1D"
-    got = session.get(marketwatch.URL, params={"json": json.dumps(query),
-                                                "ckey": marketwatch.CKEY},
-                      headers=marketwatch.HEADERS, timeout=60).json()
-    ticks, points = got["TimeInfo"]["Ticks"], got["Series"][0]["DataPoints"]
-    return pd.Series({datetime.fromtimestamp(t // 1000, timezone.utc).date().isoformat(): p[3]
-                      for t, p in zip(ticks, points) if p and p[3] is not None})
 
 
 def reset_stray_closes(frame: pd.DataFrame) -> "tuple[pd.DataFrame, int]":
@@ -178,42 +182,100 @@ def reset_stray_closes(frame: pd.DataFrame) -> "tuple[pd.DataFrame, int]":
     return out, int(stray.sum())
 
 
-def switches(ticker: str, template: str, record: pd.DataFrame, daily: pd.Series,
-             first: date, last: date) -> "tuple[list[str], list[str]]":
-    """The CFD's switch nights (session dates), and a line per window."""
+def daily_settlements(ticker: str, session) -> pd.Series:
+    """MarketWatch's daily continuous closes (the settlement), by session date."""
+    import json
+
+    from price_monitor import marketwatch
+
+    query = marketwatch._query(DAILY[ticker][0], "P10Y")
+    query["Step"] = "P1D"
+    got = session.get(marketwatch.URL, params={"json": json.dumps(query),
+                                                "ckey": marketwatch.CKEY},
+                      headers=marketwatch.HEADERS, timeout=60).json()
+    ticks, points = got["TimeInfo"]["Ticks"], got["Series"][0]["DataPoints"]
+    return pd.Series({datetime.fromtimestamp(t // 1000, timezone.utc).date().isoformat(): p[3]
+                      for t, p in zip(ticks, points) if p and p[3] is not None})
+
+
+def ratio_steps(ticker: str, record: pd.DataFrame, daily: pd.Series) -> pd.Series:
+    """By local date, the step from the session before in the CFD's close at
+    the settlement's hour over MarketWatch's settlement: the market moves both,
+    a change of contract on one side only moves it."""
     _, zone, hour = DAILY[ticker]
     local = pd.to_datetime(record["hour_utc"], unit="s", utc=True).dt.tz_convert(zone)
-    key = record["hour_utc"].map(lambda h: sessions.session_key(int(h), template))
-    at = record.assign(key=key)[local.dt.hour == hour].dropna(subset=["key"])
-    mine = at.groupby("key")["close"].last()
+    mine = record.assign(d=local.dt.date.astype(str))[local.dt.hour == hour] \
+        .groupby("d")["close"].last()
     both = pd.concat([mine.rename("cfd"), daily.rename("mw")], axis=1, join="inner").dropna()
-    step = np.log(both["cfd"] / both["mw"]).diff()
-    ordered = record.assign(key=key).dropna(subset=["key"]).sort_values("hour_utc")
-    opens = ordered.groupby("key").first()
-    closes = ordered.groupby("key")["close"].last()
-    night = np.log(opens["open"] / closes.shift(1).reindex(opens.index))
+    return np.log(both["cfd"] / both["mw"]).diff()
+
+
+def switches(ticker: str, template: str, record: pd.DataFrame, first: date, last: date,
+             steps: pd.Series) -> "tuple[pd.DataFrame, list[str], list[str]]":
+    """The CFD's switches: in each SWITCH_DAYS window, the largest hourly move
+    from the bar before (of the TOP_HOURS largest, at least SWITCH_TYPICAL
+    times the record's median) that the settlement ratio confirms - its step
+    that day (`steps`, ratio_steps) the same way, at least CONFIRM_SHARE of
+    the move and CONFIRM_BP. Inside a session that bar is dropped, so the next
+    is measured from its own open; on a session's first bar, or outside the
+    session (its step then falls in the next session's night), that night is a
+    roll night. Returns the record without the dropped bars, the roll nights
+    (session dates) and a line per window."""
+    out = record.sort_values("hour_utc").reset_index(drop=True)
+    move = np.log(out["close"] / out["close"].shift(1))
+    typical = float(move.abs().median())
+    key = out["hour_utc"].map(lambda h: sessions.session_key(int(h), template))
+    day = pd.to_datetime(out["hour_utc"], unit="s", utc=True).dt.tz_convert(
+        sessions.DAILY_SESSIONS[template][0]).dt.date
+    before, after = SWITCH_DAYS[ticker]
+    keep = np.ones(len(out), dtype=bool)
     nights, lines = [], []
-    for ltd in futures.last_trading_days(ticker, first.year, last.year):
-        lo = futures._business_days_before(ltd, WINDOW_BEFORE)
-        hi = ltd + timedelta(days=WINDOW_AFTER + 2)
-        if hi < first or lo > last:
+    for edge in switch_edges(ticker, first.year, last.year):
+        lo = futures._business_days_before(edge, before) if before else edge
+        hi = edge
+        for _ in range(after):
+            hi += timedelta(days=1)
+            while hi.weekday() >= 5:
+                hi += timedelta(days=1)
+        if hi < first or lo >= last:
             continue
-        inside = [k for k in step.index if lo.isoformat() <= k <= hi.isoformat()]
-        w = step.reindex(inside).dropna()
-        if w.empty:
-            lines.append(f"{lo}..{hi}: no settlements")
+        w = move[((day >= lo) & (day <= hi)).to_numpy()].dropna()
+        w = w.reindex(w.abs().sort_values(ascending=False).index)[:TOP_HOURS]
+        found = None
+        for at, size in w.items():
+            if abs(size) < SWITCH_TYPICAL * typical:
+                break
+            step = steps.get(day.iloc[at].isoformat(), np.nan)
+            if np.isfinite(step) and np.sign(step) == np.sign(size) and \
+                    abs(step) >= max(CONFIRM_SHARE * abs(size), CONFIRM_BP / 1e4):
+                found = (int(at), float(size), float(step))
+                break
+        if found is None:
+            top = f"{1e4 * float(w.iloc[0]):+.0f} bp" if len(w) else "no bars"
+            lines.append(f"{lo}..{hi}: none confirmed (largest {top})")
             continue
-        top = w.abs().idxmax()
-        size, moved = float(w[top]), float(night.get(top, np.nan))
-        if abs(size) * 1e4 >= STEP_BP and np.isfinite(moved) and \
-                np.sign(moved) == np.sign(size) and abs(moved) >= STEP_SHARE * abs(size):
-            nights.append(top)
-            lines.append(f"{lo}..{hi}: a switch, {top} ({1e4 * size:+.0f} bp, the night "
-                         f"{1e4 * moved:+.0f})")
-        else:
-            lines.append(f"{lo}..{hi}: none at {STEP_BP:.0f} bp (largest step "
-                         f"{1e4 * size:+.0f} bp at {top})")
-    return nights, lines
+        at, size, step = found
+        when = pd.Timestamp(int(out.loc[at, "hour_utc"]), unit="s", tz="UTC")
+        said = f"{1e4 * size:+.0f} bp at {when:%Y-%m-%d %H:%M} UTC, the ratio {1e4 * step:+.0f}"
+        if key.iloc[at] is not None and key.iloc[at] == key.iloc[at - 1]:
+            keep[at] = False
+            lines.append(f"{lo}..{hi}: an hour, {said}: dropped")
+            continue
+        later = [k for k in key.iloc[at:] if k is not None]
+        if later:
+            nights.append(later[0])
+            lines.append(f"{lo}..{hi}: a night, {later[0]} ({said})")
+    return out[keep].reset_index(drop=True), sorted(set(nights)), lines
+
+
+def switch_edges(ticker: str, first_year: int, last_year: int) -> "list[date]":
+    """The days each CFD changes contract near: the Bund's last trading days,
+    the gilt's first notice days (two business days before the delivery
+    month's first)."""
+    if ticker == "FGBL=F":
+        return futures.last_trading_days(ticker, first_year, last_year)
+    return [futures._business_days_before(futures._month_start(y, m), 2)
+            for y in range(first_year, last_year + 1) for m in (3, 6, 9, 12)]
 
 
 def build(asset, today: date, session, bars_dir: str, dry_run: bool,
@@ -241,8 +303,8 @@ def build(asset, today: date, session, bars_dir: str, dry_run: bool,
     below, strays = reset_stray_closes(below)
     print(f"   {strays} stray closes set to the next open")
     first = pd.Timestamp(int(below["hour_utc"].min()), unit="s").date()
-    nights, lines = switches(ticker, template, below, daily_settlements(ticker, session),
-                             first, seam_day)
+    steps = ratio_steps(ticker, below, daily_settlements(ticker, session))
+    below, nights, lines = switches(ticker, template, below, first, seam_day, steps)
     for line in lines:
         print(f"   {line}")
     store = pd.concat([below, own], ignore_index=True)
@@ -271,8 +333,15 @@ def main(argv: "list[str] | None" = None) -> int:
     parser.add_argument("--cache", default=None, help="a folder for the CFD's whole months")
     parser.add_argument("--months-of", type=int, default=None,
                         help="only fetch that year's whole months into --cache")
+    parser.add_argument("--this-month", action="store_true",
+                        help="only fetch the month not yet ended into --cache")
     args = parser.parse_args(argv)
     today = datetime.now(timezone.utc).date()
+    if args.this_month:
+        session = requests.Session()
+        for ticker in args.tickers:
+            print(ticker, len(this_month(CFD[ticker], today, session, args.cache)), flush=True)
+        return 0
     if args.months_of:
         for ticker in args.tickers:
             for m in range(1, 13):

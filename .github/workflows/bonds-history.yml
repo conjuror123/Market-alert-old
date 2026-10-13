@@ -1,9 +1,10 @@
 name: Bonds history
 
 # One-off (deleted with tools/bonds_history.py once the Bund's and gilt's history is
-# committed): Dukascopy's Bund and gilt CFDs, a year per runner - the archive throttles
-# one address to a month a minute or two. Writes nothing to the repository: each
-# year's months are kept as an artifact, for tools/bonds_history.py --cache.
+# committed): Dukascopy's Bund and gilt CFDs on runners - the archive throttles one
+# address to a month a minute or two, and refuses this repository's own sandbox.
+# Writes nothing to the repository: what is fetched is kept as an artifact, for
+# tools/bonds_history.py --cache.
 
 on:
   push:
@@ -23,7 +24,9 @@ jobs:
       fail-fast: false
       matrix:
         ticker: ["FGBL=F", "RLI=F"]
-        year: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+        # The whole months are fetched (2018-2026, 2026-10-13); now the month not yet
+        # ended, from its daily minute files.
+        year: [this-month]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -32,8 +35,8 @@ jobs:
           cache: "pip"
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Fetch the year's months
-        run: PYTHONPATH=. python -W ignore -m tools.bonds_history "${{ matrix.ticker }}" --months-of ${{ matrix.year }} --cache "$RUNNER_TEMP/cfd"
+      - name: Fetch the month not yet ended
+        run: PYTHONPATH=. python -W ignore -m tools.bonds_history "${{ matrix.ticker }}" --this-month --cache "$RUNNER_TEMP/cfd"
       - name: Name the artifact
         id: name
         run: echo "name=cfd-$(echo '${{ matrix.ticker }}' | tr -c 'A-Za-z0-9' '_')-${{ matrix.year }}" >> "$GITHUB_OUTPUT"

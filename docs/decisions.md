@@ -556,6 +556,12 @@ the source audit of 2026-10-13):
 
 The user's, 2026-10-13: add everything good, and look for what is missing later.
 
+**TTF's switch day.** MarketWatch's continuous series is taken to change month the session
+after the expiring month's last trading day (`futures.SPECS`), and those nights are left
+unscored; its first change in the store, around 2026-10-30, shows whether it does. TTF scores
+only from about 2027-04, so a wrong day costs nothing before then. To act: move its
+`roll_back` to the day seen.
+
 **What else Wallstreetcn carries**, hourly, about 170 days back, without volume (2026-10-10):
 sugar, lean hogs, wheat, corn, soybeans and soybean oil, the LME's lead and zinc, 38 stock
 indices and index futures, 52 government bond yields (codes in

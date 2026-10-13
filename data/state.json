@@ -1,17 +1,56 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1791896798
+    "last_run_utc": 1791900422
   },
   "floor_pending_replies": [],
   "jump_delivery": {
     "week": {
       "detector": "db7e5a071ef7",
-      "events": {},
-      "messages": {},
+      "events": {
+        "twelvedata:XLV|1791900000": {
+          "asset": "twelvedata:XLV",
+          "body": "\u2b1c <b>XLV</b> \u00b7 Health care sector -1.41% \u00b7 4.5\u00d7\u03c3",
+          "context": "",
+          "form": "row",
+          "hour": 1791896400,
+          "members": {
+            "jump:twelvedata:XLV:hour:1791896400": [
+              -0.014127084716703129,
+              0.0031234323031969925
+            ]
+          },
+          "message": 102,
+          "peak": "jump:twelvedata:XLV:hour:1791896400",
+          "seen": 1791900423,
+          "shown": [
+            "noticeable",
+            4.5,
+            1791896400,
+            -1.41
+          ],
+          "size": 4.522936098933003,
+          "start": 1791900000,
+          "story": [
+            [
+              "noticeable",
+              4.5,
+              1791896400,
+              ""
+            ]
+          ],
+          "tier": "noticeable"
+        }
+      },
+      "messages": {
+        "102": {
+          "first": "\u2b1c <b>XLV</b> \u00b7 Health care sector -1.41% \u00b7 4.5\u00d7\u03c3",
+          "hash": "07909a309babb9e6"
+        }
+      },
       "note": {
         "hashes": [
-          "e5afdf2c8dc3c9d0"
+          "cff2cdaf5e3b2279"
         ],
         "ids": [
           98

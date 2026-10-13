@@ -716,7 +716,7 @@ def switches(store: pd.DataFrame, v: pd.DataFrame, template: str) -> "list[int]"
                                            suffixes=("_s", "_v"))
     if j.empty:
         return []
-    keys = [sessions.session_key(int(h), template) for h in j["hour_utc"]]
+    keys = [_session_key(int(h), template) for h in j["hour_utc"]]
     g = pd.DataFrame({"hour": j["hour_utc"].astype("int64"),
                       "off": np.log(j["close_v"].to_numpy(float) / j["close_s"].to_numpy(float)),
                       "key": keys}).dropna(subset=["key"])
@@ -725,6 +725,22 @@ def switches(store: pd.DataFrame, v: pd.DataFrame, template: str) -> "list[int]"
     by = by[by["n"] >= 3]
     stepped = (by["off"].diff().abs() * 1e4) >= ROLL_STEP_BP
     return [int(h) for h in by.loc[stepped, "first"]]
+
+
+def _session_key(hour: int, template: str) -> "str | None":
+    """The session an hour belongs to, for a source's change of contract: a
+    daily market's own; a fund's day in New York; for the round-the-clock
+    pairs and metals, the futures' day, from 18:00 New York (Yahoo's and
+    MarketWatch's COMEX gold, which change contract at that open)."""
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+
+    if sessions.is_calendar_template(template):
+        return sessions.session_key(hour, template)
+    local = datetime.fromtimestamp(hour, ZoneInfo("America/New_York"))
+    if template != "us_equity":
+        local += timedelta(hours=6)
+    return local.date().isoformat()
 
 
 def crosses(c: dict, at: "list[int]") -> bool:

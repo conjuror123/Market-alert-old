@@ -1015,6 +1015,21 @@ def test_sinas_change_of_contract_is_found_and_a_bad_print_is_not():
     assert verify.switches(store, sina, "ice_coffee") == [ts("2026-07-08 08:00")]
 
 
+def test_a_change_of_contract_is_found_beside_a_fund_and_a_spot_metal():
+    # Wallstreetcn's natural gas future beside UNG, COMEX gold beside spot gold:
+    # the store's template has no daily session of its own. Gold's futures day
+    # opens at 18:00 New York (22:00 UTC in summer), so its step is found there.
+    def frames(hours, step_at, template):
+        store = pd.DataFrame({"hour_utc": hours, "close": 100.0})
+        v = pd.DataFrame({"hour_utc": hours,
+                          "close": [100.0 if h < step_at else 102.0 for h in hours]})
+        return verify.switches(store, v, template)
+    fund = [ts(f"2026-10-0{d} {h:02d}:00") for d in (5, 6, 7) for h in range(13, 20)]
+    assert frames(fund, ts("2026-10-07 13:00"), "us_equity") == [ts("2026-10-07 13:00")]
+    gold = [ts("2026-10-05 00:00") + HOUR * k for k in range(72)]
+    assert frames(gold, ts("2026-10-06 22:00"), "fx_continuous") == [ts("2026-10-06 22:00")]
+
+
 def test_a_move_across_the_change_is_not_judged_by_sina():
     at = [ts("2026-07-08 08:00")]
     across = {"hour": ts("2026-07-08 08:00"), "prev_hour": ts("2026-07-07 17:00")}

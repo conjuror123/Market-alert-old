@@ -42,7 +42,7 @@ from jump import atomic, bars, cboe, corporate_actions, fred, futures, quality, 
 from jump import sessions as _sessions
 from jump.basket import Asset, Basket, load_basket
 from jump.usage import Usage
-from price_monitor import (alpaca, binance, dukascopy, sifting, sina, tiingo,
+from price_monitor import (alpaca, binance, dukascopy, marketwatch, sifting, sina, tiingo,
                            twelvedata, wallstreetcn, yahoo)
 from price_monitor.models import UNANSWERED_IN_A_ROW, ExchangeError, KeyRefused, Unreachable
 from price_monitor.notifier import quote, send_health
@@ -308,6 +308,17 @@ def fetch_missing(asset: Asset, path: str, since: date, api_key: str,
             symbol=asset.ticker, interval=asset.fetch_interval, days=days,
             base_url=YAHOO_BASE_URL, session=session, end=end,
         )
+    elif provider == "marketwatch":
+        # Its last nine trading days, whatever `days` asks: the Bund's and the
+        # gilt's from the contract the store holds, and only since the session
+        # it became front (as Yahoo's contracts, above).
+        held = futures.front_contract(asset.ticker, now.date()) \
+            if asset.ticker in marketwatch.CONTRACTS else None
+        candles = marketwatch.fetch_hourly(
+            marketwatch.store_key(asset.ticker, held[0] if held else None), session, now)
+        if held:
+            floor = _sessions.daily_session_open(held[1], asset.session_template)
+            candles = [c for c in candles if c.open_time >= floor]
     elif provider == "alpaca":
         # IEX, live: the half-hour bars of the hours since the newest stored one.
         stop = end or now

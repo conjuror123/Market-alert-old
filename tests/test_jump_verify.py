@@ -127,10 +127,15 @@ def test_every_instrument_is_asked_of_every_source_that_moves_with_it_but_its_ow
         [("wallstreetcn", "UKSN.OTC", "1h")], [("wallstreetcn", "UKNI.OTC", "1h")],
         [("wallstreetcn", "UKAH.OTC", "1h")]]
     assert _asked(basket["CAD"]) == [("yahoo", "HG=F", "1h"), ("wallstreetcn", "UKCA.OTC", "1h")]
-    # No instrument has the same provider twice, and every one has a source.
+    # The Bund: the FT's S&P Euro-Bund futures index, with its own rolls.
+    assert _asked(basket["FGBL=F"]) == [("ft", "31880145", "1h")]
+    # No instrument has the same provider twice, and every one has a source but
+    # the gilt, TTF and the JGB yield, for which none was found (the user's, 2026-10-13: look
+    # later).
     for asset in basket.values():
         names = [n for n, _, _ in _asked(asset)]
-        assert len(names) == len(set(names)) and names, asset.ticker
+        assert len(names) == len(set(names)), asset.ticker
+        assert bool(names) != (asset.ticker in ("RLI=F", "TFM=F", "JP10Y")), asset.ticker
 
 
 def test_each_recount_runs_while_its_closest_reaching_source_serves_the_hour(basket):

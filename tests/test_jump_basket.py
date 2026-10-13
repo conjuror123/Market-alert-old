@@ -94,8 +94,8 @@ def test_the_thin_blocks_are_the_ones_we_know_about():
     # accident. Stage 1 tells each story once (docs/basket-proposal.md).
     basket = load_basket()
     thin = {b for b, m in basket.by_block().items() if len(m) < 6}
-    assert thin == {"rates", "credit", "energy", "precious_metals", "industrial_metals",
-                    "crypto"}
+    # Rates has the Bund and the gilt beside the Treasuries since 2026-10-13.
+    assert thin == {"credit", "energy", "precious_metals", "industrial_metals", "crypto"}
 
 
 def test_real_basket_config_is_valid():
@@ -145,3 +145,15 @@ def test_a_coins_tick_is_binances():
     coins = {a.ticker: a.tick_size for a in load_basket().instruments
              if a.source == "binance"}
     assert coins == BINANCE_TICKS
+
+
+def test_a_unit_is_a_price_or_basis_points(tmp_path):
+    import yaml
+    from jump.basket import BasketConfigError
+    raw = yaml.safe_load(open("config/basket.yaml", encoding="utf-8"))
+    assert [a["ticker"] for a in raw["assets"] if a.get("unit")] == ["JP10Y"]
+    raw["assets"][0]["unit"] = "percent"
+    path = tmp_path / "basket.yaml"
+    path.write_text(yaml.safe_dump(raw))
+    with pytest.raises(BasketConfigError, match="unit"):
+        load_basket(str(path))

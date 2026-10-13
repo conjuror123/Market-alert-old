@@ -171,3 +171,28 @@ def test_the_ft_names_stage_twos_contracts_as_it_lists_them():
     assert ft.futures_symbol("PLF27.NYM") == "US@PLF272"
     assert ft.futures_symbol("ZNZ26.CBT") is None and ft.futures_symbol(None) is None
 
+
+
+def test_the_bund_gilt_and_ttf_roll_by_their_exchanges_rules():
+    # The Bund's last trading day two business days before the 10th (December
+    # 2026's on Tuesday the 8th), rolled three before it; the gilt's two before
+    # its month's last business day, rolled five before first notice (two before
+    # the month); TTF's the second-last business day of the month before.
+    assert date(2026, 12, 8) in futures.last_trading_days("FGBL=F", 2026, 2026)
+    assert date(2026, 3, 6) in futures.last_trading_days("FGBL=F", 2026, 2026)   # 10th a Tuesday
+    assert futures.front_contract("FGBL=F", date(2026, 12, 3))[0] == "FGBLZ26.EUX"
+    assert futures.front_contract("FGBL=F", date(2026, 12, 4)) == ("FGBLH27.EUX", date(2026, 12, 4))
+    assert date(2026, 12, 29) in futures.last_trading_days("RLI=F", 2026, 2026)
+    assert futures.front_contract("RLI=F", date(2026, 11, 20)) == ("RLIH27.ICE", date(2026, 11, 20))
+    assert date(2026, 10, 29) in futures.last_trading_days("TFM=F", 2026, 2026)   # TFMX26
+    assert futures.front_contract("TFM=F", date(2026, 10, 30))[0] == "TFMZ26.NDX"
+
+
+def test_a_future_without_volume_has_no_thin_bars():
+    # MarketWatch serves the Bund without volume: every bar a zero, none thin.
+    from jump import quality
+    bund = _future("FGBL=F", "eurex_bund")
+    from dataclasses import replace
+    frame = _frame([120.0] * 61).assign(volume=0.0)
+    assert (quality.invalid_reasons(replace(bund, has_volume=False), frame) == "").all()
+    assert (quality.invalid_reasons(bund, frame) == "volume too thin to be a trade").all()

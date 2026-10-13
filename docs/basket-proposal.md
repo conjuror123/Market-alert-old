@@ -149,7 +149,9 @@ bars stay on disk.
 days back, no volume), Dukascopy's history of both from 2018, the FT's Bund as a voter;
 the JGB only as MarketWatch's 10-year yield, which the detector would score in basis
 points; TTF only as MarketWatch's ICE Endex series, about 13 days back, no history. The
-user's, 2026-10-13: add everything good, look for what is missing later.
+user's, 2026-10-13: add everything good, look for what is missing later - all four added
+that day (`docs/decisions.md`); the JGB scored in basis points; TTF and the JGB silent
+until they hold half a year of bars.
 
 **Voters** for every instrument since the source audit of 2026-10-13 (`docs/decisions.md`,
 "Every source on every instrument"): the KOSPI from MarketWatch and Naver, the TAIEX from

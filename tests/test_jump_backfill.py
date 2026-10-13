@@ -1997,6 +1997,34 @@ def test_a_rolled_future_re_asks_its_front_contract_from_the_roll(tmp_path, monk
     assert 22 < seen["days"] < 23                  # back to 2026-09-15's open
 
 
+def test_marketwatch_serves_the_bund_by_its_contract_and_ttf_by_its_series(
+        tmp_path, monkeypatch):
+    # The Bund's bars from the contract the store holds, and none from before
+    # the session it became front; TTF's continuous series as it comes.
+    from jump import backfill
+
+    now = datetime(2026, 12, 7, 12, tzinfo=timezone.utc)
+    asked = []
+    first = int(datetime(2026, 12, 3, 12, tzinfo=timezone.utc).timestamp())
+    served = [Candle(open_time=first + k * 86400, open=1.0, high=1.0, low=1.0, close=1.0,
+                     volume=0.0, close_time=first + k * 86400 + HOUR) for k in range(4)]
+    monkeypatch.setattr(backfill.marketwatch, "fetch_hourly",
+                        lambda key, session=None, now=None: asked.append(key) or served)
+    bund = Asset(ticker="FGBL=F", source="marketwatch", block="rates", has_volume=False,
+                 tick_size=0.01, session_template="eurex_bund", fetch_interval="1h",
+                 label="Bund", in_basket=True)
+    path = tmp_path / "bund"
+    backfill.fetch_missing(bund, str(path), date(2024, 1, 1), "", None, now=now)
+    assert asked == ["FUTURE/DE/XEUR/FGBLH27"]                # front from 2026-12-04
+    assert bars.load(str(path))["hour_utc"].min() == first + 86400
+    ttf = Asset(ticker="TFM=F", source="marketwatch", block="energy", has_volume=False,
+                tick_size=0.005, session_template="ice_endex", fetch_interval="1h",
+                label="TTF", in_basket=True)
+    backfill.fetch_missing(ttf, str(tmp_path / "ttf"), date(2024, 1, 1), "", None, now=now)
+    assert asked[-1] == "FUTURE/UK/NDEX/TFMI00"
+    assert len(bars.load(str(tmp_path / "ttf"))) == 4
+
+
 def test_a_removed_day_is_not_a_gap_for_fill_gaps(tmp_path):
     # The 14 fund days the old vendor shifted (LQD 2006-10-02 among them):
     # deleted, fill-gaps would re-ask Twelve Data for each; removed, the

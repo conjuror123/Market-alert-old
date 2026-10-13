@@ -1,5 +1,5 @@
 """The FT's hourly bars: a voter on live cattle, coffee, cocoa, Brent, the grains,
-platinum and five stock indices abroad.
+platinum, the Bund and five stock indices abroad.
 
 THE ENDPOINT is the one the FT's markets pages chart from (markets.ft.com's
 chartapi/series): an instrument's hourly bars by its xid, the last
@@ -65,8 +65,10 @@ _found: "dict[str, str]" = {}
 # 0.885-0.89 and are not asked; it holds no Brent or sugar contract.
 FUTURES_ROOTS = {"ZC": "C", "ZW": "W", "ZS": "S"}
 # Brent by its continuous series' xid, which its search finds (the source audit,
-# 2026-10-13: 0.977 hour by hour with the stored contract, 34 days back).
-FUTURES_CONTINUOUS = {"BZ=F": "1054972"}
+# 2026-10-13: 0.977 hour by hour with the stored contract, 34 days back); the
+# Bund by S&P's Euro-Bund futures index (BDPY:IOM): 0.95 with MarketWatch's
+# contract, but bars only at 13:00-17:00 UTC, its rolls S&P's.
+FUTURES_CONTINUOUS = {"BZ=F": "1054972", "FGBL=F": "31880145"}
 
 
 def futures_symbol(contract: "str | None") -> "str | None":

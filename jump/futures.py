@@ -60,7 +60,16 @@ MONTH_CODES = "FGHJKMNQUVXZ"
 # from an earlier month's end (ltd_months: Brent the second month before, sugar
 # the month before), and rolls on business days before it (roll_ltd, in place of
 # roll_back). The grains' last trading day is the business day before the 15th of
-# the delivery month (ltd_day, in place of ltd_back).
+# the delivery month (ltd_day, in place of ltd_back); the Bund's the second
+# business day before the 10th (ltd_day_back).
+#
+# The Bund, the long gilt and TTF (2026-10-13), live from MarketWatch
+# (price_monitor.marketwatch.STORE): the Bund and the gilt one contract at a time,
+# rolled where their volume moves - the Bund three business days before its last
+# trading day, the gilt five before its first notice day (two business days
+# before the delivery month); TTF as MarketWatch's continuous series, which holds
+# the nearest month to its last trading day, the second-last business day of the
+# month before delivery - only its roll nights are taken from here.
 #
 # Stage 2's (2026-10-12): each held month and roll set where the volume moves -
 # Yahoo's own series came onto the contract held now on the same day: Brent and
@@ -84,6 +93,11 @@ SPECS: "dict[str, dict]" = {
     "ZS=F": dict(listed="FHKNQUX", ltd_day=15, held="FHKNX", roll_back=14, suffix="CBT"),
     "SB=F": dict(listed="HKNV", ltd_months=1, ltd_back=0, held="HKNV", roll_ltd=16, suffix="NYB"),
     "PL=F": dict(listed="FJNV", ltd_back=2, held="FJNV", roll_back=3, suffix="NYM"),
+    "FGBL=F": dict(listed="HMUZ", ltd_day=10, ltd_day_back=2, held="HMUZ", roll_ltd=3,
+                   suffix="EUX"),
+    "RLI=F": dict(listed="HMUZ", ltd_back=2, held="HMUZ", roll_back=7, suffix="ICE"),
+    "TFM=F": dict(listed=MONTH_CODES, ltd_months=1, ltd_back=1, held=MONTH_CODES,
+                  roll_back=None, suffix="NDX"),
 }
 
 # Volume under this share of the series' trailing median is a quote, not a
@@ -129,7 +143,8 @@ def _contracts(months: str, first_year: int, last_year: int) -> "list[tuple[int,
 def _last_trading_day(spec: dict, year: int, month: int) -> date:
     """The contract of this delivery month's last trading day, on weekdays."""
     if "ltd_day" in spec:
-        return _business_days_before(date(year, month, spec["ltd_day"]), 1)
+        return _business_days_before(date(year, month, spec["ltd_day"]),
+                                     spec.get("ltd_day_back", 1))
     back = month - 1 - spec.get("ltd_months", 0)
     return _business_days_before(_month_end(year + back // 12, back % 12 + 1), spec["ltd_back"])
 

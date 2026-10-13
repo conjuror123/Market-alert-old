@@ -417,6 +417,13 @@ def main(argv: list[str] | None = None) -> int:
 #   cbot_grains  corn, wheat and soybeans, 19:00-13:20 Chicago; the pause from
 #                07:45 to 08:30 falls inside the session, within two hours
 #   ice_sugar    ICE sugar No. 11, 03:30-13:00 New York
+#   eurex_bund   the Euro-Bund future, 08:00-18:00 Frankfurt: the hours MarketWatch,
+#                its live source, serves (Eurex trades 01:10-22:00)
+#   ice_gilt     ICE's long gilt future, 08:00-18:00 London: the hours its history
+#                (Dukascopy's CFD) holds; MarketWatch serves 01:00-21:00
+#   ice_endex    ICE Endex's Dutch TTF gas future, 08:00-18:00 Amsterdam
+#   tokyo_bonds  Japan's 10-year government bond yield, 09:00-18:00 Tokyo, the
+#                hours MarketWatch serves it
 DAILY_SESSIONS: "dict[str, tuple[str, tuple[int, int], tuple[int, int]]]" = {
     "lme": ("Europe/London", (1, 0), (19, 0)),
     "ice_coffee": ("America/New_York", (4, 15), (13, 30)),
@@ -427,6 +434,10 @@ DAILY_SESSIONS: "dict[str, tuple[str, tuple[int, int], tuple[int, int]]]" = {
     "cbot_rates": ("America/Chicago", (17, 0), (16, 0)),
     "cbot_grains": ("America/Chicago", (19, 0), (13, 20)),
     "ice_sugar": ("America/New_York", (3, 30), (13, 0)),
+    "eurex_bund": ("Europe/Berlin", (8, 0), (18, 0)),
+    "ice_gilt": ("Europe/London", (8, 0), (18, 0)),
+    "ice_endex": ("Europe/Amsterdam", (8, 0), (18, 0)),
+    "tokyo_bonds": ("Asia/Tokyo", (9, 0), (18, 0)),
 }
 
 # THE MARKETS ABROAD: a stock index each, on its own exchange's days and hours,

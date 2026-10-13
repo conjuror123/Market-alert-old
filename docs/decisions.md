@@ -139,6 +139,26 @@ keep their bars on disk; the code only they used went with them. The rates block
 year as funds, 31 as futures, mostly the 08:00 ET hour of a data release and FOMC's 14:00,
 their 23-hour sessions reading a release hour at 10-13σ.
 
+**The Bund, the long gilt, TTF and Japan's 10-year yield join from MarketWatch**
+(2026-10-13; the user's: "add everything good, if something missing - we could try and
+find later"). The only free live source of each, hourly about nine trading days back,
+without volume, so no thin-bar rule:
+- the Bund and the gilt one contract at a time, rolled where their volume moves (the
+  Bund three business days before its last trading day, the gilt five before first
+  notice), each session's hours what the live source or the history holds (08:00-18:00
+  Frankfurt, 08:00-18:00 London); their history from Dukascopy's CFDs (the Bund's 0.4 bp
+  from MarketWatch's contract on 20 shared hours); the Bund voted by the FT's S&P
+  Euro-Bund futures index (0.95, four bars a day), the gilt by none;
+- TTF as MarketWatch's continuous series (it names no single month), its roll nights
+  unscored from the exchange's rule; no hourly history anywhere, so it scores once it has
+  its half-year window (about 2027-04);
+- the JGB as its yield, as no source carries the future: its move read and said in basis
+  points (`unit: bp`). Wallstreetcn's yield is 0.4 bp from MarketWatch's at the median but
+  holds only 104 days and moves with it at 0.70 hour by hour (both a bp or so an hour);
+  not spliced. Like TTF it scores from about 2027-04.
+
+The rates block then holds six beside TIP.
+
 **One provider per instrument, chosen by measurement**, against the stored bars hour by
 hour in basis points: a feed a few bp off on a thin fund sends alerts for moves that did
 not happen.

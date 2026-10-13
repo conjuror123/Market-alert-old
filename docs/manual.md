@@ -12,7 +12,7 @@ Running it · 11 Modules and data layout · 12 Known limitations
 
 ## 1. What it is
 
-An hourly bot on GitHub Actions. It watches 58 instruments and posts to a Telegram
+An hourly bot on GitHub Actions. It watches 62 instruments and posts to a Telegram
 channel when one moves unusually **for itself**: each move is measured against that
 instrument's own last half-year (the jump test of Lee & Mykland, 2008), not against a
 shared percentage.
@@ -111,7 +111,7 @@ standing in, a few minutes of it; that bar heals on the next fetch.
 | Binance | 4 coins | each coin as its USDT pair, via `data-api.binance.vision` (reachable from US runners) |
 | Wallstreetcn | — | a voter on the LME's metals, cocoa, cotton, Brent, UNG (natural gas), the pairs, gold, silver and 3 indices, hourly without volume, about 170 days back; the LME's history below Sina's (`deepen-wallstreetcn`: gated on the overlap, a session's first bar 1% off and back within the hour left out). What else it carries: `docs/decisions.md`, "What else Wallstreetcn carries" |
 | FT | — | the vote on live cattle, the grains and platinum, asked for the contract the store holds, on coffee, cocoa and Brent, their continuous series, and 5 stock indices abroad (`ft.INDICES`): hourly, 24 trading days back, without volume (`price_monitor/ft.py`) |
-| MarketWatch | — | a voter on the pairs, the funds, the futures, gold and silver (COMEX), and 14 indices: hourly, about 9 days back, without volume (`price_monitor/marketwatch.py`) |
+| MarketWatch | the Bund and the long gilt (one contract at a time, rolled in `jump/futures.py`), Dutch TTF gas (its continuous series), Japan's 10-year yield | about 9 trading days back, hourly, without volume (`marketwatch.STORE`); a voter on the pairs, the funds, the futures, gold and silver (COMEX), and 14 indices |
 | Naver, the Taiwan exchange | — | a voter on the KOSPI (its minutes folded to hours, `price_monitor/naver.py`) and on the TAIEX (its day reports, every five seconds, `price_monitor/twse.py`) |
 | Bitstamp, Bitfinex | — | the coins' history, and voters on the coins |
 | Dukascopy | — | history only |
@@ -215,7 +215,9 @@ only its latest session (filled with 242 overlapping hours, correlation 0.9976, 
 funds, comma-separated. That run repairs first, then makes the ordinary hourly pass.
 
 **Sessions** (`jump/sessions.py`): the NYSE table (`data/jump/sessions/nyse.csv`),
-the FX week, and each daily-session market's hours (LME, ICE, CME). The markets abroad
+the FX week, and each daily-session market's hours (LME, ICE, CME, the Bund's 08:00-18:00
+Frankfurt, the gilt's 08:00-18:00 London, TTF's 08:00-18:00 Amsterdam, Japan's yield
+09:00-18:00 Tokyo - the hours their live source or their history holds). The markets abroad
 (`EXCHANGES`: Sydney, Tokyo, Seoul, Taipei, Shanghai, Hong Kong, Mumbai, Frankfurt, London, Zurich, Istanbul, Riyadh, Johannesburg,
 Toronto, São Paulo, Mexico City) each have a table of their own in the NYSE table's format
 (`data/jump/sessions/<exchange code>.csv`, from `exchange_calendars`): the days they trade
@@ -229,7 +231,8 @@ Mumbai's at 2026-12-31); past a table's last row its usual week holds.
 **Quality gate** (`jump/quality.py`): a bar is unusable if it has no price (a removed
 bar) or a price is not positive,
 OHLC is inconsistent beyond half a tick, volume is negative, it duplicates an hour, it is a
-future's thin bar, or it falls outside its session.
+future's thin bar (where the future has volume: MarketWatch serves none), or it falls
+outside its session.
 
 **Dividends** (`jump/corporate_actions.py`): on the first run after 09:30 New York,
 Yahoo is asked for each paying fund's payouts; two funds in a row unanswered end the check
@@ -421,8 +424,11 @@ fetch brings them back. The night after each is unscored.
 `jump/pipeline.py` turns usable bars into per-instrument metrics
 (`data/jump/metrics/<stem>.parquet`), via `jump/returns.py`:
 
-- **`r`, the hour's move:** close against the previous close. On a session's first bar,
-  and on the bar after a missing hour, it is that bar's own open to close.
+- **`r`, the hour's move:** close against the previous close, as a log return. On a
+  session's first bar, and on the bar after a missing hour, it is that bar's own open to
+  close. A yield (`unit: bp` in `config/basket.yaml`: Japan's 10-year) moves by its change
+  in points instead (`returns.move_of`), and its messages say basis points (`+9.2 bp`);
+  the gap and the hole likewise.
 - **`gap`:** a session's first open against the previous session's last close. It is
   dividend-adjusted, and left unscored on a split, an unconfirmed dividend, a missing
   bar before the close, or a missing first hour: from a late first bar the "night" would

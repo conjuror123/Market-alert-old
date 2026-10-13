@@ -197,6 +197,9 @@ provider gave.
 - Twelve Data is counted in credits, one per symbol, so its batch of seven is seven.
 - The dashboard's own calls are logged, not written, since the measure run commits
   nothing.
+- The 30 days before the files (2026-09-13 to 10-13, the logs' `requests:` lines from
+  10-06) were added up from the runs' logs once, into the same three files
+  (`dashboard.csv` holds only those).
 
 A run that takes a day or month past 80% of a limit says so on the health chat, once.
 So does a day on which Twelve Data's own count runs 20 credits ahead of ours: another
@@ -658,7 +661,7 @@ topped up daily from the live feed.
 | `data/economic_calendar/` | release archive | every run |
 | `data/jump/corporate_actions.csv`, `dividend_checks.csv` | payouts, how far each fund is confirmed | every run |
 | `data/jump/verified.csv` | the sources' votes | every run |
-| `data/jump/usage/hourly.csv`, `manual.csv` | each provider's calls a day, by purpose | every run; a history walk's |
+| `data/jump/usage/hourly.csv`, `manual.csv`, `dashboard.csv` | each provider's calls a day, by purpose | every run; a history walk's; the logs' 30 days before, once |
 | `data/jump/sessions/nyse.csv`, `<exchange code>.csv` | NYSE schedule, the markets abroad's | when extended |
 | `data/jump/bars/*/YYYY-MM.csv`, `YYYY.parquet` | settled bars | when a month or year settles |
 | `data/jump/bars/*/YYYY-MM.open.csv` | open months | no: release `bars-live-<branch>`; the backfill reads the default branch's |

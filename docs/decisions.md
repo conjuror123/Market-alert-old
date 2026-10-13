@@ -250,7 +250,9 @@ repository's workflows, so our own count is the truth for what we spend:
   day, from its usage endpoint once a day (its `api-credits-left` is the minute's).
   SiftingIO's month is on its account page only, and Tiingo sends none.
 - The 30 days before the files existed are added up from the runs' logs
-  (`tools/usage_from_logs.py`, run once and deleted).
+  (`tools/usage_from_logs.py`, run once on 2026-10-13 and deleted; its Twelve Data batch
+  of seven applies to the hourly run's requests only, so the dashboard's 392 that day
+  were 56).
 
 **The LME's metals are the LME's own, from Sina**: the right instrument with a short record
 (from 2026-04-22) over a longer record of another (Shanghai tin, Kitco, COMEX aluminium).

@@ -47,6 +47,7 @@ binance:AVAX/USDT,1790665200,close,real,binance,"coinbase,kraken","coinbase,krak
 binance:AVAX/USDT,1790964000,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.042328,"-0.042328,-0.042048",1791850009
 binance:AVAX/USDT,1791338400,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.030174,"-0.030452,-0.031075",1791850009
 binance:AVAX/USDT,1791471600,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.057225,"-0.058008,-0.057047",1791850009
+binance:AVAX/USDT,1791853200,close,real,binance,"coinbase,kraken","coinbase,kraken",0.031127,"0.030278,0.031660",1791857220
 binance:BCH/USDT,1605495600,close,not_real,binance,coinbase,,0.056243,0.003959,1791349334
 binance:BCH/USDT,1610233200,close,not_real,binance,coinbase,,0.058877,-0.000709,1791349334
 binance:BCH/USDT,1789041600,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.028544,"-0.029458,-0.029145",1791504414
@@ -145,6 +146,7 @@ binance:LTC/USDT,1790269200,close,real,binance,"coinbase,kraken","coinbase,krake
 binance:LTC/USDT,1790373600,close,real,binance,"coinbase,kraken","coinbase,kraken",0.029076,"0.028869,0.029209",1791850009
 binance:LTC/USDT,1791471600,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.036304,"-0.036166,-0.037620",1791850009
 binance:LTC/USDT,1791849600,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.023028,"-0.022858,-0.023226",1791853608
+binance:LTC/USDT,1791853200,close,real,binance,"coinbase,kraken","coinbase,kraken",0.025645,"0.026051,0.026337",1791857220
 binance:POL/USDT,1789034400,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.027235,"-0.028228,-0.027446",1791508016
 binance:POL/USDT,1789128000,close,real,binance,"coinbase,kraken","coinbase,kraken",0.028532,"0.028329,0.028096",1791594373
 binance:POL/USDT,1789495200,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.029510,"-0.033297,-0.029201",1791853608
@@ -158,6 +160,7 @@ binance:POL/USDT,1790596800,close,real,binance,"coinbase,kraken","coinbase,krake
 binance:POL/USDT,1790679600,close,real,binance,"coinbase,kraken","coinbase,kraken",0.030079,"0.030107,0.030850",1791853608
 binance:POL/USDT,1790683200,close,real,binance,"coinbase,kraken","coinbase,kraken",0.038908,"0.039749,0.037210",1791853608
 binance:POL/USDT,1791471600,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.053234,"-0.053568,-0.053234",1791853608
+binance:POL/USDT,1791853200,close,real,binance,"coinbase,kraken","coinbase,kraken",0.032147,"0.030258,0.030261",1791857220
 binance:SOL/USDT,1789131600,close,real,binance,"coinbase,kraken","coinbase,kraken",0.030888,"0.031091,0.031195",1791590777
 binance:SOL/USDT,1789736400,close,real,binance,"coinbase,kraken","coinbase,kraken",0.025663,"0.025869,0.025871",1791850009
 binance:SOL/USDT,1789869600,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.022863,"-0.022964,-0.022683",1791850009
@@ -188,6 +191,7 @@ binance:XRP/USDT,1790172000,close,real,binance,"coinbase,kraken","coinbase,krake
 binance:XRP/USDT,1790334000,close,real,binance,"coinbase,kraken","coinbase,kraken",0.024117,"0.023867,0.024110",1791853608
 binance:XRP/USDT,1791471600,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.042389,"-0.042346,-0.042258",1791853608
 binance:XRP/USDT,1791482400,close,real,binance,"coinbase,kraken","coinbase,kraken",0.024790,"0.025031,0.025017",1791853608
+binance:XRP/USDT,1791853200,close,real,binance,"coinbase,kraken","coinbase,kraken",0.024381,"0.024258,0.024432",1791857220
 sina:AHD,1786525200,close,real,sina,wallstreetcn,wallstreetcn,-0.010778,-0.010778,1791828443
 sina:AHD,1789034400,close,real,sina,wallstreetcn,wallstreetcn,-0.016265,-0.016265,1791828443
 sina:AHD,1789603200,open,real,sina,wallstreetcn,wallstreetcn,-0.008572,-0.010112,1791828443

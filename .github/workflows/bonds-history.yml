@@ -1,0 +1,43 @@
+name: Bonds history
+
+# One-off (deleted with tools/bonds_history.py once the Bund's and gilt's history is
+# committed): Dukascopy's Bund and gilt CFDs, a year per runner - the archive throttles
+# one address to a month a minute or two. Writes nothing to the repository: each
+# year's months are kept as an artifact, for tools/bonds_history.py --cache.
+
+on:
+  push:
+    branches: [claude/youthful-pascal-u0rx7u]
+    paths:
+      - "tools/bonds_history.py"
+      - ".github/workflows/bonds-history.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  months:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        ticker: ["FGBL=F", "RLI=F"]
+        year: [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Fetch the year's months
+        run: PYTHONPATH=. python -W ignore -m tools.bonds_history "${{ matrix.ticker }}" --months-of ${{ matrix.year }} --cache "$RUNNER_TEMP/cfd"
+      - name: Name the artifact
+        id: name
+        run: echo "name=cfd-$(echo '${{ matrix.ticker }}' | tr -c 'A-Za-z0-9' '_')-${{ matrix.year }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: ${{ runner.temp }}/cfd

@@ -89,11 +89,13 @@ def test_a_one_member_block_does_not_load(tmp_path):
 
 
 def test_the_thin_blocks_are_the_ones_we_know_about():
-    # A tripwire: no block has fewer than six members, and this fails when
-    # that changes, so a thin block is a decision rather than an accident.
+    # A tripwire: the blocks with fewer than six members are named, and this
+    # fails when that changes, so a thin block is a decision rather than an
+    # accident. Stage 1 tells each story once (docs/basket-proposal.md).
     basket = load_basket()
     thin = {b for b, m in basket.by_block().items() if len(m) < 6}
-    assert thin == set()
+    # Rates has the Bund and the gilt beside the Treasuries since 2026-10-13.
+    assert thin == {"credit", "energy", "precious_metals", "industrial_metals", "crypto"}
 
 
 def test_real_basket_config_is_valid():
@@ -135,10 +137,7 @@ def test_real_config_tick_sizes_are_plausible(tmp_path):
 
 # Binance's PRICE_FILTER tickSize for each USDT pair (exchangeInfo, 2026-10-04).
 BINANCE_TICKS = {
-    "BTC/USDT": 0.01, "ETH/USDT": 0.01, "SOL/USDT": 0.01, "LTC/USDT": 0.01,
-    "BCH/USDT": 0.1, "LINK/USDT": 0.001, "ADA/USDT": 0.0001, "DOGE/USDT": 0.00001,
-    "AVAX/USDT": 0.001, "XRP/USDT": 0.0001, "DOT/USDT": 0.001, "POL/USDT": 0.00001,
-    "UNI/USDT": 0.001, "ATOM/USDT": 0.001, "FIL/USDT": 0.0001, "AAVE/USDT": 0.01,
+    "BTC/USDT": 0.01, "ETH/USDT": 0.01, "SOL/USDT": 0.01, "XRP/USDT": 0.0001,
 }
 
 
@@ -146,3 +145,15 @@ def test_a_coins_tick_is_binances():
     coins = {a.ticker: a.tick_size for a in load_basket().instruments
              if a.source == "binance"}
     assert coins == BINANCE_TICKS
+
+
+def test_a_unit_is_a_price_or_basis_points(tmp_path):
+    import yaml
+    from jump.basket import BasketConfigError
+    raw = yaml.safe_load(open("config/basket.yaml", encoding="utf-8"))
+    assert [a["ticker"] for a in raw["assets"] if a.get("unit")] == ["JP10Y"]
+    raw["assets"][0]["unit"] = "percent"
+    path = tmp_path / "basket.yaml"
+    path.write_text(yaml.safe_dump(raw))
+    with pytest.raises(BasketConfigError, match="unit"):
+        load_basket(str(path))

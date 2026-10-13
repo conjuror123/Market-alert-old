@@ -115,6 +115,17 @@ def fx_holiday_closed(prev_hour: np.ndarray, hours: np.ndarray,
     return out
 
 
+def move_of(asset: Asset):
+    """How a move is measured from one price to the next: the log return, or
+    for a yield (`unit: bp`) its change in percentage points - a move of 0.09
+    is 9 bp. The detector reads either against the instrument's own moves."""
+    if asset.unit == "bp":
+        return lambda before, after: np.asarray(after, dtype="float64") - \
+            np.asarray(before, dtype="float64")
+    return lambda before, after: np.log(np.asarray(after, dtype="float64")
+                                        / np.asarray(before, dtype="float64"))
+
+
 def split_channels(asset: Asset, usable: pd.DataFrame,
                    anchor_tz: str = "America/New_York",
                    dividends=None, session_table=None) -> pd.DataFrame:
@@ -154,16 +165,31 @@ def split_channels(asset: Asset, usable: pd.DataFrame,
     after_hole = ~is_open.to_numpy() & (hours - prev_hour > HOUR)
 
     prev_close = out["close"].shift(1)
-    own_hour = np.log(out["close"] / out["open"])
-    out["r"] = np.where(is_open | after_hole, own_hour, np.log(out["close"] / prev_close))
+    change = move_of(asset)
+    own_hour = change(out["open"], out["close"])
+    out["r"] = np.where(is_open | after_hole, own_hour, change(prev_close, out["close"]))
     # The very first bar of history has no previous close, and its own open is
     # the start of the record rather than a continuation of anything: undefined,
     # not zero.
     out.loc[0, "r"] = np.nan
     out["is_session_open"] = is_open
-    out["hole"] = np.where(after_hole, np.log(out["open"] / prev_close), np.nan)
+    out["hole"] = np.where(after_hole, change(prev_close, out["open"]), np.nan)
     out["gap"] = (overnight_gaps(asset, out, session, dividends, session_table)
                   if dividends is not None else np.nan)
+    from jump.sessions import is_exchange_template
+    if is_exchange_template(asset.session_template):
+        # A stock index's first price of the day is not a trade: it is
+        # computed while most of its stocks have not traded yet, from their
+        # last closes, so it sits at the previous close and the night's move
+        # comes in during the first hour (FTSE 100, the year to 2026-10-05:
+        # the night a median 5.8 bp, the first hour 28, the other hours 11).
+        # Its night runs to the first bar's close, and that bar is not an hour
+        # of its own: judged against quiet hours, an ordinary opening gap read
+        # as a 13-sigma hour.
+        first = is_open.to_numpy().copy()
+        first[0] = False
+        out["gap"] = np.where(first, out["gap"] + own_hour, out["gap"])
+        out["r"] = np.where(first, np.nan, out["r"])
     return out
 
 
@@ -211,6 +237,7 @@ def overnight_gaps(asset: Asset, frame: pd.DataFrame, session: pd.Series,
     from jump import futures
     from jump.sessions import (DAILY_CLOSED_MAX_SECONDS, daily_session_open,
                                  instrument_day_hours, is_calendar_template,
+                                 is_exchange_template, previous_trading_day,
                                  session_key_close)
 
     if not (template in ("us_equity", "fx_continuous") or is_calendar_template(template)) \
@@ -222,7 +249,7 @@ def overnight_gaps(asset: Asset, frame: pd.DataFrame, session: pd.Series,
     hours = frame["hour_utc"].to_numpy(dtype="int64")
     prev_hour = np.concatenate([[0], hours[:-1]])
     prev_close = frame["close"].shift(1).to_numpy(dtype="float64")
-    gap = np.log(frame["open"].to_numpy(dtype="float64") / prev_close)
+    gap = move_of(asset)(prev_close, frame["open"].to_numpy(dtype="float64"))
 
     if template == "fx_continuous":
         complete = (hours - prev_hour) <= FX_WEEKEND_MAX_SECONDS
@@ -249,20 +276,29 @@ def overnight_gaps(asset: Asset, frame: pd.DataFrame, session: pd.Series,
         # bars), dropped as too thin, which leaves the 12:00 bar the last.
         reached = np.array([prev_hour[k] + 2 * HOUR >= closes[prev_day[k]]
                             for k in range(n)], dtype=bool)
-        complete = reached & ((hours - prev_hour) <= DAILY_CLOSED_MAX_SECONDS)
+        if is_exchange_template(template):
+            # A market abroad's table says which days it trades: the night is
+            # whole when it runs from the trading day before, however long the
+            # closure (Golden Week), and not when a trading day is missing.
+            before = {d: str(previous_trading_day(date.fromisoformat(d), template))
+                      for d in set(day)}
+            within = np.array([prev_day[k] == before[day[k]] for k in range(n)], dtype=bool)
+        else:
+            within = (hours - prev_hour) <= DAILY_CLOSED_MAX_SECONDS
+        complete = reached & within
         rolled = np.isin(day, sorted(futures.roll_sessions(asset.ticker, day)))
-        first = {d: daily_session_open(date.fromisoformat(d), template) // HOUR * HOUR
+        # A market abroad opening on the half hour (Hong Kong 09:30): Yahoo's
+        # hourly history files its first bar under the hour that bar ends in
+        # (jump.backfill, yahoo_hours_by_end), the hour after the open's; the
+        # live bars, folded from 30 minutes, under the open's own. Either is
+        # the session's first bar - else Hang Seng's history kept 39 nights of
+        # 490 sessions, and none of its -9.6% Monday, 2025-04-07.
+        late = HOUR - 1 if is_exchange_template(template) else 0
+        first = {d: (daily_session_open(date.fromisoformat(d), template) + late) // HOUR * HOUR
                  for d in set(day[is_open])}
         on_time = np.array([is_open[k] and hours[k] <= first[day[k]] for k in range(n)],
                            dtype=bool)
-        # USD/BRL is a pair, and a night of it that opens exactly at the
-        # previous close is a stitched open, as on the other pairs' weekends:
-        # 22 of its 1,701 scored nights to 2026-10-08, 2020-2025, on nights
-        # Yahoo's BRL=X moved like any other (median 10.4 bp against 11.2,
-        # 2024-10..2026-10). A future's zero is a real quiet night: live
-        # cattle's official gaps agree with its stored ones.
-        stitched = (gap == 0.0) if template == "b3_fx" else np.zeros(n, dtype=bool)
-        usable = is_open & complete & on_time & ~rolled & ~stitched & np.isfinite(gap)
+        usable = is_open & complete & on_time & ~rolled & np.isfinite(gap)
         return np.where(usable, gap, np.nan)
 
     day = session.to_numpy(dtype=object)

@@ -12,17 +12,18 @@ Running it · 11 Modules and data layout · 12 Known limitations
 
 ## 1. What it is
 
-An hourly bot on GitHub Actions. It watches 173 instruments (172 in the basket plus DBC,
-tracked outside it) and posts to a Telegram channel when one moves unusually **for
-itself**: each move is measured against that instrument's own last half-year (the jump
-test of Lee & Mykland, 2008), not against a shared percentage.
+An hourly bot on GitHub Actions. It watches 62 instruments and posts to a Telegram
+channel when one moves unusually **for itself**: each move is measured against that
+instrument's own last half-year (the jump test of Lee & Mykland, 2008), not against a
+shared percentage.
 
 | block | instruments |
 |---|---|
-| equity, credit, rates | 107 US funds |
-| precious, industrial metals, energy, agriculture | 26 US funds, 3 LME metals, coffee, cocoa, cotton, live cattle |
-| FX | 17 pairs (16 round-the-clock, USD/BRL in its São Paulo session) |
-| crypto | 16 coins |
+| equity | 6 US funds; 16 stock indices abroad, each in its own exchange's hours |
+| credit, rates | 7 US funds |
+| precious, industrial metals, energy, agriculture | spot gold and silver round the clock, 8 US funds, 4 LME metals, coffee, cocoa, cotton, live cattle |
+| FX | 7 pairs, round the clock |
+| crypto | 4 coins |
 
 `config/basket.yaml` is the source of truth for instruments, blocks and settings.
 
@@ -42,13 +43,13 @@ Secrets (GitHub → Settings → Secrets → Actions):
 |---|---|
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | the channel (required) |
 | `TELEGRAM_HEALTH_CHAT_ID` | health and provider failures (optional) |
-| `TIINGO_API_KEY` | 27 funds |
-| `ALPACA_KEY_ID`, `ALPACA_SECRET_KEY` | 30 funds live; the consolidated tape's vote on all 133 funds; history from 2016 |
-| `SIFTING_API_KEY` | the 17 FX pairs |
-| `TWELVEDATA_API_KEY` | 8 thin funds; archive and gap-fill |
+| `TIINGO_API_KEY` | 10 funds |
+| `ALPACA_KEY_ID`, `ALPACA_SECRET_KEY` | the consolidated tape's vote on all 12 funds; history from 2016 |
+| `SIFTING_API_KEY` | the 7 FX pairs, spot gold and silver |
+| `TWELVEDATA_API_KEY` | 1 thin fund (UNG); archive and gap-fill |
 | `FRED_API_KEY` | the VIX series |
 
-Yahoo, Sina, Google Finance, Binance, MarketWatch, Wallstreetcn, the FT, Coinbase, Kraken and Cboe need no key. A
+Yahoo, Sina, Binance, MarketWatch, Wallstreetcn, the FT, Coinbase, Kraken and Cboe need no key. A
 missing key costs only that provider's instruments, and the health chat names the secret every run until it is
 set. A key the provider refuses (401; 403 too, except at Twelve Data, where 403 is one
 symbol beyond the plan) stops that provider for the run the same way
@@ -61,7 +62,7 @@ Local:
 
 ```bash
 pip install -r requirements-dev.txt
-pytest -q          # ~830 tests, about 2 minutes; run alone, several load large parquet files
+pytest -q          # ~855 tests, about 2 minutes; run alone, several load large parquet files
 ```
 
 Each test file also passes on its own (`pytest -q tests/test_jump_backfill.py`).
@@ -101,18 +102,20 @@ standing in, a few minutes of it; that bar heals on the next fetch.
 
 | provider | instruments | notes |
 |---|---|---|
-| Tiingo | 27 funds | IEX price matches the consolidated tape for these |
-| Alpaca | 30 funds | free IEX bars live; the consolidated tape (SIP) from 2016, for history and the vote, 15 minutes behind |
-| Twelve Data | 8 funds (USO UNG GLD SLV CPER DBA CORN DBC) | consolidated tape for thin funds; one batched request a run |
-| Sina Finance | 33 funds; LME tin, nickel, aluminium | US half-hour bars (consolidated); LME three-month contract, last 1,023 hourly bars |
-| Yahoo | 34 funds; coffee, cocoa, cotton, live cattle | futures from the front contract, rolled before first notice, cattle twelve business days before its delivery month; each run asks the contract's bars from the session it became front (`jump/futures.py`) |
-| Google Finance | TUR | read off the quote page |
-| SiftingIO | 17 FX pairs | the bar closed at :00 is served by :05 |
-| Binance | 16 coins | each coin as its USDT pair, via `data-api.binance.vision` (reachable from US runners) |
-| Wallstreetcn | — | the LME's metals, cocoa, cotton and 16 pairs (not USD/KRW), without volume, about 170 days back: a voter on them, and the LME's history below Sina's (backfill workflow, `deepen-wallstreetcn`, `jump.backfill.deepen_from_wallstreetcn`; gated on the overlap like any import, and only hours in the LME's session, less a session's first bar that opens 1% or more off the last close and is back as far within the hour - 11 such openings in its bars of 2026-04 to 07). It also carries what the basket does not hold - sugar, lean hogs, wheat, corn, soybeans and soybean oil, the LME's copper, lead and zinc, 38 stock indices and index futures, 52 government bond yields (codes in `price_monitor/wallstreetcn.py`) - each with about 170 days of history (`docs/decisions.md`, "What else Wallstreetcn carries") |
-| FT | — | the vote on live cattle, asked for the contract the store holds, and coffee, its continuous series: hourly, 24 trading days back, without volume (`price_monitor/ft.py`) |
-| Dukascopy, Bitstamp, Bitfinex | — | history only |
-| HF Data | — | funds' history to 2020, imported; it withdrew its consolidated tape on 2026-10-03, and its client was deleted |
+| Tiingo | 10 funds | IEX price matches the consolidated tape for these; a voter on the pairs, gold, silver, UNG and REMX, within the votes' share (section 5) |
+| Alpaca | — | the consolidated tape (SIP) from 2016, for history and the vote, 15 minutes behind; its own coins' hourly bars, a voter on the coins |
+| Twelve Data | 1 fund (UNG) | consolidated tape for a thin fund; one request a run; a voter on 6 pairs and gold, within the votes' share |
+| Sina Finance | LME tin, nickel, aluminium, copper | US half-hour bars (consolidated); LME three-month contract, last 1,023 hourly bars; a voter on spot gold and silver (London's) |
+| Yahoo | 1 fund (REMX); 13 futures - coffee, cocoa, cotton, live cattle, and stage 2's Brent, the 2-, 10- and 30-year Treasuries, corn, wheat, soybeans, sugar and platinum; 16 stock indices abroad | futures from the front contract, rolled where their volume moves (cattle twelve business days before its delivery month, Brent three before its last trading day, `jump/futures.py`); the indices at 30 minutes (15 for the Nifty) folded onto the hour, their history from the backfill's `deepen-yahoo` (hourly bars filed by the hour they end in, kept where they pass the import gate) |
+| SiftingIO | 7 FX pairs; spot gold and silver | the bar closed at :00 is served by :05; the metals from its commodities endpoint (`sifting.COMMODITIES`); a voter on SPY, UNG and platinum (spot), within the votes' share |
+| Binance | 4 coins | each coin as its USDT pair, via `data-api.binance.vision` (reachable from US runners) |
+| Wallstreetcn | — | a voter on the LME's metals, cocoa, cotton, Brent, UNG (natural gas), the pairs, gold, silver and 3 indices, hourly without volume, about 170 days back; the LME's history below Sina's (`deepen-wallstreetcn`: gated on the overlap, a session's first bar 1% off and back within the hour left out). What else it carries: `docs/decisions.md`, "What else Wallstreetcn carries" |
+| FT | — | the vote on live cattle, the grains and platinum, asked for the contract the store holds, on coffee, cocoa and Brent, their continuous series, and 5 stock indices abroad (`ft.INDICES`): hourly, 24 trading days back, without volume (`price_monitor/ft.py`) |
+| MarketWatch | the Bund and the long gilt (one contract at a time, rolled in `jump/futures.py`), Dutch TTF gas (its continuous series), Japan's 10-year yield | about 9 trading days back, hourly, without volume (`marketwatch.STORE`); a voter on the pairs, the funds, the futures, gold and silver (COMEX), and 15 indices |
+| Naver, the Taiwan exchange | — | a voter on the KOSPI (its minutes folded to hours, `price_monitor/naver.py`) and on the TAIEX (its day reports, every five seconds, `price_monitor/twse.py`) |
+| Bitstamp, Bitfinex | — | the coins' history, and voters on the coins |
+| Dukascopy | — | history only |
+| HF Data | — | funds' history to 2020, imported once (its client is gone) |
 
 Each fund's feed is chosen by measurement; see `docs/decisions.md`, "Data and providers".
 
@@ -143,7 +146,8 @@ store as its hour with no price (`bars.removed` finds it). The gate makes it a h
 whatever a fetch serves; `fill-gaps` does not see it as missing. Deleting the row instead
 would let the next fetch reaching that hour put the bad bar back. Nothing writes a
 whole store over: the tools that built the futures', coins' and pairs' histories were
-deleted once their work was done (2026-10-08).
+deleted once their work was done (2026-10-08), and stage 2's (`tools/futures_history.py`,
+2026-10-12) likewise.
 
 **Fetch** (`jump/backfill.py`): each instrument is asked from its newest stored bar less
 three hours (`SETTLE_HOURS`), so a bar stored part-way through heals - or from further
@@ -165,14 +169,44 @@ left out of the dividend check and the vote; the health chat names it
 its own thread. An instrument with no new bar for longer than its calendar allows,
 answered with nothing new or refused by Yahoo run after run, is named on the health chat
 on the run it passes its limit, then once a day, and only on a run its count moved, so not through the night (`stale_hours`): 3 session hours for a coin, 6 for a pair, 7 for a fund, two sessions for a
-daily-session market (whose calendars, B3's aside, don't know holidays).
+daily-session market (whose calendars, but the markets abroad's, don't know holidays).
 
 **Requests** (`jump/usage.py`): every answer the fetch, the vote and the VIX get, a 429
 included, is counted by provider on its HTTP session and logged once at the end of the fetch, with the quota left
 where the provider's answer says it: `requests: tiingo 27 (left 4973), sifting 16 (left 4), …`.
-Log only; nothing is sent. SiftingIO's "left" is a short window, not its 10,000 a month:
+SiftingIO's "left" is a short window, not its 10,000 a month:
 4 after a run's 16 requests while its account page showed 181 for the month
 (2026-10-06). The month is on the account page only.
+
+**Limits** (`config/provider_limits.csv`, `data/jump/usage/`). The limits file holds each
+keyed provider's limit per window and its shares:
+- the hourly run's, at its most;
+- room kept for history walks, gap fills, repairs and the dividend table;
+- the dashboard's, on each code push to dev;
+- the votes', enforced: past its share of an hour, a day or a month
+  (`usage.votes_left`, from the usage files' `votes` rows) a provider is an outage in
+  the vote for the rest of the run, named on the health chat; its share of a minute is
+  a pace (`verify.per_minute`: Twelve Data's 6, the hourly batch's 1 beside it).
+
+Each run also writes what it asked into its workflow's usage file: one row per UTC day,
+provider and purpose (fetch, votes, manual, dashboard), with the last figure left the
+provider gave.
+- The hourly run writes `hourly.csv` (`USAGE_FILE`, committed every run).
+- The history walks (`backfill-jump-bars.yml`) write `manual.csv`. Two workflows
+  committing the same row would stop each other's push.
+- Twelve Data is counted in credits, one per symbol, so its batch of seven is seven.
+- The dashboard's own calls are logged, not written, since the measure run commits
+  nothing.
+- The 30 days before the files (2026-09-13 to 10-13, the logs' `requests:` lines from
+  10-06) were added up from the runs' logs once, into the same three files
+  (`dashboard.csv` holds only those).
+
+A run that takes a day or month past 80% of a limit says so on the health chat, once.
+So does a day on which Twelve Data's own count runs 20 credits ahead of ours: another
+caller on the key, or one of ours not counted. That count is its usage endpoint's
+`daily_usage`, which costs a credit and is asked once a day by the 23:00 UTC run. The
+"left" the answers carry are short windows: Twelve Data's minute (8), Alpaca's minute
+(200), SiftingIO's few seconds. The page sets the last 30 days against each limit.
 
 **Repair** (`backfill.repair_from_yahoo`), by hand: a fund's in-session hours missing in
 the last 58 days are filled from Yahoo's 30-minute bars, folded to the hour, only if
@@ -184,16 +218,24 @@ only its latest session (filled with 242 overlapping hours, correlation 0.9976, 
 funds, comma-separated. That run repairs first, then makes the ordinary hourly pass.
 
 **Sessions** (`jump/sessions.py`): the NYSE table (`data/jump/sessions/nyse.csv`),
-the FX week, and each daily-session market's hours (LME, ICE, CME, B3). B3's trading days
-(`data/jump/sessions/b3.csv`) take its holidays out of USD/BRL's session: SiftingIO quotes
-on them, flat or thin. The tables extend themselves: when under two years remain, the
-hourly run appends the days through the end of the year three years ahead to both,
-leaving existing rows untouched.
+the FX week, and each daily-session market's hours (LME, ICE, CME, the Bund's 08:00-18:00
+Frankfurt, the gilt's 08:00-18:00 London, TTF's 08:00-18:00 Amsterdam, Japan's yield
+09:00-18:00 Tokyo - the hours their live source or their history holds). The markets abroad
+(`EXCHANGES`: Sydney, Tokyo, Seoul, Taipei, Shanghai, Hong Kong, Mumbai, Frankfurt, London, Zurich, Istanbul, Riyadh, Johannesburg,
+Toronto, São Paulo, Mexico City) each have a table of their own in the NYSE table's format
+(`data/jump/sessions/<exchange code>.csv`, from `exchange_calendars`): the days they trade
+and their hours that day - Tokyo's close moved to 15:30 on 2024-11-05, Riyadh trades
+Sunday to Thursday, Mexico City keeps New York's 09:30-16:00. The tables extend
+themselves: when under two years remain, the hourly run appends the days through the end
+of the year three years ahead to all of them, leaving existing rows untouched. A
+calendar whose holidays the library knows only so far ahead stops there (Shanghai's and
+Mumbai's at 2026-12-31); past a table's last row its usual week holds.
 
 **Quality gate** (`jump/quality.py`): a bar is unusable if it has no price (a removed
 bar) or a price is not positive,
 OHLC is inconsistent beyond half a tick, volume is negative, it duplicates an hour, it is a
-future's thin bar, or it falls outside its session.
+future's thin bar (where the future has volume: MarketWatch serves none), or it falls
+outside its session.
 
 **Dividends** (`jump/corporate_actions.py`): on the first run after 09:30 New York,
 Yahoo is asked for each paying fund's payouts; two funds in a row unanswered end the check
@@ -217,26 +259,47 @@ yardstick and on the detector's own, with the moves voted not real left out and 
 moved (`verify.candidates`, `jumps._flag`). Every reading the detector can flag is
 therefore asked about; with a bottom level under 4σ, the line follows it down.
 
-Every source of the instrument's class is asked, except its own provider. The list is
-`verify.SOURCES`, one entry per source with its measured reach (2026-10-08) and the name
-the channel gives it; a source added there is asked from the next run.
+Every source that carries the instrument and moves with its store is asked, except its
+own provider. The list is `verify.SOURCES`, one entry per feed with what it calls each
+instrument, its measured reach and the name the channel gives it; a source added there is
+asked from the next run. Each was held to one bar in the source audit of 2026-10-13
+(`docs/decisions.md`, "Every source on every instrument"): hourly moves correlated 0.90
+or more with the store's, nine in ten of the store's big moves confirmed, and no local
+hour with three or more not confirmed.
 
-| class | asked of |
+| instruments (store) | asked of |
 |---|---|
-| currency pairs and the real (17, SiftingIO) | Yahoo hourly FX (729 days back), MarketWatch (`price_monitor/marketwatch.py`, 9 days back, every hour) and Wallstreetcn (`price_monitor/wallstreetcn.py`, 170 days back), all but USD/KRW, which it does not carry |
-| funds (133) | Yahoo 30-minute bars folded to the hour (59 days back), Sina 30-minute US bars (77 days back), MarketWatch hourly (`FUND/US/<exchange>/<ticker>`, 9 days back) - two of these for a fund Yahoo or Sina serves, all three for the rest - and Alpaca's consolidated tape (`Alpaca_SIP`, from 2016, fifteen minutes behind), for every fund: the 30 the store has from Alpaca's IEX feed (`Alpaca_IEX`, one exchange) too |
-| coffee, cocoa, cotton (Yahoo) | Sina global futures, hourly (79 days back: coffee and cocoa from 2026-05-12, cotton from 07-20); for cocoa and cotton also Wallstreetcn (170 days back), for coffee the FT's continuous series (`price_monitor/ft.py`, 24 trading days back), each changing contract on its own days too |
+| currency pairs (7, SiftingIO) | Yahoo hourly FX (729 days back), MarketWatch (9 days back, every hour), Wallstreetcn (170 days back), Tiingo, Twelve Data (not USD/CNH) |
+| spot gold and silver (SiftingIO) | Yahoo's and MarketWatch's COMEX futures (`GC=F`, `GC00`; with their own rolls), Wallstreetcn's spot (`XAUUSD.OTC`), Sina's London metals (`verify.SINA_METALS`, counted as 60 days), Tiingo, Twelve Data (gold) |
+| funds (12) | Yahoo 30-minute bars folded to the hour (59 days back), Sina 30-minute US bars (77 days back), MarketWatch hourly (`FUND/US/<exchange>/<ticker>`, 9 days back), Alpaca's consolidated tape (`Alpaca_SIP`, from 2016, fifteen minutes behind) - less the fund's own provider; UNG also Wallstreetcn's natural gas future (`USNG.OTC`), Tiingo and SiftingIO, SPY SiftingIO, REMX Tiingo - each keyed one's half hours inside the regular session only |
+| coffee, cocoa, cotton (Yahoo) | Sina global futures (79 days back), MarketWatch's continuous series (`marketwatch.SOFTS`), Wallstreetcn for cocoa and cotton, the FT's continuous series for coffee and cocoa: each changing contract on its own days |
 | live cattle (Yahoo) | MarketWatch continuous contract, hourly (9 days back), and the FT's bars of the contract the store holds (24 trading days back) |
-| coins (16, Binance) | Coinbase's dollar pairs, hourly (`price_monitor/coinbase.py`, a year back) and Kraken's (`kraken.py`, 29 days back): a wick on Binance alone is real there and not the market's |
-| LME tin, nickel, aluminium (Sina) | Wallstreetcn, hourly (`price_monitor/wallstreetcn.py`, about 170 days back, counted again for 79 days, as the softs) |
+| stage 2's futures (Yahoo: Brent, the Treasuries, corn, wheat, soybeans, sugar, platinum) | MarketWatch's continuous series (`marketwatch.FUTURES`); the FT's bars of the contract the store holds for the grains and platinum (`ft.futures_symbol`), its continuous Brent; Sina's Brent and spot platinum (counted as 60 days); Wallstreetcn's Brent (`UKOIL.OTC`); SiftingIO's spot platinum: each changing contract on its own days, or none |
+| coins (4, Binance) | Coinbase, Kraken (29 days back), Bitstamp, Bitfinex, Alpaca and Yahoo dollar pairs: a wick on Binance alone is real there and not the market's |
+| the Bund, the gilt, TTF, Japan's 10-year yield (MarketWatch) | the Bund the FT's S&P Euro-Bund futures index (`ft.FUTURES_CONTINUOUS`, bars only at 13:00-17:00 UTC, so not asked about the Bund's 08:00-14:00 Frankfurt; its own rolls); none found for the others (2026-10-13) |
+| LME tin, nickel, aluminium, copper (Sina) | Wallstreetcn, hourly (about 170 days back, counted again for 79 days); copper also Yahoo's COMEX future (`HG=F`) |
+| the stock indices abroad (16, Yahoo, `sessions.EXCHANGES`) | MarketWatch (`marketwatch.INDICES`, 15 of them, not the CSI 300), Wallstreetcn's Sensex, Saudi and Canadian (`wallstreetcn.INDICES`), the FT's Euro Stoxx 50, FTSE 100, SMI, Bovespa and IPC (`ft.INDICES`, by xid), Naver's KOSPI, the Taiwan exchange's TAIEX, Sina's CSI 300 (`sina.fetch_cn_bars`, each bar filed under the hour its last minute falls in) |
 
-**Rule.** Never Tiingo, SiftingIO, Twelve Data or Google: the live run needs their
-allowances, and Google is one session deep. A test pins it.
+**Rule.** A source whose bar in one local hour is another grid's is not asked about a move
+in that hour (`Source.skip_hours`), where it is neither a vote nor an outage: the FT on the
+Euro Stoxx 50 at 17:00, the FTSE 100 at 16:00 and the SMI at 17:00 (its last bar ends
+before the closing auction Yahoo's holds: 0.08-0.19 there); the Taiwan exchange and
+MarketWatch on the TAIEX at 13:00 (its 13:30 closing auction, 0.50 and 0.46; MarketWatch
+1.00 and 0.0 bp from Yahoo's in the hours before); Sina's CSI 300 at 11:00 (the lunch
+break, 0.69). The user's, 2026-10-13. And the FT on the Bund at 08:00-14:00 Frankfurt,
+where its index has no bar. A move none of an instrument's sources is asked about
+is not voted at all (`verify.candidates`): counted, the store alone would make it real.
+
+**Rule.** Tiingo, Twelve Data and SiftingIO vote within the votes' share of their allowance
+(`config/provider_limits.csv`, section 4): Tiingo 14 an hour and 100 a day, Twelve Data 6 a
+minute and 50 a day, SiftingIO 300 a month. Past it, each is an outage in the vote for the
+rest of the run (`verify.vote_room`), and the health chat names it.
 
 **Rule.** A source is no voter on a move whose bars it supplied to the store: its word
 there is the store's (`verify.SUPPLIED`, `supplied`). Only a hand-mend inside the live
-recount is listed - Yahoo, TUR's holes of 2026-10-01 and -02; who built the rest of the
-history is the table in section 11, and no vote reaches it. A seam is known to the day:
+recount is listed - none since stage 1 (TUR's holes of 2026-10-01 and -02, mended from
+Yahoo, left with it); who built the rest of the history is the table in section 11, and no
+vote reaches it. A seam is known to the day:
 the day either side is left out too.
 
 A source that runs behind the clock (`delay`: Alpaca's tape, fifteen minutes on the free
@@ -251,16 +314,15 @@ about an instrument it provides itself: its word is the store's.
 
 **One source's answer** (`judge`). Each feed is compared with itself, so a steady
 offset is not a move.
-- **Saw it:** the source moved the same way at least half as far (`REAL_SHARE`), from its
-  closes up to an hour before the move to its closes up to an hour after. An hour it has no
-  bar for is bridged by its nearest bars within 12 hours. Measured 2026-10-08 over 3,444
-  moves: answers sit at 0.8 or more or under 0.2, half is in the gap between, and no source
-  is consistently an hour late (`docs/decisions.md`).
+- **Saw it:** its own price at the store's two bars moved the same way at least half as far
+  (`REAL_SHARE`): its close of the store's previous bar (its open of this bar, for an hour
+  measured from its open) to its close of this bar (its open, for a session's gap - not a
+  stock index's, whose night runs to its first bar's close).
 - **Did not:** it did not move with it, or has not yet - the vote is taken with what the
   source serves at the time, and the next count looks again.
-- **Outage:** the source is down, has no bar after the move yet, or is silent for 12 hours
-  around it. For the softs, also a move whose span crosses the source's own change of
-  contract - Sina's, Wallstreetcn's for cocoa and cotton, the FT's for coffee
+- **Outage:** the source is down, or has no bar - or no price - at either end: not served
+  yet, or a hole. No window and no bridge: a source an hour late does not see the move.
+  For the softs, also a move that takes in the source's own change of contract - Sina's, Wallstreetcn's for cocoa and cotton, the FT's for coffee
   (`verify.switches`: a session whose median offset to the store stepped by 50 bp or more) -
   where its move carries the spread between two months. For cattle the FT's contract is
   the one the store holds today, so the step is at the store's own change.
@@ -277,9 +339,7 @@ the count, and named on the line.
 | no other source could answer | uncertain | yes | `⚠️ SiftingIO(+2.10%), Yahoo(outage), MarketWatch(outage)` |
 
 The line names the store's provider first with the stored move, then every source with
-its own move over the same hours, or `(outage)`. A source with bars of its own around the
-move outweighs one bridging a gap: the bridging one is an outage (USD/INR at night:
-Yahoo's last bar is 10:00, MarketWatch has every hour). A rate limit, or no answer to two
+its own move over the same two bars, or `(outage)`. A rate limit, or no answer to two
 requests in a row, stops a source for the run, and the health chat names it. Every source
 of an instrument is asked or none that run: a vote of all of them, not of whichever were
 asked.
@@ -291,7 +351,7 @@ inside the recount window.
 
 **Rule.** With one other source, every disagreement is a tie: the LME's metals. Their bad
 prints are uncertain and stay scored until another source is found.
-With three - the pairs but USD/KRW - a two-two split is a tie too: USD/BRL's fall of
+With three - the pairs - a two-two split is a tie too: USD/BRL's fall of
 2026-10-05 12:00 is in the session's first hour on SiftingIO and MarketWatch, before its
 open on Yahoo and Wallstreetcn.
 
@@ -299,8 +359,9 @@ open on Yahoo and Wallstreetcn.
 voters saw the move from the previous session's close to that bar's close, the store
 one of them, the move happened in the night. The store's first print was a stale one at
 the old price (TLH 2020-03-09: gap +0.03%, first hour +3.8%; the tape opened +4.65%).
-The verdict carries each source's night, its open of the hour over its last close
-before. `jumps` (`with_nights`) puts the median of them in the gap, payout adjustment
+Each source is read on its own bars, exactly as for a vote (its close of the last bar
+before the night, its close of the first hour; missing either, it is an outage). The
+verdict carries each source's night, its open of the hour over that close. `jumps` (`with_nights`) puts the median of them in the gap, payout adjustment
 kept, and the rest of the move from the previous close in the hour: the total stays the
 store's. A gap left unscored stays so. Kept for good, like a move not real, and not
 a doubt: the message is not marked. Only readings at 4σ or more are asked, so a stale
@@ -314,10 +375,12 @@ the close check reads. A message already sent is marked, not removed (section 8)
 `recount_days`). A reading is voted on the run that finds it, then again from the bars as
 they then are on the first run after each end of its market's session - the NYSE close
 for funds, a daily-session market's own close, 00:00 UTC for coins and pairs - until the
-closest-reaching of its sources no longer serves its hour: 9 days for the funds, pairs
-and cattle (MarketWatch), 29 for the coins (Kraken), 30 for coffee (the FT), 79 for cocoa and
-cotton (Sina) and the LME (Wallstreetcn, which reaches about 170 but is held inside the
-record's 90 days, `verify.KEEP_DAYS`). After that the further sources would vote alone, and the vote stands. A source
+closest-reaching of its sources no longer serves its hour: 9 days wherever MarketWatch
+votes, 29 for the coins (Kraken), 79 for the LME (Wallstreetcn, which reaches about 170
+but is held inside the record's 90 days, `verify.KEEP_DAYS`), 89 for the CSI 300 (Sina, which
+reaches a year: every recount is held inside the record, or a vote it no longer holds would
+be due on every run).
+After that the further sources would vote alone, and the vote stands. A source
 that corrects its bars turns the vote; a bar that heals into no far move loses its vote.
 The store's own provider is re-read first: on a run with a vote due, the hourly fetch
 reaches back to its hour in the same request, and in an open month the fresher copy wins, for
@@ -331,11 +394,14 @@ from before the vote reads in its words: confirmed as real, unconfirmed as not r
 unknown - no other source had bars - counted as outages were then, against the move
 (a tie with one source named, not real with two).
 
-Instruments with a reading not yet voted are asked first; at most 40 requests a run, and
-every source of an instrument or none. Over the 30 days to 2026-10-08, simulated hourly:
-a mean of 7.7 requests a run (median 0, 95th percentile 56), in bursts at the session ends
-(up to 227 at 00:05 UTC, when the coins and pairs come due together, spread over the next
-runs by the cap; 37 of 460 runs over it). A request takes 0.1 to 3 s (Sina's longest).
+Instruments with a reading not yet voted are asked first; at most 120 requests and 300
+seconds a run (`MAX_REQUESTS`, `VOTE_SECONDS`), and every source of an instrument or
+none; those left are due, and counted on a later run. Over the 30 days to 2026-10-08,
+simulated hourly with that day's voters: a mean of 7.7 requests a run (median 0, 95th
+percentile 56), in bursts at the session ends (up to 227 at 00:05 UTC, when the coins and
+pairs come due together, spread over the next runs by the cap). A request takes 0.1 to 3 s
+(Bitfinex's and Sina's longest); the Taiwan exchange's is a request a day back to the move,
+and Twelve Data's wait out its minute's share.
 
 **History is not voted again.** Older than its recount, a move's vote stands as the record
 holds it, and a move never voted counts as normal. Most of history has one other source at
@@ -367,14 +433,21 @@ fetch brings them back. The night after each is unscored.
 `jump/pipeline.py` turns usable bars into per-instrument metrics
 (`data/jump/metrics/<stem>.parquet`), via `jump/returns.py`:
 
-- **`r`, the hour's move:** close against the previous close. On a session's first bar,
-  and on the bar after a missing hour, it is that bar's own open to close.
+- **`r`, the hour's move:** close against the previous close, as a log return. On a
+  session's first bar, and on the bar after a missing hour, it is that bar's own open to
+  close. A yield (`unit: bp` in `config/basket.yaml`: Japan's 10-year) moves by its change
+  in points instead (`returns.move_of`), and its messages say basis points (`+9.2 bp`);
+  the gap and the hole likewise.
 - **`gap`:** a session's first open against the previous session's last close. It is
   dividend-adjusted, and left unscored on a split, an unconfirmed dividend, a missing
   bar before the close, or a missing first hour: from a late first bar the "night" would
-  span hours of trading. A pair's weekend that opens exactly at Friday's close is no
-  measurement (a stitched open, or no quote) and is left unscored too, and so is a USD/BRL
-  night that opens exactly at the previous close.
+  span hours of trading. A market abroad opening on the half hour may have its first bar at
+  the next hour, as Yahoo's history files a bar under the hour it ends in. A pair's weekend that opens exactly at Friday's close is no
+  measurement (a stitched open, or no quote) and is left unscored too. **A stock index's night runs to its first
+  bar's close**, and that bar has no `r` of its own: an index's first value is computed
+  from its stocks' last closes before most of them trade, so it sits at the previous
+  close and the night's move comes in during the first hour (FTSE 100, the year to
+  2026-10-05: the night a median 5.8 bp, the first hour 28, the other hours 11).
 - **`hole`:** the move across a missing hour inside a session. It is never scored; it only
   keeps the price path whole for the close check.
 
@@ -415,20 +488,25 @@ for a 24-hour market) and is marked `young` until the window is full.
 
 | word | square | σ |
 |---|---|---|
-| noticeable | ⬜ | 6 |
-| high | 🟨 | 8.5 |
-| major | 🟧 | 12 |
-| extreme | 🟥 | 17 |
+| noticeable | ⬜ | 4.5 |
+| high | 🟨 | 6.4 |
+| major | 🟧 | 9 |
+| extreme | 🟥 | 12.7 |
 
 Each word is about three times rarer to reach than the one below (events at or above
-each, over all history on 2026-10-09: 12,438, 4,195, 1,301, 479). Extreme has no ceiling,
-so as a band of its own it is only about twice as rare as major's (479 against 822). `high` and up push
+each, over the whole history of the 58, measured 2026-10-11: 9,604, 3,227, 1,056, 304).
+Extreme has no ceiling, so as a band of its own it is about two and a half times rarer
+than major's (304 against 752). `high` and up push
 (`routing.PUSH_TIERS`); `noticeable` goes into the weekly note.
 
 **Gaps** are scored by the same rules against earlier gaps **of their own kind** over the
 same half-year: nights against nights, weekends against weekends. A gap of 48 hours or
 more is a weekend. A pair has no nights: its holiday closures count as weekends. Scoring
-starts at 16 nights or 7 weekends.
+starts at 16 nights or 7 weekends. A daily-session market's gap is whole only if the bar
+before it came within an hour of its session's close and the closure is no longer than
+110 hours (`DAILY_CLOSED_MAX_SECONDS`), or the source was out; a market abroad's, only
+if it runs from its table's trading day before, however long the closure - China's
+Golden Week is a gap, a trading day without bars is not.
 
 **Broken prints.** A reading beyond 1,000σ (`MISTAKE_SIGMA`) is not a reading and never
 enters a yardstick. The hours after such a break are dropped too, until the price is back
@@ -440,8 +518,9 @@ yardstick (`without_not_real`); a first hour voted overnight is scored with the 
 night in its gap and the rest in the hour (`with_nights`).
 
 **When a reading is judged** (`ended`, `found_times`). An hour once it has ended. A fund's
-gap with its first bar, once that bar has ended. A pair's weekend gap, and a
-daily-session market's night, at the open. `found_utc` is that moment.
+gap with its first bar, once that bar has ended, and a stock index's night, which runs to
+that bar's close. A pair's weekend gap, and another daily-session market's night, at the
+open. `found_utc` is that moment.
 
 **Rule.** A reading is judged only once it can be. The run at :05 sees what was found by
 :00.
@@ -476,9 +555,9 @@ channel in line with them.
 **A push** (`high` and up):
 
 ```
-🟨 LTC/USDT · Litecoin +5.77% · 11.1×σ
-📈 Rarest hour in 16 days (then 11.5×σ)
-🕐 24.09.2026 02:00 UTC · next close in 17h
+🟨 KOSPI · South Korea -5.98% · 6.5×σ
+📉 Rarest hour in 2 months (then 8.2×σ)
+🕐 29.07.2026 01:00 UTC · next close in 17h
 Nearby economic events (...)
 ```
 
@@ -486,14 +565,16 @@ The time line counts down to the close the move is checked at, then shows how mu
 (`close 80%`, `next close in 72h`). Scheduled releases from 2 hours before the moved bar to
 its close follow (a release after the close came after the move).
 
-The name after the ticker is the instrument's `label` in `config/basket.yaml`. A pair against
-the US dollar is named by its other currency (`USD/TRY · Turkish lira`, `EUR/USD · Euro`);
-the move is the pair's, as its ticker reads, so USD/TRY +2% is the lira weaker.
+The name after the ticker is the instrument's `label` in `config/basket.yaml`. A stock
+index abroad leads with its own name instead of Yahoo's ticker (`display`), then its place:
+`Nikkei 225 · Japan`. A pair against
+the US dollar is named by its other currency (`USD/JPY · Yen`, `EUR/USD · Euro`);
+the move is the pair's, as its ticker reads, so USD/JPY +2% is the yen weaker.
 
 **A note row** (`noticeable`) goes into the weekly note, and a ping line points at it:
 
 ```
-⬜ LTC/USDT · Litecoin +3.40% · 6.3×σ
+⬜ EUR/USD · Euro -0.31% · 5.2×σ
 Added to digest👆🏻👆🏻
 ```
 
@@ -508,9 +589,9 @@ it goes on in opens with its name-line, `continued`:
 ```
 ━━━ 🏛 RATES ━━━
 
-⬜ VGIT · US Treasuries 3-10y (Vanguard) -0.41% · 7.6×σ
-📉 Rarest hour in 20 months (then 10.1×σ)
-🕐 16.09.2026 18:00 UTC · close 113%
+⬜ ZB=F · 30-year Treasury bond (CBOT) -0.70% · 5.2×σ
+📉 Rarest hour in 18 days (then 5.0×σ)
+🕐 28.09.2026 14:00 UTC · close 38%
 ```
 
 A note in several messages ends each with its part and period (`part 2 of 3 - 02.10.2026
@@ -580,7 +661,8 @@ topped up daily from the live feed.
 | `data/economic_calendar/` | release archive | every run |
 | `data/jump/corporate_actions.csv`, `dividend_checks.csv` | payouts, how far each fund is confirmed | every run |
 | `data/jump/verified.csv` | the sources' votes | every run |
-| `data/jump/sessions/nyse.csv`, `b3.csv` | NYSE schedule, B3's trading days | when extended |
+| `data/jump/usage/hourly.csv`, `manual.csv`, `dashboard.csv` | each provider's calls a day, by purpose | every run; a history walk's; the logs' 30 days before, once |
+| `data/jump/sessions/nyse.csv`, `<exchange code>.csv` | NYSE schedule, the markets abroad's | when extended |
 | `data/jump/bars/*/YYYY-MM.csv`, `YYYY.parquet` | settled bars | when a month or year settles |
 | `data/jump/bars/*/YYYY-MM.open.csv` | open months | no: release `bars-live-<branch>`; the backfill reads the default branch's |
 | `data/jump/vix/` | daily VIX | Saturday 04:00 UTC |
@@ -611,13 +693,13 @@ and 79 s, the vote 14 and 27 s, metrics 20 s rebuilt cold and 14 s extended, eve
 
 | provider | limit | use |
 |---|---|---|
-| Tiingo | 50/hour, 1,000/day | 27 requests a run in session, ~245 a day; the full dividend refresh (backfill workflow, `corporate-actions`) asks all 133 funds at 45 an hour, about 3 hours, and starts only when the hourly run leaves Tiingo alone that long: from 3 h after a close to the next session's first hour |
-| Alpaca | 200/min | 30 a run in session; the tape's vote besides, within the vote's 40 sources a run |
-| Twelve Data | 800/day, 8/min | one batch of 8 a run, in a background thread: keep at most 8 instruments on it, as one batch is a minute's credits; a history walk (`--extend-history`, `--fill-gaps`) waits out :03–:12 past each hour and stops at 600 a day (`twelvedata.ARCHIVE_CREDIT_CAP`), so run one a day |
-| SiftingIO | 10,000/month | ~8,700/month (17 pairs, skipped outside the FX week and USD/BRL's session) |
-| Yahoo, Sina, Google, MarketWatch, Wallstreetcn, the FT | none published | live fetch, dividend check, the vote (at most 40 sources a run, all sources together) |
-| Binance | 6,000 weight/min per address | 16 a run |
-| Coinbase, Kraken | per second, per address | the coins' vote: on the run after a coin moved 4σ or more, and at 00:05 UTC for 29 days after; Coinbase serves 300 hours a request, so a coin's recount is up to 3 (25 Coinbase requests at 00:05 on 2026-10-09) |
+| Tiingo | 50/hour, 1,000/day | 10 requests a run in session, ~100 a day; the vote within 14 an hour and 100 a day; the full dividend refresh (backfill workflow, `corporate-actions`) asks all 12 funds at 45 an hour, about a quarter of an hour, and starts only when the hourly run leaves Tiingo alone that long: from 3 h after a close to the next session's first hour |
+| Alpaca | 200/min | the tape's and the coins' vote, at most 50 a minute |
+| Twelve Data | 800/day, 8/min | one batch of 1 a run, in a background thread: keep at most 8 instruments on it, as one batch is a minute's credits; a history walk (`--extend-history`, `--fill-gaps`) waits out :03–:12 past each hour and stops at 600 a day (`twelvedata.ARCHIVE_CREDIT_CAP`), so run one a day; the vote at most 6 a minute and 50 a day |
+| SiftingIO | 10,000/month | ~4,600/month (7 pairs and 2 metals, skipped outside the FX week); the vote within 300 a month |
+| Yahoo, Sina, MarketWatch, Wallstreetcn, the FT, Naver, the Taiwan exchange | none published | live fetch, dividend check, the vote (at most 120 sources a run, all sources together) |
+| Binance | 6,000 weight/min per address | 4 a run |
+| Coinbase, Kraken, Bitstamp, Bitfinex | per second, per address | the coins' vote: on the run after a coin moved 4σ or more, and at 00:05 UTC for 29 days after; Coinbase serves 300 hours a request, so a coin's recount is up to 3 (25 Coinbase requests at 00:05 on 2026-10-09) |
 
 **Health, in the order of the hourly run.** Everything below goes to the health chat
 (`TELEGRAM_HEALTH_CHAT_ID`), never the channel. "Streak" means a failed run: the down
@@ -660,16 +742,36 @@ has 12 of the job's 20 minutes: past them it is stopped, and delivery, health an
 commit still run. Each part of it (fetch, pipeline, jumps) notes its start, so a step that
 stops short is reported with the part it was in and its minutes.
 
-**Expected volume.** About 4 pushes and 10 note rows a week (209 and 546 events over the
-year to 2026-10-01). Replayed hour by hour over that year, delivery sends about 9 messages
-a week (8.6: 2.2 push messages, 5.2 ping messages, 1.2 note parts), 7.5 of them ringing. A quiet day is normal: green runs mean it looked and found nothing.
+**Expected volume.** About 4 pushes and 10 note rows a week: 3.8 and 10.5 over the year to
+2026-10-05, 4.6 and 6.7 over the year to 2025-10-05, by the stage report's count
+(24-hour events, without the vote). The basket of 172 at 6σ, counted the same way, made
+4.0 and 10.8 (`docs/basket-proposal.md`, gate D). How many messages that makes, replayed through delivery, is not measured for
+the 58 yet (the 172 sent about 9 a week). A quiet day is normal: green runs mean it looked
+and found nothing.
 
-**Checking on it.** `PYTHONPATH=. python tools/stage_report.py` prints rates by word,
-block and channel, and the biggest hours. To run the pass by hand, export the keys and
-run the four commands of section 3.
+**Checking on it.** The dashboard (https://conjuror123.github.io/Market-alert/) is
+measured on every push of code to the development branch (`.github/workflows/measure.yml`,
+and by hand). The bar store is the checkout's closed months and the live run's open months;
+an instrument the live run does not fetch yet is brought up to now by the bot's own fetch
+(`jump.backfill --live-pass`) where its provider needs no key or is SiftingIO (gold and
+silver until the merge: two calls a run), and one on Tiingo or Twelve Data stays where the
+store has it - the page names any instrument with no bar in the 4 days to the measurement. The voters' bars are fetched over each instrument's recount
+window (`tools/voter_bars.py --recount`: 9 days for most, at most 79 but for the CSI 300),
+as far back as the live pass would ask. `tools/measure.py` builds the metrics cold, votes
+the moves the live pass would hold now - each instrument's far moves inside its recount
+window, with this code, voted again with their own record until the verdicts settle - and
+scores with `jumps.run`: the detector alone over the year to the measurement, the year
+before and the archive by year, and with the votes inside the windows, the only place they
+change anything. `tools/dashboard.py` draws it. Each run publishes only its own
+measurement: nothing is compared with or kept from an earlier run, and only the workflow
+writes the page. Its counts are cross-added - every vote must lie inside its window, and
+the votes must change nothing outside the windows - and a check that fails stops it from
+publishing. `PYTHONPATH=. python tools/stage_report.py`
+prints rates by word, block and channel, and the biggest hours. To run the pass by hand,
+export the keys and run the four commands of section 3.
 
 **A repair.** Actions → Price Spike Monitor → Run workflow, on the live branch, with
-`repair` naming the funds (`TUR`). Its log says, per fund, the hours missing, the hours
+`repair` naming the funds (`HYG`). Its log says, per fund, the hours missing, the hours
 filled and the overlap it was judged on; a refused fund is left as it was (section 4).
 
 **The mute.** `jump_alerts_muted: true` in `config/config.yaml`: the run proceeds, the
@@ -691,31 +793,35 @@ health and the calendar go out, Jump's pushes, note and pings do not.
 | `jump/versioning.py`, `windows.py` | config hashes; the pipeline's warm lead |
 | `jump/cboe.py`, `fred.py`, `vix.py`, `ewma.py`, `zscore.py` | the VIX line on the note |
 | `jump/atomic.py` | safe writes |
-| `jump/usage.py` | the fetch's requests per provider, logged |
+| `jump/usage.py` | each provider's calls per run, logged and added to the usage files; the limits and their warnings |
 | `jump/audit.py` | the coverage report, `data/jump/coverage.md` |
 | `price_monitor/jump_delivery.py` | messages and the week |
 | `price_monitor/weekly_digest.py`, `economic_calendar.py` | the calendar |
 | `price_monitor/notifier.py`, `health.py`, `__main__.py` | Telegram calls, health, the delivery entry point |
 | `price_monitor/<provider>.py` | one client per provider |
-| `tools/` | `stage_report.py`, `hot_bars.sh`, `run_died.sh` (the health line for a run that could not deliver), `voter_bars.py` (every live voter's bars for a measurement; the backfill's `voter-bars` mode, where the keys are) |
+| `tools/` | `measure.py` and `dashboard.py` (the dashboard), `stage_report.py`, `hot_bars.sh`, `run_died.sh` (the health line for a run that could not deliver), `voter_bars.py` (every live voter's bars for a measurement; the backfill's `voter-bars` mode, where the keys are) |
 
 How far back each record reaches:
 
 | instruments | from | built from |
 |---|---|---|
-| 133 US funds | 2002–2011 for 73, 2016 for 55, launch for 5 | HF Data, Twelve Data, Alpaca's tape; the first bar of 9,783 mornings of 2016–2022 mended from the tape (`docs/decisions.md`, "The funds' wrong opens of 2016–2022 were mended from the tape") |
-| 14 FX pairs | 2003–2007; USD/CNH 2012 | Dukascopy to Twelve Data's first bar, about 2020-01 - the seven majors only to 2012, then FXCM (bars that open at the previous close) to 2020-01; the majors' 2012 Sunday opens from Dukascopy; then live |
-| USD/BRL, USD/INR, USD/KRW | 2019-09, 2019-11, 2020-01 | Twelve Data |
-| 16 coins | 2013–2020 by listing | Binance; earlier from Bitstamp, Bitfinex, Coinbase |
+| 12 US funds | 2002–2010 for 10, 2016 for 2 | HF Data, Twelve Data, Alpaca's tape; the first bar of 9,783 mornings of 2016–2022 mended from the tape (`docs/decisions.md`, "The funds' wrong opens of 2016–2022 were mended from the tape") |
+| 7 FX pairs | 2003; USD/CNH 2012 | Dukascopy to Twelve Data's first bar, about 2020-01 - the majors only to 2012, then FXCM (bars that open at the previous close) to 2020-01; the majors' 2012 Sunday opens from Dukascopy; then live |
+| spot gold and silver | 2003-05 | Dukascopy's archive below SiftingIO's first bar (`deepen-dukascopy`, gated on the overlap); then SiftingIO. Dukascopy leaves the daily break (an hour from 17:00 New York) empty where SiftingIO serves a thin bar |
+| 4 coins | 2013–2020 by listing | Binance; earlier from Bitstamp, Bitfinex, Coinbase |
 | coffee, cocoa, cotton | 2018-01 | Dukascopy CFDs, then the listed contract; cocoa's 2026-07-21 to 08-10, the roll window where no CFD switch could be located, from the December contract (rolled into on 07-21) |
 | live cattle | 2024-05 | Yahoo |
-| LME tin, nickel, aluminium | 2026-04-22 | Wallstreetcn to Sina's first bar (2026-07-08 tin, 07-15 nickel and aluminium), less 11 openings off the market (section 4); then Sina |
+| stage 2's futures | Brent 2011-01, soybeans 2018-03, the 30-year bond 2019-01, platinum 2021-11, the 2- and 10-year notes 2024-10, corn, wheat and sugar 2026-01/02 (`docs/decisions.md`, "Stage 2's history is by series") | Dukascopy's CFDs for Brent, the 30-year bond, soybeans and platinum, less the roll windows where no switch stood out; Yahoo's continuous series for the 2- and 10-year notes (2024-10); the contract held now for corn, wheat and sugar (2026-01/02); then the listed contract (`tools/futures_history.py`, deleted once done) |
+| 16 stock indices abroad | 2024-10; the CSI 300, BIST 100, TSX and IPC 2026-08 | Yahoo's hourly bars where they agree with its folded 30-minute ones, then those (section 4) |
+| the Bund, the long gilt | 2018-05 | Dukascopy's CFDs (BUNDTREUR, UKGILTTRGBP) below MarketWatch's first stored session (the Bund 2026-09-29, the gilt 10-05), less each quarter's switch - a large hour near the expiry the 10-year yield does not explain, dropped in its session or its night a roll in `data/jump/rolls.csv` (the Bund 29 of 34 quarters, the gilt 25; `docs/decisions.md`, "The stored history"); no volume; then MarketWatch's contract (`tools/bonds_history.py`, deleted once done) |
+| TTF, Japan's 10-year yield | 2026-09-29, 09-30 | MarketWatch's own bars from their first fetch; no hourly history anywhere, so each scores with a young yardstick from its first days (section 7), its half-year window full about 2027-04 |
+| LME tin, nickel, aluminium, copper | 2026-04-22 (copper 04-23) | Wallstreetcn to Sina's first bar (2026-07-08 tin, 07-15 nickel and aluminium, 07-22 copper), less its openings off the market (section 4: 11 of tin's and aluminium's); then Sina |
 
 ## 12. Known limitations
 
 | limitation | effect | what would fix it |
 |---|---|---|
-| Yahoo, Sina, Google Finance, MarketWatch, Wallstreetcn and the FT are undocumented endpoints | a change silences their instruments or checks until fixed; the health chat names them | paid feeds (consolidated tape, futures data) |
+| Yahoo, Sina, MarketWatch, Wallstreetcn and the FT are undocumented endpoints | a change silences their instruments or checks until fixed; the health chat names them | paid feeds (consolidated tape, futures data) |
 | one other source for the LME's metals | a disagreement is a tie: their bad prints stay scored, labelled uncertain. The LME's, Wallstreetcn, prints the same close as Sina in 53–68% of hours (2026-07 to 10): in part one upstream | another free feed |
 | weekend yardsticks rest on 26 weekends | ±16% noise | none chosen: a longer window gained little (`docs/decisions.md`, "Rejected") |
 | history before each record's start (section 11) | "rarest since" reaches only as far as the record | paid history |

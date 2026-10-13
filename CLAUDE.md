@@ -1,71 +1,28 @@
-# How an agent works here
+# Working on Jump
 
-Jump is an hourly Telegram bot on GitHub Actions that writes when one of 173 market
-instruments moves unusually for itself. `README.md` says what it is and maps the files;
-`docs/manual.md` says how every part works; `docs/decisions.md` says why, and what not to
-reopen.
+An hourly Telegram bot on GitHub Actions that writes when one of 62 market instruments
+moves unusually for itself.
 
-**Before changing code, read the section of `docs/manual.md` that covers it.** Its
-**Rule.** lines are invariants: a change that breaks one makes the system wrong, not
-merely broken. A change to behaviour updates the manual (what it does) and, where a choice
-was made, `docs/decisions.md` (why), in the same commit.
+**Where things are**
+- `README.md` - what it is, and a map of the files
+- `docs/manual.md` - how each part works; read the section before changing that part
+- `docs/decisions.md` - why things are the way they are, and what was tried
+- `docs/basket-proposal.md` - the basket, its stages and the measured volumes
 
-## Boundaries
+**Firm**
+- The channel carries alerts only; health and provider failures go to
+  `TELEGRAM_HEALTH_CHAT_ID`.
+- The repository is public: keys live in GitHub Actions secrets, never in files.
+- The live branch runs the bot: a push there reaches the channel within the hour. Ask
+  before pushing to it, unmuting, deleting data or messages, or rewriting history.
 
-- **The channel is private**, and carries the alerts only. Health and provider failures go
-  to `TELEGRAM_HEALTH_CHAT_ID` only, never to the channel.
-- **Secrets never enter the repository.** It is public. Keys live in GitHub Actions
-  secrets and are read from the environment; `config/config.yaml` may name a secret,
-  never hold one.
-- **Push only to the branch you were asked to**, and open a pull request only when asked.
-  The live branch runs the bot: a push there reaches the channel within the hour.
-- **Confirm before anything outward-facing or hard to reverse:** a push to the live
-  branch, unmuting, deleting data or channel messages, rewriting history. One approval
-  does not cover the next.
-- **Do not spend a provider's quota on experiments.** Tiingo and SiftingIO run near their
-  limits for the live run; probe free sources instead.
-- **Stored bars are not rewritten to fix them.** A bad bar is a row in
-  `data/jump/verified.csv`; the bars change only by the fetch (`docs/manual.md`,
-  section 4). The repairs made before 2026-10-09 stay as they are.
-
-## Scope
-
-- **Do what was asked, then stop.** Fixing a thing is not a request to refactor its file.
-- **Finish it.** If part is blocked, do the rest and say what was left and why.
-- **A second problem found on the way is reported, not silently fixed.** Two changes in
-  one commit cannot be reviewed or reverted apart.
-- **Stop for a go before a change to what the detector flags or what the channel
-  shows.** Present the measured before/after first.
-
-## Evidence
-
-- **Measure the thing you are about to claim**, not something adjacent. A plausible
-  mechanism is not evidence.
-- **Quote a number with its window** ("4 pushes a week, over the year to 2026-10-01").
-  Re-derive rather than copying a figure forward across a change.
-- **Never a percentage across instruments.** 5% is a quiet hour for a coin and a crash
-  for short Treasuries. Per instrument, in σ, or nothing.
-- **Never present a partial run as complete.** A killed job, a rate limit or a skipped
-  stage is said in the same breath as the result.
-- **When told you are wrong, check, then answer.** Neither fold nor dig in. When wrong,
-  say so in one sentence.
-
-## Changing it safely
-
-- **Run the whole hourly pass, not one stage** (`docs/manual.md`, "The hourly pass").
-  A stage alone leaves the next reading stale data.
-- **A formula change moves `config_version` and forces a cold rebuild.** Run it, and
-  check the diff in events is what you expected.
-- **No window may see past the bar it judges.** The easiest rule to break by accident and
-  the hardest to notice.
-- **A regression test must fail without the fix.** One that passes either way looks like
-  cover and is not.
-- **A rewrite claiming to be exact is checked against the old code on real data.**
-- **Run the tests alone:** `pytest -q`, about 830 tests in 2 minutes. Several load large
-  parquet files, and concurrent runs thrash.
-
-## What cannot be self-reported
-
-State these plainly rather than guess: effort or reasoning depth, billing and usage, and
-anything not verified in this session — including earlier numbers, if the code has
-changed since.
+**Recommended**
+- Keep a change to what was asked; mention other problems instead of folding them in.
+- Before changing what gets flagged or how messages look, show the numbers and ask.
+- Update the manual (and the record, if a choice was made) with a behaviour change.
+- Tiingo, SiftingIO and Twelve Data quotas belong to the live run; test with free sources.
+- A bad bar goes in `data/jump/verified.csv`; bars change only through the fetch.
+- Give numbers with their window, per instrument or in σ.
+- `pytest -q` (about 850 tests, 2 minutes), run alone. A regression test should fail
+  without the fix.
+- Answer plainly and briefly; recommend rather than survey.

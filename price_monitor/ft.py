@@ -1,4 +1,5 @@
-"""The FT's hourly bars: a voter on live cattle and coffee.
+"""The FT's hourly bars: a voter on live cattle, coffee, cocoa, Brent, the grains,
+platinum, the Bund and five stock indices abroad.
 
 THE ENDPOINT is the one the FT's markets pages chart from (markets.ft.com's
 chartapi/series): an instrument's hourly bars by its xid, the last
@@ -41,13 +42,44 @@ SEARCH = "https://markets.ft.com/data/searchapi/searchsecurities"
 HEADERS = {"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"}
 # The continuous series the FT names, by xid.
 CONTINUOUS = {"KC.1": "1046650"}
-SOFTS = {"KC=F": "KC.1"}
+# Cocoa's continuous series by its xid (found by the FT's search, 2026-10-13:
+# 0.92 hour by hour with the stored contract).
+SOFTS = {"KC=F": "KC.1", "CC=F": "1055540"}
+# The stock indices abroad, for the basket's stage 1, by xid: those moving with
+# Yahoo's folded bars at 0.90 or more hour by hour over its 24 days to
+# 2026-10-09 - Europe's and the Americas' 0.92-0.98. Asia's lag it (the Nikkei
+# 0.80, the Hang Seng 0.86, the ASX 200 0.06) and are left out.
+INDICES = {"^STOXX50E": "567938", "^FTSE": "572009", "^SSMI": "567786",
+           "^BVSP": "570637", "^MXX": "584510"}
 MAX_DAYS = 24
 HOUR = 3600
 MAX_ATTEMPTS = 3
 BACKOFF_SECONDS = 2.0
 # A contract's xid, once found by the search in this run.
 _found: "dict[str, str]" = {}
+
+
+# Stage 2's futures the FT carries by contract (2026-10-12): CBOT's grains by their
+# pit roots (CZ26 for Yahoo's ZCZ26), NYMEX's platinum by its electronic name
+# (US@PLF272 for PLF27). Its Treasuries (US@TYZ262, ...) moved with Yahoo's at
+# 0.885-0.89 and are not asked; it holds no Brent or sugar contract.
+FUTURES_ROOTS = {"ZC": "C", "ZW": "W", "ZS": "S"}
+# Brent by its continuous series' xid, which its search finds (the source audit,
+# 2026-10-13: 0.977 hour by hour with the stored contract, 34 days back); the
+# Bund by S&P's Euro-Bund futures index (BDPY:IOM): 0.95 with MarketWatch's
+# contract, but bars only at 13:00-17:00 UTC, its rolls S&P's.
+FUTURES_CONTINUOUS = {"BZ=F": "1054972", "FGBL=F": "31880145"}
+
+
+def futures_symbol(contract: "str | None") -> "str | None":
+    """The FT's name for a stage 2 contract Yahoo names ZCZ26.CBT or PLF27.NYM."""
+    code = (contract or "").split(".")[0]
+    root, month = code[:2], code[2:]
+    if root in FUTURES_ROOTS:
+        return FUTURES_ROOTS[root] + month
+    if root == "PL":
+        return f"US@PL{month}2"
+    return None
 
 
 def cattle_symbol(contract: "str | None") -> "str | None":
@@ -117,6 +149,8 @@ def xid_for(name: str, session: requests.Session | None = None) -> str:
     search finds (LCZ26)."""
     if name in CONTINUOUS:
         return CONTINUOUS[name]
+    if name.isdigit():                   # an xid already (INDICES)
+        return name
     if name not in _found:
         answer = _ask(lambda: (session or requests).get(
             SEARCH, params={"query": name}, headers=HEADERS, timeout=30), name)

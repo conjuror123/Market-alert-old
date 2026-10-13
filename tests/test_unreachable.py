@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import pytest
 import requests
 
-from price_monitor import alpaca, binance, google, marketwatch, sifting, sina, tiingo, yahoo
+from price_monitor import alpaca, binance, marketwatch, sifting, sina, tiingo, yahoo
 from price_monitor.models import ExchangeError, Unreachable
 
 
@@ -36,7 +36,6 @@ CALLS = {
     "sifting": (sifting, lambda s: sifting._get(s, "u", {}, "k", "X")),
     "alpaca": (alpaca, lambda s: alpaca._get(s, "u", {}, {}, "X")),
     "binance": (binance, lambda s: binance._get(s, "X", 0)),
-    "google": (google, lambda s: google.fetch_full_history("TUR", "30min", 1, session=s)),
     "sina global": (sina, lambda s: sina.fetch_bars("X", s)),
     "sina us": (sina, lambda s: sina.fetch_us_bars("X", s)),
     "marketwatch": (marketwatch, lambda s: marketwatch.fetch_hourly("X", s)),

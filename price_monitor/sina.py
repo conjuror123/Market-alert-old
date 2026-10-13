@@ -1,6 +1,7 @@
 """Sina Finance's bars: the LME's metals and US funds.
 
-THE LME METALS - tin (SND), nickel (NID), aluminium (AHD) - come from the chart
+THE LME METALS - tin (SND), nickel (NID), aluminium (AHD), and copper (CAD) for
+the basket's stage 1 - come from the chart
 endpoint behind Sina's global futures pages (gu.sina.cn GlobalService.getMink,
 type 60): the three-month contract's traded hourly bars, in dollars a tonne,
 with volume. Only the last 1,023 are served - about three months - and nothing
@@ -65,6 +66,63 @@ def parse(text: str, symbol: str, now: datetime | None = None) -> list[Candle]:
 
 
 GLOBAL_URL = "https://gu.sina.cn/ft/api/jsonp.php/var%20t=/GlobalService.getMink"
+
+
+# --- China's own indices: the CSI 300, a voter for the basket's stage 1 --------
+#
+# The A-share market's hourly bars (CN_MarketData.getKLineData, scale 60): the
+# last 1,023, back to 2025-09-12 from 2026-10-09, four a day, labelled by their
+# END in Beijing time on the session's own grid - 10:30, 11:30, 14:00, 15:00.
+# Each is filed under the round hour its last minute falls in, so its close is
+# never earlier than its hour (10:30 lands on 10:00). Against Yahoo's
+# 000300.SS folded onto the hour, 2026-08 to 10: hourly correlation 0.90, 1.3 bp
+# apart at the median.
+CN_URL = "https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData"
+CN_INDICES = {"000300.SS": "sh000300"}
+
+
+def parse_cn(rows: list, symbol: str, now: datetime | None = None) -> list[Candle]:
+    """Hourly candles from one answer of China's market data, ended bars only."""
+    if not isinstance(rows, list):
+        raise ExchangeError(f"{symbol}: Sina's answer has no bars")
+    now_ts = int((now or datetime.now(timezone.utc)).timestamp())
+    out = []
+    for row in rows:
+        end = int(datetime.strptime(row["day"], "%Y-%m-%d %H:%M:%S")
+                  .replace(tzinfo=BEIJING).timestamp())
+        if end > now_ts:
+            continue
+        out.append(Candle(open_time=(end - 1) // 3600 * 3600, open=float(row["open"]),
+                          high=float(row["high"]), low=float(row["low"]),
+                          close=float(row["close"]), volume=0.0, close_time=end))
+    return out
+
+
+def fetch_cn_bars(symbol: str, session: requests.Session | None = None,
+                  now: datetime | None = None) -> list[Candle]:
+    """The last 1,023 hourly bars of a Chinese index (sh000300) that have ended."""
+    last: Exception | None = None
+    for attempt in range(MAX_ATTEMPTS):
+        if attempt:
+            time.sleep(BACKOFF_SECONDS * attempt)
+        try:
+            resp = (session or requests).get(
+                CN_URL, params={"symbol": symbol, "scale": 60, "ma": "no", "datalen": 1023},
+                headers=HEADERS, timeout=30)
+        except requests.RequestException as exc:
+            last = Unreachable(f"{symbol}: {exc}")
+            continue
+        if resp.status_code in (429, 500, 502, 503, 504):
+            last = (Unreachable if resp.status_code >= 500 else ExchangeError)(
+                f"{symbol}: Sina answered {resp.status_code}")
+            continue
+        if resp.status_code != 200:
+            raise ExchangeError(f"{symbol}: Sina answered {resp.status_code}")
+        try:
+            return parse_cn(resp.json(), symbol, now)
+        except ValueError as exc:
+            raise ExchangeError(f"{symbol}: Sina's answer is not JSON") from exc
+    raise last or ExchangeError(f"{symbol}: no response")
 
 
 def fetch_bars(symbol: str, session: requests.Session | None = None,

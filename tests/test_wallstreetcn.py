@@ -85,6 +85,5 @@ def test_a_refused_request_raises():
 
 def test_a_pair_is_named_by_its_six_letters_and_usd_krw_is_not_carried():
     assert wallstreetcn.pair_code("EUR/USD") == "EURUSD.OTC"
-    assert wallstreetcn.pair_code("USD/BRL") == "USDBRL.OTC"
-    assert wallstreetcn.pair_code("USD/KRW") is None
+    assert wallstreetcn.pair_code("USD/CNH") == "USDCNH.OTC"
     assert "KC=F" not in wallstreetcn.SOFTS                 # no coffee

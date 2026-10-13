@@ -37,14 +37,18 @@ BLOCK_MIN_MEMBERS = 2
 #
 # `provider` is who actually answers the request, and that CAN change: see
 # docs/manual.md, "Data in", for the current split. It defaults
-# to `source`, which is why the crypto rows need no provider line.
-SOURCES = ("twelvedata", "binance", "yahoo", "sina")
+# to `source`, which is why the crypto rows need no provider line. Gold's and
+# silver's stores began with SiftingIO (stage 1), so they are named for it; the
+# Bund's, the gilt's, TTF's and Japan's yield with MarketWatch (2026-10-13).
+SOURCES = ("twelvedata", "binance", "yahoo", "sina", "sifting", "marketwatch")
 
 # Who can be asked for bars. Wider than SOURCES because a provider may serve an
 # instrument whose history came from somewhere else.
-PROVIDERS = ("twelvedata", "binance", "tiingo", "alpaca", "yahoo", "sifting", "google",
-             "sina")
-FETCH_INTERVALS = ("30min", "1h")
+PROVIDERS = ("twelvedata", "binance", "tiingo", "alpaca", "yahoo", "sifting", "sina",
+             "marketwatch")
+FETCH_INTERVALS = ("15min", "30min", "1h")
+# A price (empty), or a yield moving in basis points.
+UNITS = ("", "bp")
 
 
 class BasketConfigError(ValueError):
@@ -71,6 +75,18 @@ class Asset:
     # Who is asked for the bars. Defaults to `source` when the configuration
     # does not say otherwise.
     provider: str = ""
+    # The name a message leads with where the ticker is only one vendor's
+    # (Yahoo's ^N225 is NI225 elsewhere): the index's own name. Defaults to the
+    # ticker.
+    display: str = ""
+    # "bp" for a yield (Japan's 10-year): its move is the yield's change, not a
+    # log return, and a message gives it in basis points. Empty: a price.
+    unit: str = ""
+
+    @property
+    def shown_as(self) -> str:
+        """The name a message leads with: `display`, or the ticker."""
+        return self.display or self.ticker
 
     @property
     def fetched_from(self) -> str:
@@ -165,6 +181,9 @@ def _asset(raw: dict, *, in_basket: bool) -> Asset:
             f"is not one of {list(FETCH_INTERVALS)}")
     if not isinstance(raw["has_volume"], bool):
         raise BasketConfigError(f"{raw['ticker']}: has_volume must be true or false")
+    if raw.get("unit", "") not in UNITS:
+        raise BasketConfigError(
+            f"{raw['ticker']}: unit '{raw['unit']}' is not one of {list(UNITS)}")
     if not isinstance(raw["tick_size"], (int, float)) or raw["tick_size"] <= 0:
         raise BasketConfigError(
             f"{raw['ticker']}: tick_size must be a positive number, "
@@ -175,7 +194,8 @@ def _asset(raw: dict, *, in_basket: bool) -> Asset:
         session_template=raw["session_template"], fetch_interval=raw["fetch_interval"],
         tick_size=float(raw["tick_size"]),
         label=raw.get("label", raw["ticker"]), in_basket=in_basket,
-        provider=raw.get("provider", ""),
+        provider=raw.get("provider", ""), display=raw.get("display", ""),
+        unit=raw.get("unit", ""),
     )
 
 

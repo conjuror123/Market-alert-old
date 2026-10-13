@@ -7,8 +7,7 @@ THE HOURLY PATH asks each instrument only for what it can be missing: the walk
 starts at its newest stored bar minus three hours, and an instrument whose market
 has been shut since that bar is not asked at all (see nothing_can_have_appeared).
 Providers are chosen per instrument by `provider` in config/basket.yaml (Tiingo,
-Alpaca, Twelve Data, Yahoo, Sina, SiftingIO, Binance, Google Finance for TUR;
-docs/manual.md, "Data in"), and only Twelve Data is paced, because only its free
+Alpaca, Twelve Data, Yahoo, Sina, SiftingIO, Binance; docs/manual.md, "Data in"), and only Twelve Data is paced, because only its free
 tier enforces a per-minute limit. After the fetch, the other sources vote on
 the far moves (jump.verify).
 
@@ -43,8 +42,8 @@ from jump import atomic, bars, cboe, corporate_actions, fred, futures, quality, 
 from jump import sessions as _sessions
 from jump.basket import Asset, Basket, load_basket
 from jump.usage import Usage
-from price_monitor import (alpaca, binance, dukascopy, google, sifting, sina,
-                           tiingo, twelvedata, wallstreetcn, yahoo)
+from price_monitor import (alpaca, binance, dukascopy, marketwatch, sifting, sina, tiingo,
+                           twelvedata, wallstreetcn, yahoo)
 from price_monitor.models import UNANSWERED_IN_A_ROW, ExchangeError, KeyRefused, Unreachable
 from price_monitor.notifier import quote, send_health
 
@@ -64,7 +63,7 @@ TWELVEDATA_DELAY_SECONDS = 8.0
 # per trading day, so 300 days is ~3900 rows against a ceiling of 5000. Hourly
 # currency pairs give 24 rows a day, and there the client's own, more cautious
 # default applies.
-CHUNK_DAYS = {"30min": 300, "1h": 150}
+CHUNK_DAYS = {"15min": 59, "30min": 300, "1h": 150}
 
 # How far back each provider will answer, by interval. The archive providers
 # page backwards without a wall and are absent on purpose; the two recent-end
@@ -309,6 +308,17 @@ def fetch_missing(asset: Asset, path: str, since: date, api_key: str,
             symbol=asset.ticker, interval=asset.fetch_interval, days=days,
             base_url=YAHOO_BASE_URL, session=session, end=end,
         )
+    elif provider == "marketwatch":
+        # Its last nine trading days, whatever `days` asks: the Bund's and the
+        # gilt's from the contract the store holds, and only since the session
+        # it became front (as Yahoo's contracts, above).
+        held = futures.front_contract(asset.ticker, now.date()) \
+            if asset.ticker in marketwatch.CONTRACTS else None
+        candles = marketwatch.fetch_hourly(
+            marketwatch.store_key(asset.ticker, held[0] if held else None), session, now)
+        if held:
+            floor = _sessions.daily_session_open(held[1], asset.session_template)
+            candles = [c for c in candles if c.open_time >= floor]
     elif provider == "alpaca":
         # IEX, live: the half-hour bars of the hours since the newest stored one.
         stop = end or now
@@ -323,12 +333,6 @@ def fetch_missing(asset: Asset, path: str, since: date, api_key: str,
     elif provider == "sina" and asset.session_template == "lme":
         # An LME metal: its last 1,023 hourly bars, about three months.
         candles = sina.fetch_bars(asset.ticker, session, url=sina.GLOBAL_URL)
-    elif provider == "google":
-        # The latest session, whatever `days` asks: the page holds no more.
-        candles = google.fetch_full_history(
-            symbol=asset.ticker, interval=asset.fetch_interval, days=days,
-            session=session, end=end,
-        )
     else:
         raise ExchangeError(f"{asset.asset_id}: unknown provider '{provider}'")
 
@@ -905,8 +909,10 @@ ALIGNMENT_MIN_HOURS = 200
 ALIGNMENT_MAX_MEDIAN_BP = 25.0
 
 
-def verify_alignment(minutes: "pd.DataFrame", stored: "pd.DataFrame") -> dict:
-    """Checks re-derived bars against the ones already held, over their overlap.
+def verify_alignment(minutes: "pd.DataFrame", stored: "pd.DataFrame",
+                     min_hours: int = 0) -> dict:
+    """Checks re-derived bars against the ones already held, over their overlap
+    (at least ALIGNMENT_MIN_HOURS of it, or `min_hours` where a caller asks fewer).
 
     The overlap is the hours both hold, which the store can already price
     independently. The years being imported have no second opinion at all,
@@ -919,7 +925,7 @@ def verify_alignment(minutes: "pd.DataFrame", stored: "pd.DataFrame") -> dict:
     stored = stored[~bars.removed(stored).to_numpy()]
     joined = hourly.merge(stored[["hour_utc", "close"]], on="hour_utc",
                           how="inner", suffixes=("_new", "_stored"))
-    if len(joined) < ALIGNMENT_MIN_HOURS:
+    if len(joined) < (min_hours or ALIGNMENT_MIN_HOURS):
         return {"hours": len(joined), "correlation": float("nan"),
                 "median_bp": float("nan"), "ok": False,
                 "why": f"only {len(joined)} overlapping hours"}
@@ -955,11 +961,6 @@ def verify_alignment(minutes: "pd.DataFrame", stored: "pd.DataFrame") -> dict:
             "why": "; ".join(reasons), "worst": worst}
 
 
-# A fund's ticker before a rename, for the history sources that file the years
-# before it under the old name (probed 2026-10-02): Alpaca serves CIU 2016 to
-# 2018-07 and CRED 2016 on. Only ever a candidate: the history it brings is written only if it
-# passes the same overlap gate against the stored bars as any other source.
-FORMER_TICKERS = {"IGIB": "CIU", "USIG": "CRED"}
 
 
 # How far back a repair reaches: Yahoo's 30-minute bars, a day short of their
@@ -1097,8 +1098,7 @@ def deepen_from_alpaca(asset: Asset, path: str, since: date, auth: dict,
 
     end = min(oldest + timedelta(days=ALPACA_OVERLAP_DAYS),
               datetime.now(timezone.utc) - timedelta(minutes=20))
-    candles = alpaca.fetch_history(FORMER_TICKERS.get(asset.ticker, asset.ticker),
-                                   start, end, auth, session)
+    candles = alpaca.fetch_history(asset.ticker, start, end, auth, session)
     if not candles:
         return {"skipped": "Alpaca returned nothing", "added": 0}
 
@@ -1181,7 +1181,103 @@ def deepen_from_wallstreetcn(asset: Asset, path: str, session: requests.Session,
             "left_out": [f"{day(h):%Y-%m-%d %H:%M}" for h in frame.loc[off, "hour_utc"]]}
 
 
+
+# A MARKET ABROAD FROM YAHOO (sessions.EXCHANGES): its last 58 days at its own
+# interval - 30 minutes, 15 for Nifty's quarter-hour grid - folded onto the round
+# hour as the hourly fetch stores them, and before them Yahoo's hourly bars, about
+# two years back. An hourly bar on the round hour is the folded one exactly
+# (Tokyo's and London's over 2026-08 to 10: correlation 1.0000, 0 bp); one on the
+# half or quarter hour is half an hour off it, and is taken only where it passes
+# the import gate against the folded bars (verify_alignment).
+YAHOO_RECENT_DAYS = yahoo.MAX_LOOKBACK_DAYS["30min"] - 1
+
+
+def yahoo_hours_by_end(candles: "list", template: str) -> list:
+    """Yahoo's hourly bars, each filed under the round UTC hour its last minute
+    falls in, its end capped at its session's close: a bar starting on the round
+    hour keeps its own hour, one starting on the half hour (Shanghai's 09:30,
+    Nifty's 09:15) takes the next - never an hour before its own close."""
+    from price_monitor.models import Candle
+
+    out = []
+    for c in candles:
+        day = _sessions.daily_session_of(c.open_time // 3600 * 3600, template)
+        if day is None:
+            continue
+        end = min(c.open_time + 3600, _sessions.daily_session_close(day, template))
+        out.append(Candle(open_time=(end - 1) // 3600 * 3600, open=c.open, high=c.high,
+                          low=c.low, close=c.close, volume=c.volume, close_time=end))
+    return out
+
+
+def deepen_from_yahoo(asset: Asset, path: str, session: "requests.Session | None",
+                      now: datetime | None = None) -> dict:
+    """A market abroad's history from Yahoo: the last 58 days folded, and before
+    them the hourly bars (yahoo_hours_by_end) where, over those 58 days, they
+    agree with the folded ones; otherwise the 58 days alone. Only its session's
+    hours are taken."""
+    if asset.fetched_from != "yahoo" or not _sessions.is_exchange_template(
+            asset.session_template):
+        return {"skipped": "not a market abroad from Yahoo", "added": 0}
+    now = now or datetime.now(timezone.utc)
+    recent = yahoo.fetch_full_history(asset.ticker, asset.fetch_interval,
+                                      days=YAHOO_RECENT_DAYS, base_url=YAHOO_BASE_URL,
+                                      session=session, end=now)
+    folded = bars.to_hourly(bars.candles_to_frame(recent))
+    if folded.empty:
+        return {"skipped": "Yahoo returned nothing", "added": 0}
+    hourly = yahoo.fetch_full_history(asset.ticker, "1h",
+                                      days=yahoo.MAX_LOOKBACK_DAYS["1h"] - 1,
+                                      base_url=YAHOO_BASE_URL, session=session, end=now)
+    filed = bars.to_hourly(bars.candles_to_frame(
+        yahoo_hours_by_end(hourly, asset.session_template)))
+    # The funds' 200 hours are about 29 of their sessions; a five-hour market
+    # (Taipei, Riyadh) holds about 185 in Yahoo's 59 days of half-hour bars, and is
+    # asked the same 29 sessions instead.
+    from jump import jumps
+    check = verify_alignment(filed, folded, min_hours=min(
+        ALIGNMENT_MIN_HOURS, 29 * jumps.bars_per_day(asset.session_template)))
+    older = (filed[filed["hour_utc"] < int(folded["hour_utc"].min())] if check["ok"]
+             else filed.iloc[0:0])
+    frame = pd.concat([older, folded], ignore_index=True)
+    frame = frame[quality.in_session(asset, frame["hour_utc"]).to_numpy(bool)]
+    added = bars.merge(path, frame)
+    day = lambda h: datetime.fromtimestamp(int(h), tz=timezone.utc).date()  # noqa: E731
+    return {"skipped": None, "added": added, "older": len(older), "check": check,
+            "from": day(frame["hour_utc"].min()), "to": day(frame["hour_utc"].max())}
+
 def main(argv: list[str] | None = None) -> int:
+    """One run, its calls counted (jump.usage) whatever way it ends, and added to
+    the run's usage file when the workflow names one."""
+    usage = Usage()
+    try:
+        return _main(argv, usage)
+    finally:
+        record_usage(usage)
+
+
+def record_usage(usage: Usage, now: "datetime | None" = None) -> None:
+    """Add the run's count to its usage file (USAGE_FILE), and say on the health
+    chat what that newly crossed (jump.usage.warnings). Never fails the run."""
+    from jump import usage as usage_mod
+
+    if not os.environ.get(usage_mod.USAGE_FILE_ENV, "").strip():
+        return
+    try:
+        directory = os.path.dirname(os.environ[usage_mod.USAGE_FILE_ENV].strip()) \
+            or usage_mod.USAGE_DIR
+        before = usage_mod.read_all(directory)
+        usage.record(now=now)
+        notes = usage_mod.warnings(before, usage_mod.read_all(directory),
+                                   usage_mod.limits(), now)
+    except Exception as exc:
+        log.warning("usage not recorded - %s", exc)
+        return
+    if notes:
+        send_ops_alert("⚠️ <b>Provider limits</b>\n" + "\n".join(f"• {quote(n)}" for n in notes))
+
+
+def _main(argv: "list[str] | None", usage: Usage) -> int:
     parser = argparse.ArgumentParser(description="Fetch Jump's hourly bars into the store")
     parser.add_argument("--instruments", default="",
                         help="Comma-separated tickers; the whole basket by default")
@@ -1213,10 +1309,19 @@ def main(argv: list[str] | None = None) -> int:
                              "less the openings gone within the hour. Needs no "
                              "key. Overlaps the store and is gated on agreeing "
                              "with it.")
+    parser.add_argument("--deepen-yahoo", action="store_true",
+                        help="the markets abroad's history from Yahoo: 58 days "
+                             "folded onto the hour, and about two years of hourly "
+                             "bars before them where they agree with those. Needs "
+                             "no key.")
     parser.add_argument("--live-pass", action="store_true",
                         help="the ordinary hourly fetch without the VIX, for "
                              "trying a provider change from the backfill "
                              "workflow on a few named instruments")
+    parser.add_argument("--usage-purpose", choices=("fetch", "votes", "manual", "dashboard"),
+                        default=None,
+                        help="what this run's calls are counted as (jump.usage); "
+                             "the hourly pass is fetch, any other mode manual")
     parser.add_argument("--repair", action="store_true",
                         help="fill the named funds' missing hours of the last "
                              "REPAIR_DAYS from Yahoo, gated on agreeing with the "
@@ -1229,6 +1334,10 @@ def main(argv: list[str] | None = None) -> int:
     twelvedata.archive_mode = bool(args.extend_history or args.fill_gaps)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    purpose = args.usage_purpose or ("manual" if (
+        args.extend_history or args.fill_gaps or args.deepen_dukascopy or args.deepen_alpaca
+        or args.deepen_wallstreetcn or args.deepen_yahoo or args.repair or args.live_pass)
+        else "fetch")
     if args.live_pass:
         args.skip_vix = True
     basket = load_basket()
@@ -1245,7 +1354,7 @@ def main(argv: list[str] | None = None) -> int:
             log.error("TWELVEDATA_API_KEY is not set")
             return 2
         table = _sessions.load_sessions()
-        session = requests.Session()
+        session = usage.session(purpose)
         filled = unfilled = 0
         td_spent = False
         for asset in instruments:
@@ -1298,7 +1407,7 @@ def main(argv: list[str] | None = None) -> int:
             log.error("ALPACA_KEY_ID / ALPACA_SECRET_KEY are not set")
             return 2
         auth = alpaca.headers(key, secret)
-        session = requests.Session()
+        session = usage.session(purpose)
         total = 0
         for asset in instruments:
             path = bars.store_path(args.bars_dir, asset.file_stem)
@@ -1333,7 +1442,7 @@ def main(argv: list[str] | None = None) -> int:
         # carries. Run per pair from the workflow - each is a few hundred
         # requests, and a failure part way through then costs one pair rather
         # than all of them.
-        session = requests.Session()
+        session = usage.session(purpose)
         total = 0
         for asset in instruments:
             path = bars.store_path(args.bars_dir, asset.file_stem)
@@ -1358,7 +1467,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.deepen_wallstreetcn:
-        session = requests.Session()
+        session = usage.session(purpose)
         total = 0
         for asset in (a for a in instruments if a.ticker in wallstreetcn.LME):
             path = bars.store_path(args.bars_dir, asset.file_stem)
@@ -1382,12 +1491,36 @@ def main(argv: list[str] | None = None) -> int:
         log.info("Wallstreetcn deepening added %d bars", total)
         return 0
 
+    if args.deepen_yahoo:
+        session = usage.session(purpose)
+        total = 0
+        for asset in (a for a in instruments if a.fetched_from == "yahoo"
+                      and _sessions.is_exchange_template(a.session_template)):
+            path = bars.store_path(args.bars_dir, asset.file_stem)
+            try:
+                out = deepen_from_yahoo(asset, path, session)
+            except Exception as exc:
+                log.error("%s: Yahoo deepening failed - %s", asset.asset_id, exc)
+                continue
+            if out["skipped"]:
+                log.info("%s: skipped (%s)", asset.asset_id, out["skipped"])
+                continue
+            check = out["check"]
+            total += out["added"]
+            log.info("%s: +%d bars from Yahoo (%s .. %s), %d hourly before the folded "
+                     "58 days; their check %d hours, corr %.4f, median %.2fbp%s",
+                     asset.asset_id, out["added"], out["from"], out["to"], out["older"],
+                     check["hours"], check["correlation"], check["median_bp"],
+                     "" if check["ok"] else f" - not taken: {check['why']}")
+        log.info("Yahoo deepening added %d bars", total)
+        return 0
+
     if args.repair:
         if not wanted:
             log.error("--repair needs --instruments: it writes into the store")
             return 2
         table = _sessions.load_sessions()
-        session = requests.Session()
+        session = usage.session(purpose)
         failed = 0
         for asset in instruments:
             path = bars.store_path(args.bars_dir, asset.file_stem)
@@ -1429,8 +1562,7 @@ def main(argv: list[str] | None = None) -> int:
                       PROVIDER_KEYS[provider][0])
     alpaca_gone = False
 
-    usage = Usage()
-    session = usage.session()
+    session = usage.session(purpose)
     # Loaded once. A missing table is not an error here - it only means no
     # instrument can be skipped, which is the safe direction.
     try:
@@ -1490,7 +1622,7 @@ def main(argv: list[str] | None = None) -> int:
             from concurrent.futures import ThreadPoolExecutor
             pool = ThreadPoolExecutor(max_workers=1)
             td_thread = pool.submit(fetch_twelvedata_live, due, args.bars_dir, api_key,
-                                    session=usage.session(),
+                                    session=usage.session(purpose),
                                     recount={a.asset_id: voted(a) for a in due})
             pool.shutdown(wait=False)
 
@@ -1729,12 +1861,17 @@ def main(argv: list[str] | None = None) -> int:
     vote: list[str] = []
     if session_table and not args.instruments and not args.extend_history:
         try:
-            r = verify.verify(basket.instruments, args.bars_dir, session_table, session,
+            r = verify.verify(basket.instruments, args.bars_dir, session_table,
+                              usage.session("votes"),
                               blocked=({"yahoo"} if yahoo_gone else set()) | set(silent))
             for name in (r or {}).get("stopped", []):
                 vote.append(f"{name} stopped for the run (a rate limit, or no answer twice "
                             "in a row): an outage in the vote, left out of the count of the "
                             "moves it is asked about until a later count")
+            for name in (r or {}).get("capped", []):
+                vote.append(f"{name} has spent the votes' share of its allowance "
+                            "(config/provider_limits.csv): an outage in the vote until "
+                            "the share renews")
         except Exception as exc:
             # Not a failed run: an unvoted move is scored, as every move never
             # voted is. Named, though.
@@ -1759,6 +1896,10 @@ def main(argv: list[str] | None = None) -> int:
             dark.append(("VIX", "cboe/fred", str(exc)))
             log.error("VIX: failed - %s", exc)
 
+    if not args.live_pass and not args.instruments:
+        # Twelve Data's own count of the day, once a day (jump.usage): set beside ours.
+        from jump.usage import ask_twelvedata
+        ask_twelvedata(usage, api_key)
     log.info(usage.line())
     text = format_provider_failure(
         dark, tiingo_gone=tiingo_gone, tiingo_skipped=tiingo_skipped,

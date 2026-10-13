@@ -62,9 +62,9 @@ def test_a_yahoo_rate_limit_alone_says_nothing():
 def test_a_stale_instrument_of_a_refusing_yahoo_says_so():
     text = format_provider_failure([], yahoo_gone=True,
                                    stale=[("yahoo:CT=F", "yahoo", 37),
-                                          ("twelvedata:TUR", "google", 15)])
+                                          ("twelvedata:UNG", "twelvedata", 15)])
     assert "• yahoo:CT=F (yahoo, refused this run): 37 session hours" in text
-    assert "• twelvedata:TUR (google): 15 session hours" in text
+    assert "• twelvedata:UNG (twelvedata): 15 session hours" in text
 
 
 def test_ops_alert_uses_the_health_chat_not_the_product_one(monkeypatch):

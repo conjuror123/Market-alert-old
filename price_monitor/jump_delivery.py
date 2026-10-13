@@ -143,11 +143,13 @@ def _open_words(event: dict) -> "tuple[str, str]":
 
 @lru_cache(maxsize=1)
 def _tickers() -> dict:
-    """asset_id -> ticker, from the basket definition, read once per process."""
+    """asset_id -> the name a message leads with (the ticker, or an index's own
+    name: jump.basket.Asset.shown_as), from the basket definition, read once per
+    process."""
     try:
         from jump.basket import load_basket
 
-        return {a.asset_id: a.ticker for a in load_basket().instruments}
+        return {a.asset_id: a.shown_as for a in load_basket().instruments}
     except Exception as exc:                     # pragma: no cover - defensive
         log.warning("Could not read the basket composition: %s", exc)
         return {}
@@ -205,6 +207,26 @@ def _labels() -> dict[str, str]:
     except Exception as exc:                     # pragma: no cover - defensive
         log.warning("Could not read basket labels: %s", exc)
         return {}
+
+
+_UNITS: "dict[str, str] | None" = None
+
+
+def move_text(asset_id: str, move: float) -> str:
+    """A move as a message gives it: a price's in per cent (`+2.03%`), a
+    yield's in basis points (`+9.0 bp`, jump.basket.Asset.unit)."""
+    global _UNITS
+    if _UNITS is None:
+        try:
+            from jump.basket import load_basket
+
+            _UNITS = {a.asset_id: a.unit for a in load_basket().instruments if a.unit}
+        except Exception as exc:                 # pragma: no cover - defensive
+            log.warning("Could not read the basket's units: %s", exc)
+            _UNITS = {}
+    if _UNITS.get(asset_id) == "bp":
+        return f"{move * 100:+.1f} bp"
+    return f"{move * 100:+.2f}%"
 
 
 def _calendar(cfg: Config) -> "economic_calendar.Timeline | None":
@@ -295,9 +317,10 @@ def describe(event: dict, labels: dict[str, str]) -> str:
     label = labels.get(asset_id) or asset_id.split(":")[-1]
     move = _clean(event.get("r"))
     # The ticker leads: it is what the reader types into a chart and the only
-    # name that is the same everywhere. The move shares that line, because it is
+    # name that is the same everywhere - where it is not (Yahoo's ^N225), the
+    # index's own name, which is (jump.basket.Asset.display). The move shares that line, because it is
     # the first thing anyone wants, and its size in σ ends it.
-    shown = f" {move * 100:+.2f}%" if move is not None else ""
+    shown = f" {move_text(asset_id, move)}" if move is not None else ""
     if shown and _overnight(event):
         # The gap is a price move from the last close to the first print, and
         # it is said as one - never as the hour it was scored alongside.
@@ -804,7 +827,7 @@ def ping_line(event: dict, labels: dict[str, str]) -> str:
     emoji = TIER_EMOJI.get(tier, "⚪")
     asset_id = str(event.get("asset_id", ""))
     move = _clean(event.get("r"))
-    shown = f" {move * 100:+.2f}%" if move is not None else ""
+    shown = f" {move_text(asset_id, move)}" if move is not None else ""
     ticker = _ticker(asset_id)
     label = labels.get(asset_id) or ticker
     return (f"{emoji} <b>{_escape(ticker)}</b> · {_escape(label)}"

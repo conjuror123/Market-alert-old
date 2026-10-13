@@ -1,21 +1,21 @@
 # Jump
 
-An hourly Telegram bot that watches 173 market instruments (US funds across equity,
-credit, rates and commodities, futures, LME metals, FX pairs, coins) and writes when one
-moves unusually **for itself**.
+An hourly Telegram bot that watches 62 market instruments (stock indices in their own
+markets' hours, US funds, futures, Japan's 10-year yield, spot gold and silver, LME
+metals, FX pairs, coins) and writes when one moves unusually **for itself**.
 
 A 1.5% hour is nothing for a coin and enormous for short Treasuries, so no shared
 percentage works. Each move is measured against the instrument's own last half-year,
 with the jump test of Lee & Mykland (2008), and the message says how far out it is:
 
 ```
-🟨 LTC/USDT · Litecoin +5.77% · 11.1×σ
-📈 Rarest hour in 16 days (then 11.5×σ)
-🕐 24.09.2026 02:00 UTC · next close 242%
+🟨 KOSPI · South Korea -5.98% · 6.5×σ
+📉 Rarest hour in 2 months (then 8.2×σ)
+🕐 29.07.2026 01:00 UTC · next close 129%
 ```
 
-The colour is the word: ⬜ noticeable at 6σ, 🟨 high at 8.5σ, 🟧 major at 12σ, 🟥 extreme
-at 17σ, each about three times rarer to reach than the one below. `high` and up arrive at once
+The colour is the word: ⬜ noticeable at 4.5σ, 🟨 high at 6.4σ, 🟧 major at 9σ, 🟥 extreme
+at 12.7σ, each about three times rarer to reach than the one below. `high` and up arrive at once
 (about 4 a week); `noticeable` goes into one weekly note (about 10 rows). Every other data
 feed that carries the instrument votes on a far move: one most did not see is marked `❌`
 with each feed's own move and kept out of the statistics, a tie `⚠️` and kept in. It runs entirely on
@@ -42,11 +42,12 @@ Under `detector:` in `config/basket.yaml`:
 ```yaml
 detector:
   window_days: 182.6              # how far back "usual" reaches
-  levels: [6.0, 8.5, 12.0, 17.0]  # noticeable, high, major, extreme, in sigmas
+  levels: [4.5, 6.4, 9.0, 12.7]   # noticeable, high, major, extreme, in sigmas
 ```
 
-The bottom level sets how much you hear: 6 gives about 9 messages a week, 5 about 14,
-3.9 about 26 (the delivery replayed over the year to 2026-10-01). Which words push is `PUSH_TIERS` in `jump/routing.py`. To silence the
+The bottom level sets how much you hear: 4.5 gives about 3.8 pushes and 10.5 note rows a
+week, 3.9 about 7.0 and 15.8, 6 about 1.4 and 3.3 (the stage report's count over the year
+to 2026-10-05). Which words push is `PUSH_TIERS` in `jump/routing.py`. To silence the
 channel without stopping the bot, set `jump_alerts_muted: true` in
 `config/config.yaml`.
 
@@ -58,6 +59,7 @@ channel without stopping the bot, set `jump_alerts_muted: true` in
 | why it is built this way; rejected options; open questions | `docs/decisions.md` |
 | how an agent works on this repository | `CLAUDE.md` |
 | which instruments, in which blocks, from which provider | `config/basket.yaml` (the source of truth) |
+| the new basket: why, and stages 1 and 2 as built | `docs/basket-proposal.md` |
 | run settings: health alerts, the mute, the calendar | `config/config.yaml` |
 | how much history each instrument has | `data/jump/coverage.md` |
 | the detector | `jump/jumps.py` |
@@ -65,3 +67,4 @@ channel without stopping the bot, set `jump_alerts_muted: true` in
 | what goes to Telegram | `price_monitor/jump_delivery.py` |
 | the hourly workflow | `.github/workflows/price-monitor.yml` |
 | rates by word and block, the biggest hours | `tools/stage_report.py` |
+| the dashboard: volume, the votes taken again on the voters' bars, and the archive, measured on every code change | `.github/workflows/measure.yml` (`tools/measure.py`, `tools/dashboard.py`), published at https://conjuror123.github.io/Market-alert/ |

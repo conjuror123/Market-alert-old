@@ -12,7 +12,7 @@ half-year BEFORE the reading (their eq. 8):
 Products of neighbouring moves, so a jump in the window never multiplies with
 itself and cannot inflate the yardstick it is later measured against.
 
-THE WORD, from |z|: 6, 8.5, 12, 17 (LEVELS) - about sqrt(2) apart, each about
+THE WORD, from |z|: 4.5, 6.4, 9, 12.7 (LEVELS) - about sqrt(2) apart, each about
 three times rarer to reach than the one below.
 
 THE WINDOW is half a year of calendar time for every instrument (a fund about
@@ -68,7 +68,7 @@ WORDS: tuple[str, ...] = ("noticeable", "high", "major", "extreme")
 WINDOW_DAYS = 182.6          # half a year of calendar time
 # The four words' thresholds on |z|, in half-year sigmas: about sqrt(2) apart,
 # each word about three times rarer to reach than the one below, rounded.
-LEVELS: "tuple[float, ...]" = (6.0, 8.5, 12.0, 17.0)
+LEVELS: "tuple[float, ...]" = (4.5, 6.4, 9.0, 12.7)
 
 # Bars a day, per calendar, for the paper's minimum window.
 BARS_PER_DAY: "dict[str, int]" = {"us_equity": 7, "fx_continuous": 24, "crypto_24_7": 24}
@@ -386,11 +386,16 @@ def matches(hours, z, share: float = RARE_SHARE, bottom: float = LEVELS[0]
 def found_times(scored: pd.DataFrame, template: str) -> np.ndarray:
     """When each reading became judgeable: an hour once it has ended; a fund's
     gap with its first bar, once that bar has ended (the first half-hour, as
-    the bar is stamped on the hour); a currency pair's weekend gap and a
-    daily-session market's night at their open, which is the whole of them."""
+    the bar is stamped on the hour); a stock index's night too, which runs to
+    its first bar's close (jump.returns.split_channels); a currency pair's
+    weekend gap and another daily-session market's night at their open,
+    which is the whole of them."""
+    from jump.sessions import is_exchange_template
+
     hours = scored["hour_utc"].astype("int64").to_numpy()
-    fx_gap = (scored["reading"] != HOUR).to_numpy() & (template != "us_equity")
-    return np.where(fx_gap, hours, hours + 3600)
+    at_open = (scored["reading"] != HOUR).to_numpy() & (template != "us_equity") \
+        & (not is_exchange_template(template))
+    return np.where(at_open, hours, hours + 3600)
 
 
 def ended(scored: pd.DataFrame, template: str, now: int) -> pd.DataFrame:

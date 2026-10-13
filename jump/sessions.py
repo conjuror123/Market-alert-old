@@ -31,9 +31,6 @@ from functools import lru_cache
 
 HOUR = 3600
 DEFAULT_SESSIONS_PATH = os.path.join("data", "jump", "sessions", "nyse.csv")
-# B3's trading days, for USD/BRL's session (b3_fx): built and extended like the
-# NYSE table, one date a row.
-B3_DAYS_PATH = os.path.join("data", "jump", "sessions", "b3.csv")
 
 REFERENCE_OPEN_HOUR = 17   # Sunday, anchor exchange local time
 REFERENCE_CLOSE_HOUR = 17  # Friday
@@ -73,58 +70,46 @@ def generate_nyse_sessions(start: date, end: date) -> list[Session]:
     return sessions
 
 
-def generate_b3_days(start: date, end: date) -> "list[date]":
-    """B3's trading days from the exchange_calendars library (BVMF): the
-    exchange's own holidays, São Paulo's city ones among them, are absent."""
+def generate_exchange_sessions(name: str, start: date, end: date) -> list[Session]:
+    """An exchange's days and hours abroad (EXCHANGES) from the exchange_calendars
+    library: its holidays absent, a changed hour on the day it changed (Tokyo's
+    close 15:00 -> 15:30 on 2024-11-05). Mexico's are New York's 09:30-16:00 in
+    Mexico City's time, as the BMV keeps them since Mexico ended daylight saving
+    in 2022 (the library has them fixed at 08:30-15:00: Yahoo's ^MXX opens at
+    07:30 local from spring to autumn). A close earlier than the year's usual
+    one is a half session. A calendar whose holidays the library knows only so
+    far ahead (Shanghai's and Mumbai's to 2026-12-31: their years are announced
+    one at a time) stops there; past a table's last row its usual week holds
+    until the next extension (trades_on)."""
     import exchange_calendars as xcals  # local import: generation only
+    from exchange_calendars.calendar_utils import _default_calendar_factories
+    from zoneinfo import ZoneInfo
 
-    calendar = xcals.get_calendar("BVMF", start=str(start), end=str(end))
-    return [d.date() for d in calendar.sessions]
-
-
-def write_days(path: str, days: "list[date]") -> None:
-    from jump import atomic
-
-    def _write(tmp: str) -> None:
-        with open(tmp, "w", encoding="utf-8", newline="") as f:
-            f.write("date\n")
-            for d in sorted(days):
-                f.write(d.isoformat() + "\n")
-
-    atomic.write_replacing(path, _write)
-
-
-@lru_cache(maxsize=4)
-def _b3_days(path: str = B3_DAYS_PATH) -> "tuple[frozenset, date | None, date | None]":
-    """(trading days, first, last) of the B3 table; empty without one."""
-    if not os.path.exists(path):
-        return frozenset(), None, None
-    with open(path, "r", encoding="utf-8", newline="") as f:
-        days = frozenset(date.fromisoformat(row["date"]) for row in csv.DictReader(f))
-    return days, min(days, default=None), max(days, default=None)
-
-
-def b3_holiday(day: date, path: str = B3_DAYS_PATH) -> bool:
-    """A weekday B3 is shut, inside the table's span. Outside it nothing is
-    known, and the day counts as open, as before the table."""
-    days, first, last = _b3_days(path)
-    return first is not None and first <= day <= last and day.weekday() < 5 \
-        and day not in days
-
-
-def extend_b3_days(path: str = B3_DAYS_PATH, until: "date | None" = None,
-                   generate=None) -> int:
-    """Appends B3's trading days after the table's last row through `until`;
-    the rows already there stay as they are (the NYSE table's rule)."""
-    days, _, last = _b3_days(path)
-    if last is None or until is None or last >= until:
-        return 0
-    new = [d for d in (generate or generate_b3_days)(last + timedelta(days=1), until)
-           if d > last]
-    if new:
-        write_days(path, list(days) + new)
-        _b3_days.cache_clear()
-    return len(new)
+    code, zone = EXCHANGES[name]
+    factory = _default_calendar_factories[code]
+    if factory.bound_max() is not None:
+        end = min(end, factory.bound_max().date())
+    if factory.bound_min() is not None:                 # Riyadh's from 2021
+        start = max(start, factory.bound_min().date())
+    if end < start:
+        return []
+    calendar = xcals.get_calendar(code, start=str(start), end=str(end))
+    tz, ny = ZoneInfo(zone), ZoneInfo(EXCHANGE_TZ)
+    rows = []
+    for day, row in calendar.schedule.iterrows():
+        if name == "mexico_city":
+            opened = datetime.combine(day.date(), time(9, 30), tzinfo=ny).astimezone(tz)
+            closed = datetime.combine(day.date(), time(16, 0), tzinfo=ny).astimezone(tz)
+        else:
+            opened, closed = row["open"].tz_convert(zone), row["close"].tz_convert(zone)
+            closed = closed + timedelta(minutes=CLOSING_AUCTION_MINUTES.get(name, 0))
+        rows.append((day.date(), opened.strftime("%H:%M"), closed.strftime("%H:%M")))
+    usual = {}
+    for year in {d.year for d, _, _ in rows}:
+        closes = [c for d, _, c in rows if d.year == year]
+        usual[year] = max(set(closes), key=closes.count)
+    return [Session(day=d, local_open=o, local_close=c, is_early_close=c < usual[d.year])
+            for d, o, c in rows]
 
 
 def write_sessions(path: str, sessions: list[Session]) -> None:
@@ -377,15 +362,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--extend-if-short", action="store_true",
                         help="append the coming years when under two remain "
                              "(append-only; what the hourly workflow runs)")
+    parser.add_argument("--exchanges", action="store_true",
+                        help="write the tables of the markets abroad (EXCHANGES), from "
+                             "--start to the NYSE table's last day")
     args = parser.parse_args(argv)
 
     if args.extend_if_short:
         added = extend_sessions(args.out)
         print(f"{args.out}: {added} trading days appended" if added
               else f"{args.out}: reaches far enough, nothing appended")
-        # B3's table to the same last year as the NYSE's.
-        b3 = extend_b3_days(until=max(load_sessions(args.out)))
-        print(f"{B3_DAYS_PATH}: {b3} trading days appended")
+        # The markets abroad to the same last day as the NYSE's.
+        until = max(load_sessions(args.out))
+        for name in EXCHANGES:
+            n = extend_exchange_table(name, until)
+            print(f"{exchange_table_path(name)}: {n} trading days appended")
+        return 0
+
+    if args.exchanges:
+        until = max(load_sessions(args.out))
+        for name in EXCHANGES:
+            table = generate_exchange_sessions(name, date.fromisoformat(args.start), until)
+            write_sessions(exchange_table_path(name), table)
+            print(f"{exchange_table_path(name)}: {len(table)} trading days, "
+                  f"{table[0].day} .. {table[-1].day}")
+        _exchange_table.cache_clear()
         return 0
 
     sessions = generate_nyse_sessions(date.fromisoformat(args.start),
@@ -397,11 +397,6 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":
-    import sys
-
-    sys.exit(main())
-
 
 # DAILY SESSIONS: a market that opens and closes once a trading day (Monday to
 # Friday) at fixed local times. An hour (by its opening moment) is in the session
@@ -409,32 +404,152 @@ if __name__ == "__main__":
 # is later than its close starts the evening before: cotton's Monday runs from
 # Sunday 21:00 New York. Holidays are not listed: the source has no bars on them,
 # so the close before one is simply longer, and its gap is judged with the other
-# closes of that length (jump.jumps.gap_kinds). Except b3_fx's: SiftingIO quotes
-# USD/BRL on B3's holidays too - flat, or thin offshore quotes moving up to 23 bp
-# an hour against 14 bp on a trading day (2019-09 to 2026-10) - so B3's trading
-# days are listed (B3_DAYS_PATH) and its holidays are outside the session.
+# closes of that length (jump.jumps.gap_kinds).
 #
 #   lme          tin, nickel and aluminium on LMEselect, 01:00-19:00 London
 #   ice_coffee   ICE arabica, 04:15-13:30 New York
 #   ice_cocoa    ICE cocoa, 04:45-13:30 New York
 #   ice_cotton   ICE cotton No. 2, 21:00-14:20 New York
 #   cme_cattle   CME live cattle, 08:30-13:05 Chicago
-#   b3_fx        the Brazilian real, 09:00-18:00 Sao Paulo: on a whole session
-#                of hourly bars, 94-98% of the hours from 12:00 to 21:00 UTC move
-#                and carry 9-31 bp each, the rest under 3.5 bp - the offshore
-#                quote before the onshore market opens
+#   nymex_globex Brent and platinum on Globex, 18:00-17:00 New York: the hour's
+#                pause is their night
+#   cbot_rates   the Treasuries on Globex, 17:00-16:00 Chicago
+#   cbot_grains  corn, wheat and soybeans, 19:00-13:20 Chicago; the pause from
+#                07:45 to 08:30 falls inside the session, within two hours
+#   ice_sugar    ICE sugar No. 11, 03:30-13:00 New York
+#   eurex_bund   the Euro-Bund future, 08:00-18:00 Frankfurt: the hours MarketWatch,
+#                its live source, serves (Eurex trades 01:10-22:00)
+#   ice_gilt     ICE's long gilt future, 08:00-18:00 London: the hours its history
+#                (Dukascopy's CFD) holds; MarketWatch serves 01:00-21:00
+#   ice_endex    ICE Endex's Dutch TTF gas future, 08:00-18:00 Amsterdam
+#   tokyo_bonds  Japan's 10-year government bond yield, 09:00-18:00 Tokyo, the
+#                hours MarketWatch serves it
 DAILY_SESSIONS: "dict[str, tuple[str, tuple[int, int], tuple[int, int]]]" = {
     "lme": ("Europe/London", (1, 0), (19, 0)),
     "ice_coffee": ("America/New_York", (4, 15), (13, 30)),
     "ice_cocoa": ("America/New_York", (4, 45), (13, 30)),
     "ice_cotton": ("America/New_York", (21, 0), (14, 20)),
     "cme_cattle": ("America/Chicago", (8, 30), (13, 5)),
-    "b3_fx": ("America/Sao_Paulo", (9, 0), (18, 0)),
+    "nymex_globex": ("America/New_York", (18, 0), (17, 0)),
+    "cbot_rates": ("America/Chicago", (17, 0), (16, 0)),
+    "cbot_grains": ("America/Chicago", (19, 0), (13, 20)),
+    "ice_sugar": ("America/New_York", (3, 30), (13, 0)),
+    "eurex_bund": ("Europe/Berlin", (8, 0), (18, 0)),
+    "ice_gilt": ("Europe/London", (8, 0), (18, 0)),
+    "ice_endex": ("Europe/Amsterdam", (8, 0), (18, 0)),
+    "tokyo_bonds": ("Asia/Tokyo", (9, 0), (18, 0)),
 }
+
+# THE MARKETS ABROAD: a stock index each, on its own exchange's days and hours,
+# read from a table per exchange (data/jump/sessions/<code>.csv, the NYSE
+# table's format) that exchange_calendars builds and extends with the NYSE's
+# (generate_exchange_sessions). Each table lists the days the market trades and
+# its hours that day, so a holiday is known rather than inferred: a closure of
+# any length between two trading days is a gap - China's Golden Week, Eid in
+# Riyadh - and a trading day with no bars is the source out (previous_trading_day).
+# Tadawul trades Sunday to Thursday. The hours below are a usual day's, used only
+# past a table's last row.
+EXCHANGES: "dict[str, tuple[str, str]]" = {
+    "sydney": ("XASX", "Australia/Sydney"),
+    "tokyo": ("XTKS", "Asia/Tokyo"),
+    "seoul": ("XKRX", "Asia/Seoul"),
+    "taipei": ("XTAI", "Asia/Taipei"),
+    "shanghai": ("XSHG", "Asia/Shanghai"),
+    "hong_kong": ("XHKG", "Asia/Hong_Kong"),
+    "mumbai": ("XBOM", "Asia/Kolkata"),
+    "frankfurt": ("XETR", "Europe/Berlin"),
+    "london": ("XLON", "Europe/London"),
+    "zurich": ("XSWX", "Europe/Zurich"),
+    "istanbul": ("XIST", "Europe/Istanbul"),
+    "riyadh": ("XSAU", "Asia/Riyadh"),
+    "johannesburg": ("XJSE", "Africa/Johannesburg"),
+    "toronto": ("XTSE", "America/Toronto"),
+    "sao_paulo": ("BVMF", "America/Sao_Paulo"),
+    "mexico_city": ("XMEX", "America/Mexico_City"),
+}
+DAILY_SESSIONS.update({
+    "sydney": ("Australia/Sydney", (10, 0), (16, 10)),
+    "tokyo": ("Asia/Tokyo", (9, 0), (15, 30)),
+    "seoul": ("Asia/Seoul", (9, 0), (15, 30)),
+    "taipei": ("Asia/Taipei", (9, 0), (13, 30)),
+    "shanghai": ("Asia/Shanghai", (9, 30), (15, 0)),
+    "hong_kong": ("Asia/Hong_Kong", (9, 30), (16, 10)),
+    "mumbai": ("Asia/Kolkata", (9, 15), (15, 30)),
+    "frankfurt": ("Europe/Berlin", (9, 0), (17, 30)),
+    "london": ("Europe/London", (8, 0), (16, 30)),
+    "zurich": ("Europe/Zurich", (9, 0), (17, 30)),
+    "istanbul": ("Europe/Istanbul", (10, 0), (18, 0)),
+    "riyadh": ("Asia/Riyadh", (10, 0), (15, 0)),
+    "johannesburg": ("Africa/Johannesburg", (9, 0), (17, 0)),
+    "toronto": ("America/Toronto", (9, 30), (16, 0)),
+    "sao_paulo": ("America/Sao_Paulo", (10, 0), (18, 0)),
+    "mexico_city": ("America/Mexico_City", (8, 30), (15, 0)),
+})
+# The days a market is shut every week, where it is not Saturday and Sunday.
+WEEKEND_DAYS: "dict[str, tuple[int, ...]]" = {"riyadh": (4, 5)}
+# A closing auction after the library's close that sets the official close, and
+# that Yahoo serves as a bar of its own: Sydney's and Hong Kong's, 16:00-16:10,
+# a bar at 16:00 on each of the 59 days to 2026-10-09.
+CLOSING_AUCTION_MINUTES: "dict[str, int]" = {"sydney": 10, "hong_kong": 10}
+
+
+def exchange_table_path(name: str) -> str:
+    return os.path.join("data", "jump", "sessions", f"{EXCHANGES[name][0].lower()}.csv")
+
+
+@lru_cache(maxsize=32)
+def _exchange_table(path: str) -> "tuple[dict, date | None, date | None]":
+    """(sessions by day, first, last) of an exchange's table; empty without one."""
+    if not os.path.exists(path):
+        return {}, None, None
+    table = load_sessions(path)
+    return table, min(table, default=None), max(table, default=None)
+
+
+def is_exchange_template(name: str) -> bool:
+    return name in EXCHANGES
+
+
+def trades_on(day: date, name: str) -> bool:
+    """Whether a daily-session market trades on `day`. A market abroad by its
+    table, and past the table's span by its usual week; the rest Monday to
+    Friday."""
+    if name in EXCHANGES:
+        table, first, last = _exchange_table(exchange_table_path(name))
+        if first is not None and first <= day <= last:
+            return day in table
+        return day.weekday() not in WEEKEND_DAYS.get(name, (5, 6))
+    return day.weekday() < 5
+
+
+def previous_trading_day(day: date, name: str) -> "date | None":
+    """The last day before `day` the market traded, within a month."""
+    for back in range(1, 32):
+        if trades_on(day - timedelta(days=back), name):
+            return day - timedelta(days=back)
+    return None
+
+
+def extend_exchange_table(name: str, until: date, generate=None,
+                          path: "str | None" = None) -> int:
+    """Appends an exchange's sessions after its table's last row through
+    `until`; the rows already there stay as they are (the NYSE table's rule)."""
+    path = path or exchange_table_path(name)
+    table, _, last = _exchange_table(path)
+    if last is None or last >= until:
+        return 0
+    new = [s for s in (generate or generate_exchange_sessions)(name, last + timedelta(days=1),
+                                                                until)
+           if s.day > last]
+    if new:
+        write_sessions(path, list(table.values()) + new)
+        _exchange_table.cache_clear()
+    return len(new)
 
 # The longest a daily-session market can be shut: Thursday's close to Tuesday's
 # open over Easter, or a Christmas on a Thursday, about 102 hours. Longer means
 # the source was out, not the market shut, and the move across is not a gap.
+# Not for the markets abroad, whose tables say which days they trade.
 DAILY_CLOSED_MAX_SECONDS = 110 * HOUR
 
 
@@ -443,6 +558,11 @@ def _bounds(day: date, name: str) -> "tuple[datetime, datetime]":
     from zoneinfo import ZoneInfo
 
     zone, (oh, om), (ch, cm) = DAILY_SESSIONS[name]
+    if name in EXCHANGES:
+        session = _exchange_table(exchange_table_path(name))[0].get(day)
+        if session is not None:
+            oh, om = (int(x) for x in session.local_open.split(":"))
+            ch, cm = (int(x) for x in session.local_close.split(":"))
     tz = ZoneInfo(zone)
     opened_on = day - timedelta(days=1) if (oh, om) > (ch, cm) else day
     return (datetime.combine(opened_on, time(oh, om), tzinfo=tz),
@@ -456,9 +576,7 @@ def daily_session_of(hour_utc: int, name: str) -> "date | None":
     start = datetime.fromtimestamp(int(hour_utc), ZoneInfo(DAILY_SESSIONS[name][0]))
     end = start + timedelta(hours=1)
     for day in (start.date(), start.date() + timedelta(days=1)):
-        if day.weekday() >= 5:
-            continue
-        if name == "b3_fx" and b3_holiday(day):
+        if not trades_on(day, name):
             continue
         opened, closed = _bounds(day, name)
         if start < closed and end > opened:
@@ -494,9 +612,9 @@ def last_close(template: str, now: int) -> "int | None":
         from zoneinfo import ZoneInfo
 
         today = datetime.fromtimestamp(int(now), ZoneInfo(DAILY_SESSIONS[template][0])).date()
-        for back in range(10):
+        for back in range(32):
             day = today - timedelta(days=back)
-            if day.weekday() >= 5 or (template == "b3_fx" and b3_holiday(day)):
+            if not trades_on(day, template):
                 continue
             close = daily_session_close(day, template)
             if close <= now:
@@ -535,3 +653,9 @@ def hours_mask(hours_utc, template: str) -> "pd.Series":
 def is_calendar_template(template: str) -> bool:
     """A template whose sessions are computed here (a daily session)."""
     return template in DAILY_SESSIONS
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main())

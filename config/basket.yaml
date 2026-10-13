@@ -54,7 +54,7 @@ fetch_since: "2002-01-01"
 #   the one below; the bottom sets the volume (docs/decisions.md, "The detector").
 detector:
   window_days: 182.6
-  levels: [6.0, 8.5, 12.0, 17.0]
+  levels: [4.5, 6.4, 9.0, 12.7]
 
 # Session templates: here only the names the assets refer to; the calendars
 # are in jump/sessions.py and data/jump/sessions/.
@@ -93,10 +93,106 @@ session_templates:
     exchange: CME
     tz: America/Chicago
     description: "08:30-13:05 Chicago on weekdays"
-  b3_fx:
-    exchange: B3
+  nymex_globex:
+    exchange: NYMEX
+    tz: America/New_York
+    description: "18:00-17:00 New York on Globex, the session opening the evening before"
+  cbot_rates:
+    exchange: CBOT
+    tz: America/Chicago
+    description: "17:00-16:00 Chicago on Globex, the session opening the evening before"
+  cbot_grains:
+    exchange: CBOT
+    tz: America/Chicago
+    description: "19:00-13:20 Chicago, the session opening the evening before"
+  ice_sugar:
+    exchange: ICE US
+    tz: America/New_York
+    description: "03:30-13:00 New York on weekdays"
+  eurex_bund:
+    exchange: Eurex
+    tz: Europe/Berlin
+    description: "08:00-18:00 Frankfurt on weekdays, the hours MarketWatch serves"
+  ice_gilt:
+    exchange: ICE Futures Europe
+    tz: Europe/London
+    description: "08:00-18:00 London on weekdays, the hours its history holds"
+  ice_endex:
+    exchange: ICE Endex
+    tz: Europe/Amsterdam
+    description: "08:00-18:00 Amsterdam on weekdays"
+  tokyo_bonds:
+    exchange: Japan's bond market
+    tz: Asia/Tokyo
+    description: "09:00-18:00 Tokyo on weekdays, the hours MarketWatch serves the yield"
+  # The stock markets abroad (jump/sessions.py EXCHANGES): each day's hours from
+  # its exchange's own calendar (data/jump/sessions/<code>.csv, from
+  # exchange_calendars), so a holiday or a half day is the exchange's; nominal
+  # hours here.
+  sydney:
+    exchange: XASX
+    tz: Australia/Sydney
+    description: "10:00-16:10 Sydney, the close's auction included"
+  tokyo:
+    exchange: XTKS
+    tz: Asia/Tokyo
+    description: "09:00-15:30 Tokyo (15:00 before 2024-11-05)"
+  seoul:
+    exchange: XKRX
+    tz: Asia/Seoul
+    description: "09:00-15:30 Seoul"
+  taipei:
+    exchange: XTAI
+    tz: Asia/Taipei
+    description: "09:00-13:30 Taipei"
+  shanghai:
+    exchange: XSHG
+    tz: Asia/Shanghai
+    description: "09:30-15:00 Shanghai"
+  hong_kong:
+    exchange: XHKG
+    tz: Asia/Hong_Kong
+    description: "09:30-16:10 Hong Kong, the close's auction included"
+  mumbai:
+    exchange: XBOM
+    tz: Asia/Kolkata
+    description: "09:15-15:30 Mumbai"
+  frankfurt:
+    exchange: XETR
+    tz: Europe/Berlin
+    description: "09:00-17:30 Frankfurt (Xetra's calendar, for the Euro Stoxx 50)"
+  london:
+    exchange: XLON
+    tz: Europe/London
+    description: "08:00-16:30 London"
+  zurich:
+    exchange: XSWX
+    tz: Europe/Zurich
+    description: "09:00-17:30 Zurich"
+  istanbul:
+    exchange: XIST
+    tz: Europe/Istanbul
+    description: "10:00-18:00 Istanbul"
+  riyadh:
+    exchange: XSAU
+    tz: Asia/Riyadh
+    description: "10:00-15:00 Riyadh, Sunday to Thursday"
+  johannesburg:
+    exchange: XJSE
+    tz: Africa/Johannesburg
+    description: "09:00-17:00 Johannesburg"
+  toronto:
+    exchange: XTSE
+    tz: America/Toronto
+    description: "09:30-16:00 Toronto"
+  sao_paulo:
+    exchange: BVMF
     tz: America/Sao_Paulo
-    description: "09:00-18:00 Sao Paulo on weekdays, the onshore dollar market"
+    description: "10:00-18:00 Sao Paulo by its calendar; Yahoo's bars end at 17:00"
+  mexico_city:
+    exchange: XMEX
+    tz: America/Mexico_City
+    description: "09:30-16:00 New York's clock"
 
 # tick_size is the exchange price step, stated rather than measured: a source
 # serves ETF prices with a floating tail (769.53992 for 769.54). The bar gate
@@ -113,18 +209,20 @@ session_templates:
 #
 # WHAT THIS COSTS, HOURLY - each quota kept under about 85%, so tests and
 # backfills have room (docs/manual.md, "Running it"):
-#   Tiingo       27 IEX-safe funds, of its 50 requests an hour;
-#   Alpaca       30 more IEX-safe funds, free IEX bars, 30 of 200 a minute,
-#                and the consolidated tape's vote on every fund;
-#   Twelve Data  8 thin funds that need the consolidated tape - one batched
-#                request a run (its 8 credits a minute), in a thread beside the
-#                other providers;
-#   SiftingIO    the 17 FX pairs, ~85% of 10,000 a month;
-#   Sina, Yahoo  the remaining 67 funds, alternating within each block so an
-#                outage of either leaves every block reporting;
-#   Google TUR; Sina the LME metals; Yahoo 4 futures; Binance the 16 coins;
+#   Tiingo       10 IEX-safe funds, of its 50 requests an hour;
+#   Alpaca       the consolidated tape's vote on every fund;
+#   Twelve Data  1 thin fund that needs the consolidated tape (UNG) - one
+#                request a run (1 of its 8 credits a minute), in a thread beside
+#                the other providers;
+#   SiftingIO    the 7 FX pairs and spot gold and silver, about 4,600 of 10,000
+#                a month;
+#   Yahoo        the 16 stock indices, 13 futures and 1 fund - at most 30
+#                requests a run;
+#   Sina         the LME's 4 metals;
+#   Binance      the 4 coins;
 #   the vote     at most 40 sources a run across Yahoo, Sina, MarketWatch,
-#                Alpaca's tape, Wallstreetcn, Coinbase and Kraken (jump.verify).
+#                Alpaca's tape, Wallstreetcn, the FT, Coinbase and Kraken
+#                (jump.verify).
 # Instruments whose market is shut are not asked
 # (jump.backfill.nothing_can_have_appeared).
 #
@@ -138,7 +236,7 @@ session_templates:
 # Twelve Data keeps the archive and serves --fill-gaps and --extend-history.
 assets:
   # --- equity ----------------------------------------------------------------
-  # US and developed-market equity, the eleven GICS sectors first.
+  # US equity: four sectors, then the broad market.
   - ticker: XLK
     source: twelvedata
     provider: tiingo
@@ -157,24 +255,6 @@ assets:
     session_template: us_equity
     fetch_interval: 30min
     label: "Financial sector"
-  - ticker: XLY
-    source: twelvedata
-    provider: tiingo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Consumer discretionary sector"
-  - ticker: XLP
-    source: twelvedata
-    provider: tiingo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Consumer staples sector"
   - ticker: XLE
     source: twelvedata
     provider: tiingo
@@ -193,51 +273,6 @@ assets:
     session_template: us_equity
     fetch_interval: 30min
     label: "Health care sector"
-  - ticker: XLI
-    source: twelvedata
-    provider: tiingo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Industrial sector"
-  - ticker: XLB
-    source: twelvedata
-    provider: tiingo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Materials sector"
-  - ticker: XLU
-    source: twelvedata
-    provider: tiingo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Utilities sector"
-  - ticker: XLRE
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Real estate sector"
-  - ticker: XLC
-    source: twelvedata
-    provider: tiingo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Communication services sector"
   - ticker: SPY
     source: twelvedata
     provider: tiingo
@@ -247,15 +282,6 @@ assets:
     session_template: us_equity
     fetch_interval: 30min
     label: "S&P 500"
-  - ticker: QQQ
-    source: twelvedata
-    provider: tiingo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Nasdaq 100"
   - ticker: IWM
     source: twelvedata
     provider: tiingo
@@ -265,71 +291,218 @@ assets:
     session_template: us_equity
     fetch_interval: 30min
     label: "Russell 2000 (small caps)"
-  - ticker: EFA
-    source: twelvedata
-    provider: tiingo
+  # The stock indices abroad, each in its own exchange's hours and calendar
+  # (jump/sessions.py, EXCHANGES), in the order the day reaches them. Yahoo's bars,
+  # live at 30 minutes (the Nifty at 15) folded onto the round hour; history from
+  # Yahoo's hourly bars where they agree with those, back to 2024-10 - the CSI 300,
+  # BIST 100, TSX and IPC only the last 58 days, their older bars having failed the
+  # import gate (jump.backfill, deepen_from_yahoo). An index has no volume here.
+  # `display` is the name a message leads with, as Yahoo's ticker is Yahoo's
+  # only; `label` the market's place.
+  - ticker: "^AXJO"
+    source: yahoo
     block: equity
-    has_volume: true
+    has_volume: false
     tick_size: 0.01
-    session_template: us_equity
+    session_template: sydney
     fetch_interval: 30min
-    label: "Developed markets outside the US"
-  - ticker: EEM
-    source: twelvedata
-    provider: tiingo
+    display: "ASX 200"
+    label: "Australia"
+  - ticker: "^N225"
+    source: yahoo
     block: equity
-    has_volume: true
+    has_volume: false
     tick_size: 0.01
-    session_template: us_equity
+    session_template: tokyo
     fetch_interval: 30min
-    label: "Emerging markets"
+    display: "Nikkei 225"
+    label: "Japan"
+  - ticker: "^KS11"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: seoul
+    fetch_interval: 30min
+    display: "KOSPI"
+    label: "South Korea"
+  - ticker: "^TWII"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: taipei
+    fetch_interval: 30min
+    display: "TAIEX"
+    label: "Taiwan"
+  - ticker: "000300.SS"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: shanghai
+    fetch_interval: 30min
+    display: "CSI 300"
+    label: "China"
+  - ticker: "^HSI"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: hong_kong
+    fetch_interval: 30min
+    display: "Hang Seng"
+    label: "Hong Kong"
+  - ticker: "^NSEI"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: mumbai
+    fetch_interval: 15min
+    display: "Nifty 50"
+    label: "India"
+  - ticker: "^STOXX50E"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: frankfurt
+    fetch_interval: 30min
+    display: "Euro Stoxx 50"
+    label: "Euro area"
+  - ticker: "^FTSE"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: london
+    fetch_interval: 30min
+    display: "FTSE 100"
+    label: "UK"
+  - ticker: "^SSMI"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: zurich
+    fetch_interval: 30min
+    display: "SMI"
+    label: "Switzerland"
+  - ticker: "XU100.IS"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: istanbul
+    fetch_interval: 30min
+    display: "BIST 100"
+    label: "Turkey"
+  - ticker: "^TASI.SR"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: riyadh
+    fetch_interval: 30min
+    display: "Tadawul"
+    label: "Saudi Arabia"
+  - ticker: "^J200.JO"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: johannesburg
+    fetch_interval: 30min
+    display: "JSE Top 40"
+    label: "South Africa"
+  - ticker: "^GSPTSE"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: toronto
+    fetch_interval: 30min
+    display: "TSX"
+    label: "Canada"
+  - ticker: "^BVSP"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: sao_paulo
+    fetch_interval: 30min
+    display: "Bovespa"
+    label: "Brazil"
+  - ticker: "^MXX"
+    source: yahoo
+    block: equity
+    has_volume: false
+    tick_size: 0.01
+    session_template: mexico_city
+    fetch_interval: 30min
+    display: "IPC"
+    label: "Mexico"
   # --- rates -----------------------------------------------------------------
-  # US Treasuries by maturity, plus the two government-backed sectors.
-  - ticker: SHY
-    source: twelvedata
-    provider: tiingo
+  # US Treasuries by maturity - the 2-, 10- and 30-year futures, live from Yahoo
+  # one contract at a time (jump/futures.py) - and inflation-protected; the
+  # Bund and the long gilt, live from MarketWatch one contract at a time, and
+  # Japan's 10-year yield, all without volume.
+  - ticker: ZT=F
+    source: yahoo
     block: rates
     has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Treasuries 1-3 years"
-  - ticker: IEI
-    source: twelvedata
-    provider: tiingo
+    tick_size: 0.00390625
+    session_template: cbot_rates
+    fetch_interval: 1h
+    label: "2-year Treasury note (CBOT)"
+  - ticker: ZN=F
+    source: yahoo
     block: rates
     has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Treasuries 3-7 years"
-  - ticker: IEF
-    source: twelvedata
-    provider: tiingo
+    tick_size: 0.015625
+    session_template: cbot_rates
+    fetch_interval: 1h
+    label: "10-year Treasury note (CBOT)"
+  - ticker: ZB=F
+    source: yahoo
     block: rates
     has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Treasuries 7-10 years"
-  - ticker: TLH
-    source: twelvedata
-    provider: tiingo
+    tick_size: 0.03125
+    session_template: cbot_rates
+    fetch_interval: 1h
+    label: "30-year Treasury bond (CBOT)"
+  - ticker: FGBL=F
+    source: marketwatch
     block: rates
-    has_volume: true
+    has_volume: false
     tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Treasuries 10-20 years"
-  - ticker: TLT
-    source: twelvedata
-    provider: tiingo
+    session_template: eurex_bund
+    fetch_interval: 1h
+    display: "Bund"
+    label: "German 10-year Bund (Eurex)"
+  - ticker: RLI=F
+    source: marketwatch
     block: rates
-    has_volume: true
+    has_volume: false
     tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Treasuries 20+ years"
+    session_template: ice_gilt
+    fetch_interval: 1h
+    display: "Gilt"
+    label: "UK long gilt (ICE)"
+  # Japan's 10-year government bond yield, live from MarketWatch: no free source
+  # carries the JGB future (2026-10-13). A yield, so its move is read and shown in
+  # basis points (unit: bp).
+  - ticker: JP10Y
+    source: marketwatch
+    block: rates
+    has_volume: false
+    tick_size: 0.0001
+    session_template: tokyo_bonds
+    fetch_interval: 1h
+    unit: bp
+    display: "JGB 10Y"
+    label: "Japan 10-year government bond yield"
   - ticker: TIP
     source: twelvedata
     provider: tiingo
@@ -339,15 +512,6 @@ assets:
     session_template: us_equity
     fetch_interval: 30min
     label: "Inflation-protected Treasuries"
-  - ticker: MBB
-    source: twelvedata
-    provider: tiingo
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Mortgage-backed securities"
   # --- credit ----------------------------------------------------------------
   # Corporate and sovereign credit risk, from investment grade down.
   - ticker: LQD
@@ -368,15 +532,6 @@ assets:
     session_template: us_equity
     fetch_interval: 30min
     label: "High-yield corporate bonds"
-  - ticker: JNK
-    source: twelvedata
-    provider: tiingo
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "High-yield corporate bonds (second index)"
   - ticker: EMB
     source: twelvedata
     provider: tiingo
@@ -386,53 +541,18 @@ assets:
     session_template: us_equity
     fetch_interval: 30min
     label: "Emerging-market sovereign bonds in dollars"
-  - ticker: BKLN
-    source: twelvedata
-    provider: yahoo
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Senior bank loans"
-  - ticker: PFF
-    source: twelvedata
-    provider: tiingo
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Preferred shares"
   # --- energy ----------------------------------------------------------------
-  # The energy complex.
-  - ticker: USO
-    source: twelvedata
-    provider: twelvedata
+  # The energy complex: Brent's futures, live from Yahoo one contract at a time
+  # (jump/futures.py), and natural gas - America's fund and Europe's TTF, live
+  # from MarketWatch's continuous series without volume.
+  - ticker: BZ=F
+    source: yahoo
     block: energy
     has_volume: true
     tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "WTI crude oil"
-  - ticker: BNO
-    source: twelvedata
-    provider: yahoo
-    block: energy
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Brent crude oil"
-  - ticker: UGA
-    source: twelvedata
-    provider: sina
-    block: energy
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Gasoline"
+    session_template: nymex_globex
+    fetch_interval: 1h
+    label: "Brent crude (NYMEX)"
   - ticker: UNG
     source: twelvedata
     provider: twelvedata
@@ -443,68 +563,50 @@ assets:
     fetch_interval: 30min
     label: "Natural gas"
   # --- precious_metals -------------------------------------------------------
-  # Precious metals.
-  - ticker: GLD
-    source: twelvedata
-    provider: twelvedata
+  # Precious metals. Spot gold and silver round the clock on the pairs' week, from
+  # SiftingIO's commodities endpoint over Dukascopy's history from 2003; platinum's
+  # futures live from Yahoo one contract at a time (jump/futures.py).
+  - ticker: TFM=F
+    source: marketwatch
+    block: energy
+    has_volume: false
+    tick_size: 0.005
+    session_template: ice_endex
+    fetch_interval: 1h
+    display: "TTF"
+    label: "Dutch TTF natural gas (ICE Endex)"
+  - ticker: XAU/USD
+    source: sifting
     block: precious_metals
-    has_volume: true
+    has_volume: false
     tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
+    session_template: fx_continuous
+    fetch_interval: 1h
     label: "Gold"
-  - ticker: SLV
-    source: twelvedata
-    provider: twelvedata
+  - ticker: XAG/USD
+    source: sifting
     block: precious_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
+    has_volume: false
+    tick_size: 0.0001
+    session_template: fx_continuous
+    fetch_interval: 1h
     label: "Silver"
-  - ticker: PPLT
-    source: twelvedata
-    provider: yahoo
+  - ticker: PL=F
+    source: yahoo
     block: precious_metals
     has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Platinum"
-  - ticker: PALL
-    source: twelvedata
-    provider: sina
-    block: precious_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Palladium"
+    tick_size: 0.1
+    session_template: nymex_globex
+    fetch_interval: 1h
+    label: "Platinum (NYMEX)"
   # --- industrial_metals -----------------------------------------------------
   # Industrial metals.
-  - ticker: DBB
-    source: twelvedata
-    provider: yahoo
-    block: industrial_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Base metals (aluminium, zinc, copper)"
-  - ticker: CPER
-    source: twelvedata
-    provider: twelvedata
-    block: industrial_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Copper"
-  # The LME's metals themselves - the ETNs (JJN, JJU, JJT) are delisted: the
-  # three-month contract's traded hourly bars from Sina (price_monitor/sina.py),
-  # in dollars a tonne, on LMEselect's hours. Sina serves only the last 1,023
-  # bars; below them, Wallstreetcn's from 2026-04-22
-  # (price_monitor/wallstreetcn.py). Ticks are the LME's.
+  # The LME's metals themselves - the ETNs (JJN, JJU, JJT) are delisted, and
+  # copper is the LME's own price, not CPER's: the three-month contract's traded
+  # hourly bars from Sina (price_monitor/sina.py), in dollars a tonne, on
+  # LMEselect's hours. Sina serves only the last 1,023 bars; below them,
+  # Wallstreetcn's from 2026-04-22 (price_monitor/wallstreetcn.py). Ticks are the
+  # LME's.
   - ticker: SND
     source: sina
     block: industrial_metals
@@ -529,44 +631,95 @@ assets:
     session_template: lme
     fetch_interval: 1h
     label: "Aluminium (LME)"
-  # --- agriculture -----------------------------------------------------------
-  # Agricultural commodities.
-  - ticker: DBA
-    source: twelvedata
-    provider: twelvedata
-    block: agriculture
+  - ticker: CAD
+    source: sina
+    block: industrial_metals
     has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Broad agriculture"
-  - ticker: CORN
-    source: twelvedata
-    provider: twelvedata
-    block: agriculture
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Corn"
-  - ticker: WEAT
+    tick_size: 0.5
+    session_template: lme
+    fetch_interval: 1h
+    label: "Copper (LME)"
+  - ticker: REMX
     source: twelvedata
     provider: yahoo
-    block: agriculture
+    block: industrial_metals
     has_volume: true
     tick_size: 0.01
     session_template: us_equity
     fetch_interval: 30min
-    label: "Wheat"
-  - ticker: SOYB
-    source: twelvedata
-    provider: sina
+    label: "Rare earths"
+  # --- agriculture -----------------------------------------------------------
+  # Agricultural commodities: CBOT's corn, wheat and soybeans and ICE's sugar,
+  # live from Yahoo one contract at a time (jump/futures.py).
+  - ticker: ZC=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 0.25
+    session_template: cbot_grains
+    fetch_interval: 1h
+    label: "Corn (CBOT)"
+  - ticker: ZW=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 0.25
+    session_template: cbot_grains
+    fetch_interval: 1h
+    label: "Wheat (CBOT)"
+  - ticker: ZS=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 0.25
+    session_template: cbot_grains
+    fetch_interval: 1h
+    label: "Soybeans (CBOT)"
+  - ticker: SB=F
+    source: yahoo
     block: agriculture
     has_volume: true
     tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Soybeans"
+    session_template: ice_sugar
+    fetch_interval: 1h
+    label: "Sugar No. 11 (ICE)"
+  # Futures, live from Yahoo. History: coffee, cocoa and cotton from Dukascopy's
+  # single-contract CFDs (2018), live cattle from Yahoo (2024-05). Each in its
+  # exchange's session; a
+  # roll's jump is left unscored and a bar too thin to be a trade dropped
+  # (jump/futures.py). Prices in the contract's own unit.
+  - ticker: KC=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 0.05
+    session_template: ice_coffee
+    fetch_interval: 1h
+    label: "Coffee (ICE)"
+  - ticker: CC=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 1.0
+    session_template: ice_cocoa
+    fetch_interval: 1h
+    label: "Cocoa (ICE)"
+  - ticker: CT=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 0.01
+    session_template: ice_cotton
+    fetch_interval: 1h
+    label: "Cotton (ICE)"
+  - ticker: LE=F
+    source: yahoo
+    block: agriculture
+    has_volume: true
+    tick_size: 0.025
+    session_template: cme_cattle
+    fetch_interval: 1h
+    label: "Live cattle (CME)"
   # --- FX --------------------------------------------------------------------
   # Major currency pairs, all quoted against the dollar.
   - ticker: EUR/USD
@@ -605,15 +758,6 @@ assets:
     session_template: fx_continuous
     fetch_interval: 1h
     label: "Australian dollar"
-  - ticker: NZD/USD
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.00001
-    session_template: fx_continuous
-    fetch_interval: 1h
-    label: "New Zealand dollar"
   - ticker: USD/CHF
     source: twelvedata
     provider: sifting
@@ -668,981 +812,6 @@ assets:
     session_template: crypto_24_7
     fetch_interval: 1h
     label: "Solana"
-  - ticker: LTC/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.01
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Litecoin"
-  - ticker: BCH/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.1
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Bitcoin Cash"
-  - ticker: LINK/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.001
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Chainlink"
-  - ticker: ADA/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.0001
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Cardano"
-  - ticker: DOGE/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.00001
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Dogecoin"
-  - ticker: AVAX/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.001
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Avalanche"
-  # Futures, live from Yahoo. History: coffee, cocoa and cotton from Dukascopy's
-  # single-contract CFDs (2018), live cattle from Yahoo (2024-05). Each in its
-  # exchange's session; a
-  # roll's jump is left unscored and a bar too thin to be a trade dropped
-  # (jump/futures.py). Prices in the contract's own unit.
-  - ticker: KC=F
-    source: yahoo
-    block: agriculture
-    has_volume: true
-    tick_size: 0.05
-    session_template: ice_coffee
-    fetch_interval: 1h
-    label: "Coffee (ICE)"
-  - ticker: CC=F
-    source: yahoo
-    block: agriculture
-    has_volume: true
-    tick_size: 1.0
-    session_template: ice_cocoa
-    fetch_interval: 1h
-    label: "Cocoa (ICE)"
-  - ticker: CT=F
-    source: yahoo
-    block: agriculture
-    has_volume: true
-    tick_size: 0.01
-    session_template: ice_cotton
-    fetch_interval: 1h
-    label: "Cotton (ICE)"
-  - ticker: LE=F
-    source: yahoo
-    block: agriculture
-    has_volume: true
-    tick_size: 0.025
-    session_template: cme_cattle
-    fetch_interval: 1h
-    label: "Live cattle (CME)"
-  # The Brazilian real on its own session (sessions.b3_fx): live from SiftingIO,
-  # history from Twelve Data (2019-09), whose hourly closes sit 1.5 bp
-  # (median) from SiftingIO's against 9-31 bp of an hour's move.
-  - ticker: USD/BRL
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.0001
-    session_template: b3_fx
-    fetch_interval: 1h
-    label: "Brazilian real"
-  # --- further funds, by block -------------------------------------------------
-  # History from Twelve Data (2020-02 on) and HF Data's consolidated tape before
-  # it. TUR is on Google Finance's quote page, the one feed whose hourly closes
-  # match the tape on it (price_monitor/google.py); RWX on Yahoo, which matches
-  # the tape but lacks 3% of its hours, skipped as holes.
-  - ticker: KRE
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Regional banks"
-  - ticker: XRT
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US retail"
-  - ticker: ITB
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US homebuilders"
-  - ticker: IYT
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US transportation"
-  - ticker: XME
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US metals & mining"
-  - ticker: XBI
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US biotech"
-  - ticker: XPH
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US pharmaceuticals"
-  - ticker: IHI
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US medical devices"
-  - ticker: VDC
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US consumer staples (Vanguard)"
-  - ticker: VHT
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US health care (Vanguard)"
-  - ticker: VPU
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US utilities (Vanguard)"
-  - ticker: SMH
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Semiconductors (VanEck)"
-  - ticker: SOXX
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Semiconductors (iShares)"
-  - ticker: IGV
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US software"
-  - ticker: FDN
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US internet"
-  - ticker: CIBR
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Cybersecurity"
-  - ticker: SKYY
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Cloud computing"
-  - ticker: DIA
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Dow Jones Industrial Average"
-  - ticker: RSP
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "S&P 500 equal weight"
-  - ticker: MDY
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "S&P mid cap 400"
-  - ticker: EWJ
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Japan"
-  - ticker: EWG
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Germany"
-  - ticker: EWU
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "United Kingdom"
-  - ticker: EWQ
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "France"
-  - ticker: EWC
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Canada"
-  - ticker: EWA
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Australia"
-  - ticker: EWL
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Switzerland"
-  - ticker: EWN
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Netherlands"
-  - ticker: EZU
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Eurozone"
-  - ticker: FXI
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "China large caps"
-  - ticker: EWZ
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Brazil"
-  - ticker: EWW
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Mexico"
-  - ticker: INDA
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "India"
-  - ticker: EWY
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "South Korea"
-  - ticker: EWT
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Taiwan"
-  - ticker: EZA
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "South Africa"
-  - ticker: TUR
-    source: twelvedata
-    provider: google
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Turkey"
-  - ticker: EPI
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "India earnings"
-  - ticker: VNQ
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US real estate (Vanguard)"
-  - ticker: IYR
-    source: twelvedata
-    provider: alpaca
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US real estate (iShares)"
-  - ticker: RWR
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US REITs (SPDR)"
-  - ticker: SCHH
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US REITs (Schwab)"
-  - ticker: REM
-    source: twelvedata
-    provider: yahoo
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Mortgage REITs"
-  - ticker: VNQI
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "International real estate"
-  - ticker: RWX
-    source: twelvedata
-    provider: sina
-    block: equity
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "International real estate (SPDR)"
-  - ticker: GOVT
-    source: twelvedata
-    provider: alpaca
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US Treasuries, all maturities"
-  - ticker: SCHO
-    source: twelvedata
-    provider: yahoo
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US Treasuries 1-3y (Schwab)"
-  - ticker: VGIT
-    source: twelvedata
-    provider: alpaca
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US Treasuries 3-10y (Vanguard)"
-  - ticker: VGLT
-    source: twelvedata
-    provider: sina
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US Treasuries 10y+ (Vanguard)"
-  - ticker: SPTL
-    source: twelvedata
-    provider: alpaca
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "US Treasuries 10y+ (SPDR)"
-  - ticker: BWX
-    source: twelvedata
-    provider: yahoo
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "International government bonds"
-  - ticker: VTIP
-    source: twelvedata
-    provider: alpaca
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Short TIPS (Vanguard)"
-  - ticker: SCHP
-    source: twelvedata
-    provider: alpaca
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "TIPS (Schwab)"
-  - ticker: STIP
-    source: twelvedata
-    provider: sina
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "TIPS 0-5y (iShares)"
-  - ticker: VMBS
-    source: twelvedata
-    provider: alpaca
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Mortgage-backed (Vanguard)"
-  - ticker: SPMB
-    source: twelvedata
-    provider: yahoo
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Mortgage-backed (SPDR)"
-  - ticker: LMBS
-    source: twelvedata
-    provider: alpaca
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Low-duration mortgage"
-  - ticker: JMBS
-    source: twelvedata
-    provider: sina
-    block: rates
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Mortgage-backed (Janus)"
-  - ticker: VCIT
-    source: twelvedata
-    provider: alpaca
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Intermediate corporate bonds"
-  - ticker: VCSH
-    source: twelvedata
-    provider: alpaca
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Short corporate bonds"
-  - ticker: IGIB
-    source: twelvedata
-    provider: alpaca
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Intermediate IG corporates (iShares)"
-  - ticker: SPIB
-    source: twelvedata
-    provider: alpaca
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Intermediate corporates (SPDR)"
-  - ticker: USIG
-    source: twelvedata
-    provider: alpaca
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Broad IG corporates"
-  - ticker: QLTA
-    source: twelvedata
-    provider: sina
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Aaa-A corporates"
-  - ticker: GIGB
-    source: twelvedata
-    provider: yahoo
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "IG corporates (Goldman)"
-  - ticker: SLQD
-    source: twelvedata
-    provider: sina
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Short IG corporates 0-5y"
-  - ticker: SHYG
-    source: twelvedata
-    provider: yahoo
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Short high yield"
-  - ticker: USHY
-    source: twelvedata
-    provider: alpaca
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Broad high yield"
-  - ticker: ANGL
-    source: twelvedata
-    provider: sina
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Fallen angels"
-  - ticker: SRLN
-    source: twelvedata
-    provider: yahoo
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Senior loans"
-  - ticker: FALN
-    source: twelvedata
-    provider: sina
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Fallen angels (iShares)"
-  - ticker: EMLC
-    source: twelvedata
-    provider: alpaca
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "EM local-currency bonds"
-  - ticker: VWOB
-    source: twelvedata
-    provider: yahoo
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "EM government bonds (Vanguard)"
-  - ticker: PCY
-    source: twelvedata
-    provider: sina
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "EM sovereign bonds"
-  - ticker: EBND
-    source: twelvedata
-    provider: yahoo
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "EM local bonds (SPDR)"
-  - ticker: LEMB
-    source: twelvedata
-    provider: sina
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "EM local bonds (iShares)"
-  - ticker: EMHY
-    source: twelvedata
-    provider: yahoo
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "EM high yield"
-  - ticker: CEMB
-    source: twelvedata
-    provider: sina
-    block: credit
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "EM corporate bonds"
-  - ticker: DBO
-    source: twelvedata
-    provider: yahoo
-    block: energy
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Crude oil (Invesco)"
-  - ticker: DBE
-    source: twelvedata
-    provider: sina
-    block: energy
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Energy basket"
-  - ticker: UNL
-    source: twelvedata
-    provider: yahoo
-    block: energy
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Natural gas 12-month"
-  - ticker: IAU
-    source: twelvedata
-    provider: yahoo
-    block: precious_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Gold (iShares)"
-  - ticker: SGOL
-    source: twelvedata
-    provider: sina
-    block: precious_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Gold (abrdn)"
-  - ticker: SIVR
-    source: twelvedata
-    provider: yahoo
-    block: precious_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Silver (abrdn)"
-  - ticker: GLTR
-    source: twelvedata
-    provider: sina
-    block: precious_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Precious metals basket"
-  - ticker: LIT
-    source: twelvedata
-    provider: sina
-    block: industrial_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Lithium & batteries"
-  - ticker: REMX
-    source: twelvedata
-    provider: yahoo
-    block: industrial_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Rare earths"
-  - ticker: SLX
-    source: twelvedata
-    provider: sina
-    block: industrial_metals
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Steel"
-  - ticker: CANE
-    source: twelvedata
-    provider: yahoo
-    block: agriculture
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Sugar"
-  - ticker: USD/SEK
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.00001
-    session_template: fx_continuous
-    fetch_interval: 1h
-    label: "Swedish krona"
-  - ticker: USD/NOK
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.00001
-    session_template: fx_continuous
-    fetch_interval: 1h
-    label: "Norwegian krone"
-  - ticker: USD/MXN
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.00001
-    session_template: fx_continuous
-    fetch_interval: 1h
-    label: "Mexican peso"
-  - ticker: USD/ZAR
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.00001
-    session_template: fx_continuous
-    fetch_interval: 1h
-    label: "South African rand"
-  - ticker: USD/TRY
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.00001
-    session_template: fx_continuous
-    fetch_interval: 1h
-    label: "Turkish lira"
-  - ticker: USD/PLN
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.00001
-    session_template: fx_continuous
-    fetch_interval: 1h
-    label: "Polish zloty"
-  - ticker: USD/INR
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.0001
-    session_template: fx_continuous
-    fetch_interval: 1h
-    label: "Indian rupee"
-  - ticker: USD/KRW
-    source: twelvedata
-    provider: sifting
-    block: FX
-    has_volume: false
-    tick_size: 0.01
-    session_template: fx_continuous
-    fetch_interval: 1h
-    label: "Korean won"
   - ticker: XRP/USDT
     source: binance
     block: crypto
@@ -1651,68 +820,10 @@ assets:
     session_template: crypto_24_7
     fetch_interval: 1h
     label: "XRP"
-  - ticker: DOT/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.001
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Polkadot"
-  - ticker: POL/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.00001
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Polygon (POL, formerly MATIC)"
-  - ticker: UNI/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.001
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Uniswap"
-  - ticker: ATOM/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.001
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Cosmos"
-  - ticker: FIL/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.0001
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Filecoin"
-  - ticker: AAVE/USDT
-    source: binance
-    block: crypto
-    has_volume: true
-    tick_size: 0.01
-    session_template: crypto_24_7
-    fetch_interval: 1h
-    label: "Aave"
 
 # Instruments outside the basket: scored and delivered like any other, but kept
-# out of the basket's block counts. block is still required.
-outside_basket:
-  # A broad commodity index, about 55% energy: it belongs to no one block.
-  - ticker: DBC
-    source: twelvedata
-    provider: twelvedata
-    block: energy
-    has_volume: true
-    tick_size: 0.01
-    session_template: us_equity
-    fetch_interval: 30min
-    label: "Broad commodity basket"
+# out of the basket's block counts. block is still required. None in stage 1.
+outside_basket: []
 
 # The VIX: FRED's VIXCLS, the index itself from 1990, shown on the weekly note
 # as a level ranked in its own history - the regime the week's moves happened

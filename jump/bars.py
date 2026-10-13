@@ -1,8 +1,8 @@
 """Jump hourly bar store: one directory of shards per instrument - the open
 months as CSV outside git, settled months as CSV, settled years as Parquet.
 
-Why Parquet for the settled years: 173 instruments back to 2003 amount to
-several million bars, read on every run. A typed columnar format reads an order
+Why Parquet for the settled years: the instruments back to 2003 amount to
+millions of bars, read on every run. A typed columnar format reads an order
 of magnitude faster and takes several times less space.
 
 Why sharded rather than one file per instrument: parquet rewrites a file whole,

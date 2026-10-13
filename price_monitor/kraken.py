@@ -2,13 +2,13 @@
 
 WHY. A second independent dollar exchange, keyless and reachable from US
 runners: over the 300 hours to 2026-09-25 its hourly moves correlated
-0.988-1.000 with the stored Binance bars for all 16 coins. It is the third
+0.988-1.000 with the stored Binance bars for all 16 coins of the time. It is the third
 vote, beside the store's and Coinbase's, so one exchange's wick is outvoted.
 
 WHAT IS ASKED. /0/public/OHLC, interval 60: the last 720 hourly candles at
 most, whatever `since` asks for. Each row is [time, open, high, low, close,
 vwap, volume, count], stamped at the start of its hour in UTC. Kraken names
-bitcoin XBT and dogecoin XDG. An hour with no trade comes as a candle of zero
+bitcoin XBT. An hour with no trade comes as a candle of zero
 volume at the last price, which is not a price: it is dropped.
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ STEP = 3600
 REACH_HOURS = 720
 MAX_ATTEMPTS = 3
 BACKOFF_SECONDS = 2.0
-RENAMED = {"BTC": "XBT", "DOGE": "XDG"}
+RENAMED = {"BTC": "XBT"}
 
 
 def pair_for(ticker: str) -> str:

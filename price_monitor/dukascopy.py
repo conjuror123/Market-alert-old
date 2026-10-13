@@ -3,7 +3,7 @@
 WHY THIS EXISTS. No free live plan serves FX history back to 2003. Dukascopy
 serves the seven majors from then - which is what puts the FX history in the
 same era as the ETFs, so 2008 stops being a crisis the basket can only half
-see. It also carries USD/CNH.
+see. It also carries USD/CNH, and spot gold and silver.
 
 NO NODE, NO KEY, NO ACCOUNT. The popular dukascopy-node package is a wrapper
 around these same plain HTTPS files; there is no API behind it. One file holds
@@ -29,7 +29,9 @@ high >= low.
 THE POINT IS NOT THE SAME FOR EVERY PAIR. It is 1e-5 for the five-decimal
 pairs and 1e-3 for the yen ones - measured: in June 2013 USD/JPY's integers run
 94085..100672, which is 94.085..100.672 and not 0.94085. A single scale puts
-the yen a thousand times too low.
+the yen a thousand times too low. Gold and silver count thousandths of a dollar
+too: so read, gold is 4,040-4,450 and silver 57-66 dollars in August 2026, as
+SiftingIO's and Wallstreetcn's bars say.
 
 FILLER BARS ARE NOT DATA. The archive emits a record for EVERY hour of the
 month, including the ones the market was shut: volume 0.0, and open, high, low
@@ -84,9 +86,8 @@ BASE_URL = "https://datafeed.dukascopy.com/datafeed"
 SYMBOLS = {
     "EUR/USD": "EURUSD", "GBP/USD": "GBPUSD", "USD/JPY": "USDJPY",
     "USD/CHF": "USDCHF", "USD/CAD": "USDCAD", "AUD/USD": "AUDUSD",
-    "NZD/USD": "NZDUSD", "USD/CNH": "USDCNH",
-    "USD/SEK": "USDSEK", "USD/NOK": "USDNOK", "USD/MXN": "USDMXN",
-    "USD/ZAR": "USDZAR", "USD/TRY": "USDTRY", "USD/PLN": "USDPLN",
+    "USD/CNH": "USDCNH",
+    "XAU/USD": "XAUUSD", "XAG/USD": "XAGUSD",
 }
 
 # The earliest month each symbol holds a traded hour, probed rather than
@@ -95,12 +96,27 @@ SYMBOLS = {
 FIRST_MONTH = {
     "EURUSD": (2003, 5), "GBPUSD": (2003, 5), "USDJPY": (2003, 5),
     "USDCHF": (2003, 5), "USDCAD": (2003, 8), "AUDUSD": (2003, 8),
-    "NZDUSD": (2003, 8), "USDCNH": (2012, 4),
-    # Probed 2026-09-30. SEK and NOK at June of odd years only (none in 2003,
-    # traded in 2005), so their floor is the last month known to be empty.
-    "USDSEK": (2003, 6), "USDNOK": (2003, 6), "USDMXN": (2007, 3),
-    "USDZAR": (2004, 11), "USDTRY": (2007, 3), "USDPLN": (2007, 3),
+    "USDCNH": (2012, 4),
+    # Probed 2026-10-12; gold read 340-373 and silver 4.35-4.84 dollars that month.
+    "XAUUSD": (2003, 5), "XAGUSD": (2003, 5),
 }
+
+# Stage 2's futures and the Bund and gilt as Dukascopy's CFDs, for their history
+# only (imported once on 2026-10-12 and -13, docs/decisions.md): one contract at a
+# time, each switch once (the Bund's 120.9 points, the gilt's 83.9). Each is
+# the future's own price in thousandths - Brent 99.8 dollars a barrel, the
+# 30-year bond 107.3 points, soybeans 1,311 cents a bushel, platinum 1,700
+# dollars an ounce in 2026-09, Yahoo's contracts' to 0.01%. Its SUGAR.CMD/USD is
+# London's white sugar (521 dollars a tonne), not New York's No. 11; it carries
+# no corn, wheat, 2- or 10-year note.
+CFDS = {"BZ=F": "BRENTCMDUSD", "ZB=F": "USTBONDTRUSD", "ZS=F": "SOYBEANCMDUSX",
+        "PL=F": "XPTCMDUSD", "FGBL=F": "BUNDTREUR", "RLI=F": "UKGILTTRGBP"}
+# Probed 2026-10-12: Brent answered for 2011-01 (2010-01: none), the bond and
+# soybeans for 2018-01 (2017-07: none), platinum from 2021-11; the Bund and the
+# gilt from 2018-05 (2018-04: no trades, 2026-10-13).
+FIRST_MONTH.update({"BRENTCMDUSD": (2011, 1), "USTBONDTRUSD": (2018, 1),
+                    "SOYBEANCMDUSX": (2018, 1), "XPTCMDUSD": (2021, 11),
+                    "BUNDTREUR": (2018, 5), "UKGILTTRGBP": (2018, 5)})
 
 RECORD = struct.Struct(">iiiiif")   # time, open, close, low, high, volume
 RECORD_SIZE = RECORD.size
@@ -109,7 +125,9 @@ SIDES = ("BID", "ASK")
 
 # Integer prices are in units of the instrument's point.
 POINT_DEFAULT = 1e-5
-POINT_JPY = 1e-3
+POINT_THOUSANDTHS = 1e-3
+# Counted in thousandths beside the yen pairs.
+METALS = ("XAUUSD", "XAGUSD")
 
 # Polite spacing between requests, and how hard to retry a 503.
 REQUEST_DELAY_SECONDS = 1.5
@@ -127,7 +145,9 @@ def symbol_for(ticker: str) -> str | None:
 
 def point_for(symbol: str) -> float:
     """The price unit of the archive's integers for this symbol."""
-    return POINT_JPY if symbol.endswith("JPY") else POINT_DEFAULT
+    if symbol.endswith("JPY") or symbol in METALS or symbol in CFDS.values():
+        return POINT_THOUSANDTHS
+    return POINT_DEFAULT
 
 
 def first_month(symbol: str) -> tuple[int, int] | None:
@@ -200,7 +220,8 @@ def _months(start: date, end: date) -> list[tuple[int, int]]:
 def fetch_history(symbol: str, start: date, end: date,
                   session: requests.Session | None = None,
                   base_url: str = BASE_URL,
-                  request_delay_seconds: float = REQUEST_DELAY_SECONDS) -> list[Candle]:
+                  request_delay_seconds: float = REQUEST_DELAY_SECONDS,
+                  tick_volume: bool = False) -> list[Candle]:
     """Every traded hourly bar between `start` and `end`, bid and ask folded
     to the mid.
 
@@ -247,8 +268,11 @@ def fetch_history(symbol: str, start: date, end: date,
                 open=(b[1] + a[1]) / 2.0, high=(b[2] + a[2]) / 2.0,
                 low=(b[3] + a[3]) / 2.0, close=(b[4] + a[4]) / 2.0,
                 # See the module docstring: their volume is a tick-count proxy,
-                # and the pairs already stored carry 0.0.
-                volume=0.0, close_time=stamp + HOUR_SECONDS))
+                # and the pairs already stored carry 0.0. A future's CFD keeps
+                # its bid ticks (`tick_volume`), scaled to contracts by its
+                # importer, so the thin-bar rule reads its history too.
+                volume=float(b[5]) if tick_volume else 0.0,
+                close_time=stamp + HOUR_SECONDS))
             kept += 1
         log.info("%s %d-%02d: %d traded hours kept (%d bid, %d ask rows)",
                  symbol, year, month, kept, len(bid), len(ask))

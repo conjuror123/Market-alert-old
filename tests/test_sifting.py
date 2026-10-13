@@ -64,6 +64,13 @@ def test_the_pages_are_followed_to_the_end():
     assert s.calls[1]["params"]["cursor"] == "abc"
 
 
+def test_gold_and_silver_go_to_the_commodities_endpoint_not_the_forex_one():
+    for ticker, symbol in (("XAU/USD", "XAUUSD"), ("XAG/USD", "XAGUSD")):
+        s = _Session(page([BAR]))
+        sifting.fetch_full_history(ticker, "1h", days=1, api_key="k", session=s)
+        assert s.calls[0]["url"].endswith(f"/hist/commodities/{symbol}/bars")
+
+
 def test_a_fund_goes_to_the_stock_endpoint_at_thirty_minutes():
     s = _Session(page([BAR]))
     sifting.fetch_full_history("SPY", "30min", days=1, api_key="k", session=s)

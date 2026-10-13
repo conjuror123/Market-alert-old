@@ -268,24 +268,6 @@ def _utc(y, m, d, h):
     return int(datetime(y, m, d, h, tzinfo=timezone.utc).timestamp())
 
 
-def test_a_usd_brl_night_opening_exactly_at_the_previous_close_is_not_scored():
-    # USD/BRL keeps B3's session, 09:00-18:00 Sao Paulo (12:00-21:00 UTC), and
-    # is a pair: an open at exactly the previous close is a stitched one, as
-    # on the other pairs' weekends. The next night, which moved, is scored.
-    brl = asset(ticker="USD/BRL", source="twelvedata", block="FX", tick_size=0.0001,
-                session_template="b3_fx", fetch_interval="1h")
-    out = returns.split_channels(brl, frame([
-        (_utc(2025, 11, 17, 19), 5.3000, 5.3020, 5.2990, 5.3010, 0.0, 2),
-        (_utc(2025, 11, 17, 20), 5.3010, 5.3020, 5.2990, 5.3000, 0.0, 2),
-        (_utc(2025, 11, 18, 12), 5.3000, 5.3300, 5.2990, 5.3250, 0.0, 2),
-        (_utc(2025, 11, 18, 20), 5.3250, 5.3260, 5.3240, 5.3250, 0.0, 2),
-        (_utc(2025, 11, 19, 12), 5.3400, 5.3420, 5.3390, 5.3410, 0.0, 2),
-    ]), dividends=dividends(ticker="SPY"))
-    opens = out[out["is_session_open"]].set_index("hour_utc")["gap"]
-    assert np.isnan(opens[_utc(2025, 11, 18, 12)])
-    assert opens[_utc(2025, 11, 19, 12)] == pytest.approx(math.log(5.3400 / 5.3250))
-
-
 def test_crypto_has_no_gap():
     coin = asset(ticker="BTC-USD", source="coinbase", block="crypto",
                  session_template="crypto_24_7", fetch_interval="1h")
@@ -409,3 +391,87 @@ def test_lme_hours_are_one_to_nineteen_london_on_weekdays():
     hours = pd.Series([ldn(2026, 9, 30, 0), ldn(2026, 9, 30, 1), ldn(2026, 9, 30, 18),
                        ldn(2026, 9, 30, 19), ldn(2026, 10, 3, 12)])
     assert list(quality.in_session(nickel(), hours)) == [False, True, True, False, False]
+
+
+# --- a market abroad: the CSI 300 on Shanghai's days ----------------------------
+
+def csi300():
+    return asset(ticker="000300.SS", source="yahoo", block="equity",
+                 has_volume=False, tick_size=0.01, session_template="shanghai",
+                 fetch_interval="1h", label="CSI 300")
+
+
+def cst(y, m, d, h):
+    return int(datetime(y, m, d, h, tzinfo=ZoneInfo("Asia/Shanghai")).timestamp())
+
+
+def test_golden_week_is_a_night_for_shanghai_not_an_outage():
+    # China shut from 2025-10-01 to 10-08: the close of 09-30 to the open of 10-09
+    # is nine days, longer than any closure of the daily markets at home.
+    out = returns.split_channels(csi300(), frame([
+        (cst(2025, 9, 30, 13), 4600, 4610, 4590, 4605, 0.0, 12),
+        (cst(2025, 9, 30, 14), 4605, 4620, 4600, 4615, 0.0, 12),
+        (cst(2025, 10, 9, 9), 4700, 4710, 4690, 4705, 0.0, 12),
+    ]), dividends=dividends(ticker="SPY"))
+    assert out.iloc[2]["gap"] == pytest.approx(math.log(4705 / 4615))
+
+
+def test_an_indexs_night_runs_to_its_first_hours_close():
+    # An index's first value is computed from its stocks' last closes, before
+    # most of them trade: the night's move comes in during the first hour. The
+    # night takes it, and the first hour is no hour of its own.
+    out = returns.split_channels(csi300(), frame([
+        (cst(2025, 9, 29, 13), 4600, 4610, 4590, 4605, 0.0, 12),
+        (cst(2025, 9, 29, 14), 4605, 4620, 4600, 4615, 0.0, 12),
+        (cst(2025, 9, 30, 9), 4615, 4615, 4510, 4520, 0.0, 12),
+        (cst(2025, 9, 30, 10), 4520, 4540, 4515, 4530, 0.0, 12),
+    ]), dividends=dividends(ticker="SPY"))
+    assert out.iloc[2]["gap"] == pytest.approx(math.log(4520 / 4615))
+    assert np.isnan(out.iloc[2]["r"])
+    assert out.iloc[3]["r"] == pytest.approx(math.log(4530 / 4520))
+
+
+def test_a_half_hour_markets_first_bar_filed_by_its_end_still_opens_its_night():
+    # Hang Seng opens at 09:30: Yahoo's hourly history files the bar of
+    # 09:30-10:30 under 10:00, the live 30-minute bars fold the first into
+    # 09:00. Either is the session's first bar, and its night is scored.
+    hsi = asset(ticker="^HSI", source="yahoo", block="equity", has_volume=False,
+                tick_size=0.01, session_template="hong_kong", fetch_interval="30min",
+                label="Hong Kong")
+    hkt = lambda y, m, d, h: int(datetime(y, m, d, h, tzinfo=ZoneInfo("Asia/Hong_Kong")).timestamp())
+    for first in (9, 10):
+        out = returns.split_channels(hsi, frame([
+            (hkt(2025, 4, 3, 15), 22800, 22870, 22790, 22812, 0.0, 12),
+            (hkt(2025, 4, 3, 16), 22812, 22850, 22800, 22850, 0.0, 12),
+            (hkt(2025, 4, 7, first), 22850, 22850, 20500, 20762, 0.0, 12),
+        ]), dividends=dividends(ticker="SPY"))
+        assert out.iloc[2]["gap"] == pytest.approx(math.log(20762 / 22850)), first
+
+
+def test_a_shanghai_night_across_a_missing_trading_day_is_not_scored():
+    # 2025-09-23 traded, and none of its bars is here: Monday's close to
+    # Wednesday's open spans a day of trading, though it is shorter than a weekend.
+    out = returns.split_channels(csi300(), frame([
+        (cst(2025, 9, 22, 14), 4500, 4510, 4490, 4505, 0.0, 12),
+        (cst(2025, 9, 24, 9), 4550, 4560, 4540, 4555, 0.0, 12),
+    ]), dividends=dividends(ticker="SPY"))
+    assert out["gap"].isna().all()
+
+
+def test_a_yields_move_is_its_change_in_points_not_a_log_return():
+    # Japan's 10-year at 3.00% then 3.09%: a move of 0.09 (9 bp) against a log
+    # return of 2.96%. Its first hour of a session from its own open, as a
+    # price's.
+    jgb = asset(ticker="JP10Y", source="marketwatch", block="rates", has_volume=False,
+                tick_size=0.0001, session_template="tokyo_bonds", fetch_interval="1h",
+                unit="bp")
+    tokyo = ZoneInfo("Asia/Tokyo")
+    at = lambda d, h: int(datetime(2026, 10, d, h, tzinfo=tokyo).timestamp())  # noqa: E731
+    bars_ = frame([(at(8, 16), 3.00, 3.00, 3.00, 3.00, 0.0, 1),
+                   (at(8, 17), 3.00, 3.09, 3.00, 3.09, 0.0, 1),
+                   (at(9, 9), 3.10, 3.12, 3.10, 3.12, 0.0, 1)])
+    out = returns.split_channels(jgb, bars_)
+    assert out["r"].tolist()[1:] == pytest.approx([0.09, 0.02])
+    price = returns.split_channels(asset(ticker="X", session_template="tokyo_bonds",
+                                         fetch_interval="1h"), bars_)
+    assert price["r"].iloc[1] == pytest.approx(math.log(3.09 / 3.00))

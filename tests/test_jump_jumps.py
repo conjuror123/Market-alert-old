@@ -86,10 +86,10 @@ def test_a_cut_history_scores_the_shared_hours_the_same():
                                cut["z"].to_numpy()[settled.to_numpy()], rtol=1e-12)
 
 
-def test_the_words_sit_at_exactly_6_8_5_12_and_17():
-    assert jumps.levels() == (6.0, 8.5, 12.0, 17.0)
+def test_the_words_sit_at_exactly_4_5_6_4_9_and_12_7():
+    assert jumps.levels() == (4.5, 6.4, 9.0, 12.7)
     assert jumps.LEVELS == jumps.settings()[1]          # the code's default is the setting
-    words = jumps.word_of([5.99, -6.0, 8.49, 8.5, -11.99, 12.0, 16.99, 17.0, np.nan])
+    words = jumps.word_of([4.49, -4.5, 6.39, 6.4, -8.99, 9.0, 12.69, 12.7, np.nan])
     assert list(words) == [None, "noticeable", "noticeable", "high", "high", "major",
                            "major", "extreme", None]
 
@@ -268,6 +268,16 @@ def test_a_funds_gap_is_found_with_its_first_bar_and_a_pairs_at_its_open():
     assert jumps.ended(pair, "fx_continuous", pair_open)["found_utc"].iloc[0] == pair_open
 
 
+def test_an_indexs_night_is_found_once_its_first_hour_has_ended():
+    # It runs to that hour's close (jump.returns.split_channels); the LME's
+    # night is its open.
+    night = _flags([("2026-03-03 08:00", "night", "noticeable")])
+    opened = int(night["hour_utc"].iloc[0])
+    assert jumps.ended(night, "london", opened).empty
+    assert jumps.ended(night, "london", opened + HOUR)["found_utc"].iloc[0] == opened + HOUR
+    assert jumps.ended(night, "lme", opened)["found_utc"].iloc[0] == opened
+
+
 def test_the_detector_version_ignores_comments_and_follows_the_settings(tmp_path):
     import shutil
 
@@ -293,8 +303,8 @@ def test_the_detector_version_ignores_comments_and_follows_the_settings(tmp_path
                       .replace('label: "Gold"', 'label: "Gold bullion"'))
     assert jumps.detector_version(str(root)) == before
 
-    basket.write_text(basket.read_text().replace("levels: [6.0, 8.5, 12.0, 17.0]",
-                                                 "levels: [6.5, 8.5, 12.0, 17.0]"))
+    basket.write_text(basket.read_text().replace("levels: [4.5, 6.4, 9.0, 12.7]",
+                                                 "levels: [5.0, 6.4, 9.0, 12.7]"))
     assert jumps.detector_version(str(root)) != before
 
 
@@ -468,7 +478,8 @@ def test_an_instrument_that_fails_to_score_keeps_its_last_events(tmp_path, monke
     from jump.basket import load_basket
 
     basket = load_basket()
-    picked = [a for a in basket.instruments if a.ticker in ("SPY", "GLD")]
+    picked = [a for a in basket.instruments if a.ticker in ("SPY", "TIP")]
+    assert len(picked) == 2
     if not all(os.path.exists(os.path.join("data/jump/metrics", f"{a.file_stem}.parquet"))
                for a in picked):
         pytest.skip("needs the derived metrics")
@@ -500,7 +511,8 @@ def test_an_instrument_without_metrics_this_run_keeps_its_last_events(tmp_path, 
     from jump.basket import load_basket
 
     basket = load_basket()
-    picked = [a for a in basket.instruments if a.ticker in ("SPY", "GLD")]
+    picked = [a for a in basket.instruments if a.ticker in ("SPY", "TIP")]
+    assert len(picked) == 2
     if not all(os.path.exists(os.path.join("data/jump/metrics", f"{a.file_stem}.parquet"))
                for a in picked):
         pytest.skip("needs the derived metrics")

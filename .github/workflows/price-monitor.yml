@@ -13,7 +13,7 @@ on:
       # Yahoo's bars agree with the store (jump.backfill --repair). Here and
       # not in the history workflow: only this run may save the open months.
       repair:
-        description: "Funds to repair from Yahoo, comma-separated (e.g. TUR)"
+        description: "Funds to repair from Yahoo, comma-separated (e.g. HYG)"
         required: false
         default: ""
 
@@ -97,6 +97,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: tools/hot_bars.sh restore
 
+      # One-off, removed once the archive holds them: the October hours of the
+      # Bund, the gilt, TTF and Japan's yield, which MarketWatch serves only
+      # about nine trading days back, laid into their open months where the
+      # store lacks them (tools/carry_open_months.py, data/jump/carry).
+      - name: Carry the new instruments' October hours
+        id: carry
+        if: hashFiles('data/jump/carry/*.csv') != ''
+        run: PYTHONPATH=. python -m tools.carry_open_months
+
       # Three steps feed delivery: backfill brings the bars up to date,
       # pipeline turns them into per-asset metrics (the move and the gap), and
       # jumps scores every instrument's whole history and writes the events.
@@ -126,6 +135,8 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_HEALTH_CHAT_ID: ${{ secrets.TELEGRAM_HEALTH_CHAT_ID }}
           REPAIR: ${{ github.event.inputs.repair }}
+          # What the run asks of each provider, by day (jump.usage).
+          USAGE_FILE: data/jump/usage/hourly.csv
         run: |
           stage() { echo "$1 $(date +%s)" >> "$RUNNER_TEMP/jump-stages"; }
           set +e
@@ -223,6 +234,9 @@ jobs:
           # detector leaves the moves voted not real out on every runner, so
           # an uncommitted vote would be a move scored again.
           if [ -f data/jump/verified.csv ]; then git add data/jump/verified.csv; fi
+          # Every run, and small: what each provider was asked, by day
+          # (jump.usage) - the limits are counted against it.
+          if [ -f data/jump/usage/hourly.csv ]; then git add data/jump/usage/hourly.csv; fi
           # Open months live on the release, not in git: once it holds them,
           # any still tracked leave the tree (they stay on disk, gitignored).
           if [ "${{ steps.hot_save.outcome }}" = "success" ]; then

@@ -62,11 +62,11 @@ SPLIT_THRESHOLD = 0.20
 
 REQUEST_DELAY_SECONDS = 8.0
 # Tiingo's free plan: 50 requests an hour, shared with the hourly run, which
-# asks for its 27 funds every hour the NYSE is open or just closed. So the full
+# asks for its funds every hour the NYSE is open or just closed. So the full
 # refresh runs only while the hourly run leaves Tiingo alone - from three hours
 # after a close to the next session's first hour, a night or a weekend
-# (hourly_run_asks_tiingo) - and keeps to 45 an hour itself, room for a retry: 133 funds take about three
-# hours. RateLimited does not retry, so a collision aborts rather than writing a
+# (hourly_run_asks_tiingo) - and keeps to 45 an hour itself, room for a retry:
+# stage 2's 12 funds take about a quarter of an hour. RateLimited does not retry, so a collision aborts rather than writing a
 # truncated table.
 TIINGO_HOURLY_LIMIT = 50
 TIINGO_REQUEST_DELAY_SECONDS = 80.0
@@ -440,6 +440,18 @@ def hourly_run_asks_tiingo(basket, start: datetime, seconds: float, bars_dir: st
 
 
 def main(argv: list[str] | None = None) -> int:
+    """The table refreshed, its calls counted as manual and recorded (jump.usage)."""
+    from jump.backfill import record_usage
+    from jump.usage import Usage
+
+    usage = Usage()
+    try:
+        return _main(argv, usage.session("manual"))
+    finally:
+        record_usage(usage)
+
+
+def _main(argv: "list[str] | None", session: requests.Session) -> int:
     import argparse
 
     from jump import bars
@@ -470,7 +482,6 @@ def main(argv: list[str] | None = None) -> int:
 
     basket = load_basket()
     funds = _funds(basket)
-    session = requests.Session()
 
     if args.add_missing:
         return add_missing_from_yahoo(funds, basket.acquire_since, args.out, session)

@@ -112,7 +112,8 @@ def invalid_reasons(asset: Asset, frame: pd.DataFrame) -> pd.Series:
     reasons[(frame["volume"] < 0) & (reasons == "")] = "volume negative"
 
     from jump import futures
-    if futures.is_continuous(asset.ticker):
+    # A future served without volume (MarketWatch's) has no thin bars to tell.
+    if futures.is_continuous(asset.ticker) and asset.has_volume:
         ordered = frame.sort_values("hour_utc")
         thin = pd.Series(futures.thin(ordered["volume"]), index=ordered.index)
         reasons[thin.reindex(frame.index).to_numpy(dtype=bool) & (reasons == "")] = \

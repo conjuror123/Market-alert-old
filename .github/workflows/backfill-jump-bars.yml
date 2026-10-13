@@ -20,8 +20,9 @@ name: Backfill Jump Bars
 #                   does not; an empty answer confirms the hole is the
 #                   provider's rather than something our fetching skipped
 #   deepen-dukascopy
-#                   fill the currency pairs below what is stored, from
-#                   Dukascopy, which reaches 2003 and also carries USD/CNH.
+#                   fill the currency pairs, gold and silver below what is
+#                   stored, from Dukascopy, which reaches 2003 and also carries
+#                   USD/CNH.
 #                   Needs no key. Run it ONE PAIR AT A TIME via `instruments`:
 #                   a pair is a few hundred requests, and a failure part way
 #                   through then costs one pair rather than all of them
@@ -35,6 +36,9 @@ name: Backfill Jump Bars
 #                   about 170 days back (price_monitor/wallstreetcn.py), less
 #                   the sessions' openings gone within the hour. Needs no key.
 #                   Gated on an overlap with the store, like the others.
+#   deepen-yahoo    the markets abroad (jump/sessions.py EXCHANGES) from Yahoo:
+#                   58 days folded onto the hour, and about two years of hourly
+#                   bars before them where they agree with those. Needs no key.
 #   live-pass       the ordinary hourly fetch (no VIX) for the named
 #                   instruments, to try a provider change before it goes live.
 #                   Name few: Tiingo's 50 an hour are the live run's.
@@ -44,8 +48,8 @@ name: Backfill Jump Bars
 #                   already declared. It must reach at least
 #                   as far back as the bars, or an older payout arrives as an
 #                   unexplained price drop. Nights and weekends only: it takes
-#                   about three hours of Tiingo's 50 an hour, and refuses to
-#                   start while the hourly run is asking Tiingo too. Twelve Data remains a labelled
+#                   about half an hour of Tiingo's 50 an hour (the 23 funds),
+#                   and refuses to start while the hourly run is asking Tiingo. Twelve Data remains a labelled
 #                   fallback (`--source twelvedata`) that cannot see splits.
 #   voter-bars      every live voter's bars of every instrument (or those named),
 #                   35 days, uploaded as the artifact `voter-bars` for a
@@ -71,6 +75,7 @@ on:
           - deepen-dukascopy
           - deepen-alpaca
           - deepen-wallstreetcn
+          - deepen-yahoo
           - live-pass
           - corporate-actions
           - voter-bars
@@ -88,6 +93,10 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
+    # What the walk asks of each provider, by day (jump.usage): its own file,
+    # beside the hourly run's, so the two never commit the same row.
+    env:
+      USAGE_FILE: data/jump/usage/manual.csv
     # A deepening is many sequential requests - Twelve Data's at most 600 a
     # day (ARCHIVE_CREDIT_CAP), Dukascopy's throttled archive - and a partial
     # run is fine because the commit step keeps whatever arrived.
@@ -123,7 +132,8 @@ jobs:
           TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           # Deepening asks each pair's archive source, not SiftingIO, but the
-          # backfill refuses up front a list holding SiftingIO pairs without it.
+          # backfill refuses up front a list holding SiftingIO pairs without it;
+          # a live pass asks it.
           SIFTING_API_KEY: ${{ secrets.SIFTING_API_KEY }}
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}

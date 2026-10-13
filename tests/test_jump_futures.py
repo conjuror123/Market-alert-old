@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -34,6 +34,33 @@ def test_the_live_contract_rolls_before_first_notice_and_skips_october_cotton():
     assert futures.front_contract("ALI=F", date(2026, 10, 2)) is None
 
 
+def test_stage_twos_last_trading_days_follow_each_exchanges_rule():
+    # Brent two months before delivery, sugar the month before, the 10-year seven
+    # business days before its month's last, the grains the business day before
+    # the 15th (soybeans' November 2026: the 15th a Sunday, so Friday the 13th).
+    assert date(2026, 9, 30) in futures.last_trading_days("BZ=F", 2026, 2026)      # BZX26
+    assert date(2026, 10, 30) in futures.last_trading_days("BZ=F", 2026, 2026)     # BZZ26
+    assert date(2026, 9, 30) in futures.last_trading_days("SB=F", 2026, 2026)      # SBV26
+    assert date(2026, 9, 21) in futures.last_trading_days("ZN=F", 2026, 2026)
+    assert date(2026, 9, 30) in futures.last_trading_days("ZT=F", 2026, 2026)
+    assert date(2026, 11, 13) in futures.last_trading_days("ZS=F", 2026, 2026)
+    assert date(2026, 10, 28) in futures.last_trading_days("PL=F", 2026, 2026)
+
+
+def test_stage_twos_contracts_roll_when_yahoos_series_did_in_2026():
+    # Each onto the contract held now on the day Yahoo's own series came onto it;
+    # corn and soybeans before July's first notice, past September (and August).
+    assert futures.front_contract("BZ=F", date(2026, 10, 12)) == ("BZZ26.NYM", date(2026, 9, 28))
+    assert futures.front_contract("ZN=F", date(2026, 10, 12)) == ("ZNZ26.CBT", date(2026, 8, 27))
+    assert futures.front_contract("ZW=F", date(2026, 10, 12)) == ("ZWZ26.CBT", date(2026, 8, 12))
+    assert futures.front_contract("SB=F", date(2026, 10, 12)) == ("SBH27.NYB", date(2026, 9, 9))
+    assert futures.front_contract("PL=F", date(2026, 10, 12)) == ("PLF27.NYM", date(2026, 9, 28))
+    assert futures.front_contract("ZC=F", date(2026, 7, 1))[0] == "ZCZ26.CBT"
+    assert futures.front_contract("ZS=F", date(2026, 7, 1))[0] == "ZSX26.CBT"
+    # Brent holds every month: November until three business days before 09-30.
+    assert futures.front_contract("BZ=F", date(2026, 9, 25))[0] == "BZX26.NYM"
+
+
 def test_both_roll_calendars_leave_their_nights_unscored():
     days = [str(d.date()) for d in pd.bdate_range("2026-08-01", "2026-10-01")]
     rolled = futures.roll_sessions("KC=F", days)
@@ -67,13 +94,6 @@ def test_an_overnight_session_starts_the_evening_before():
     assert sessions.daily_session_of(ny(2026, 3, 2, 14), "ice_cotton") == date(2026, 3, 2)
     assert sessions.daily_session_of(ny(2026, 3, 2, 15), "ice_cotton") is None
     assert sessions.daily_session_of(ny(2026, 3, 6, 21), "ice_cotton") is None   # Friday night
-
-
-def test_the_real_trades_twelve_to_twenty_one_utc():
-    utc = lambda h: int(datetime(2026, 3, 4, h, tzinfo=ZoneInfo("UTC")).timestamp())  # noqa: E731
-    inside = [h for h in range(24) if sessions.daily_session_of(utc(h), "b3_fx")]
-    assert inside == list(range(12, 21))
-    assert sessions.daily_bars_per_day("b3_fx") == 9
 
 
 def _future(ticker="KC=F", template="ice_coffee"):
@@ -142,3 +162,48 @@ def test_a_night_ending_on_a_late_first_bar_is_not_scored():
     late = late[late["hour_utc"] != ny(2026, 3, 4, 4)].reset_index(drop=True)
     out = returns.split_channels(_future(), late, dividends=_dividends())
     assert out["gap"].isna().all()
+
+
+def test_the_ft_names_stage_twos_contracts_as_it_lists_them():
+    from price_monitor import ft
+    assert ft.futures_symbol("ZCZ26.CBT") == "CZ26"
+    assert ft.futures_symbol("ZSX26.CBT") == "SX26"
+    assert ft.futures_symbol("PLF27.NYM") == "US@PLF272"
+    assert ft.futures_symbol("ZNZ26.CBT") is None and ft.futures_symbol(None) is None
+
+
+
+def test_the_bund_gilt_and_ttf_roll_by_their_exchanges_rules():
+    # The Bund's last trading day two business days before the 10th (December
+    # 2026's on Tuesday the 8th), rolled three before it; the gilt's two before
+    # its month's last business day, rolled five before first notice (two before
+    # the month); TTF's the second-last business day of the month before.
+    assert date(2026, 12, 8) in futures.last_trading_days("FGBL=F", 2026, 2026)
+    assert date(2026, 3, 6) in futures.last_trading_days("FGBL=F", 2026, 2026)   # 10th a Tuesday
+    assert futures.front_contract("FGBL=F", date(2026, 12, 3))[0] == "FGBLZ26.EUX"
+    assert futures.front_contract("FGBL=F", date(2026, 12, 4)) == ("FGBLH27.EUX", date(2026, 12, 4))
+    assert date(2026, 12, 29) in futures.last_trading_days("RLI=F", 2026, 2026)
+    assert futures.front_contract("RLI=F", date(2026, 11, 20)) == ("RLIH27.ICE", date(2026, 11, 20))
+    assert date(2026, 10, 29) in futures.last_trading_days("TFM=F", 2026, 2026)   # TFMX26
+    assert futures.front_contract("TFM=F", date(2026, 10, 30))[0] == "TFMZ26.NDX"
+
+
+def test_ttfs_roll_nights_hold_marketwatchs_change_of_month():
+    # MarketWatch's TTF is on the next month from the last trading day itself, and
+    # a session earlier where a holiday moves that day: September 2026's last
+    # traded on 08-27, London's bank holiday on 08-31 counted out, and its value
+    # changed that day. The nights into 08-27, 08-28 and 08-31 are not scored.
+    days = [date(2026, 8, 3) + timedelta(i) for i in range(40)]
+    rolled = futures.roll_sessions("TFM=F", [d for d in days if d.weekday() < 5])
+    assert {"2026-08-27", "2026-08-28", "2026-08-31"} <= rolled
+    assert "2026-08-26" not in rolled
+
+
+def test_a_future_without_volume_has_no_thin_bars():
+    # MarketWatch serves the Bund without volume: every bar a zero, none thin.
+    from jump import quality
+    bund = _future("FGBL=F", "eurex_bund")
+    from dataclasses import replace
+    frame = _frame([120.0] * 61).assign(volume=0.0)
+    assert (quality.invalid_reasons(replace(bund, has_volume=False), frame) == "").all()
+    assert (quality.invalid_reasons(bund, frame) == "volume too thin to be a trade").all()

@@ -49,6 +49,15 @@ def test_the_yen_uses_a_different_point_than_everything_else():
     assert dukascopy.point_for("USDCNH") == 1e-5
 
 
+def test_gold_and_silver_count_thousandths_of_a_dollar():
+    # Gold read 4,040-4,450 and silver 57-66 dollars in August 2026, as SiftingIO
+    # and Wallstreetcn said; at the pairs' point they would read 42 and 0.61.
+    payload = encode([(0, 4203390, 4203410, 4201820, 4208160, 3.0)])
+    rows = dukascopy.parse_month(payload, 2026, 10, dukascopy.point_for("XAUUSD"))
+    assert rows[0][4] == pytest.approx(4203.41)
+    assert dukascopy.point_for("XAGUSD") == 1e-3
+
+
 def test_a_yen_month_decodes_to_a_yen_price():
     payload = encode([(0, 100672, 100500, 100400, 100700, 12.0)])
     rows = dukascopy.parse_month(payload, 2013, 6, dukascopy.point_for("USDJPY"))
@@ -172,6 +181,15 @@ def test_volume_is_stored_as_zero_like_every_other_pair(monkeypatch):
     candles = dukascopy.fetch_history("EURUSD", date(2015, 1, 1), date(2015, 2, 1),
                                       session, request_delay_seconds=0)
     assert candles[0].volume == 0.0
+
+
+def test_a_futures_cfd_keeps_its_bid_ticks_for_the_thin_bar_rule(monkeypatch):
+    monkeypatch.setattr(dukascopy.time, "sleep", lambda *_: None)
+    session = _sides([(0, 120000, 120000, 120000, 120000, 42.0)],
+                     [(0, 120000, 120000, 120000, 120000, 40.0)])
+    candles = dukascopy.fetch_history("BRENTCMDUSD", date(2015, 1, 1), date(2015, 2, 1),
+                                      session, request_delay_seconds=0, tick_volume=True)
+    assert candles[0].volume == 42.0 and candles[0].close == 120.0      # thousandths
 
 
 def test_months_below_the_known_floor_are_not_asked_for(monkeypatch):

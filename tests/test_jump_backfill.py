@@ -609,7 +609,7 @@ def _repair_case(tmp_path, monkeypatch, served_shift=0, served_scale=1.0):
                      c * served_scale, c * served_scale, 90.0, h + served_shift + HOUR)
               for h, c in zip(hours, close)]
     monkeypatch.setattr(backfill.yahoo, "fetch_full_history", lambda *a, **k: served)
-    asset = Asset(ticker="TUR", source="twelvedata", provider="google", block="equity",
+    asset = Asset(ticker="TUR", source="twelvedata", provider="tiingo", block="equity",
                   has_volume=True, tick_size=0.01, session_template="us_equity",
                   fetch_interval="30min", label="TUR", in_basket=True)
     return backfill, asset, str(path), _table(days)
@@ -1486,25 +1486,6 @@ def test_the_fetch_asks_sifting_for_a_sifting_pair(tmp_path, monkeypatch):
     assert seen["symbol"] == "USD/MXN" and seen["api_key"] == "sk"
 
 
-def test_the_fetch_asks_google_for_a_google_fund(tmp_path, monkeypatch):
-    from jump import backfill
-
-    seen = {}
-
-    def fake(**kwargs):
-        seen.update(kwargs)
-        return []
-
-    monkeypatch.setattr(backfill.google, "fetch_full_history", fake)
-    asset = Asset(ticker="TUR", source="twelvedata", provider="google", 
-                  block="equity", has_volume=True, tick_size=0.01,
-                  session_template="us_equity", fetch_interval="30min",
-                  label="TUR", in_basket=True)
-    backfill.fetch_missing(asset, str(tmp_path / "p"), date(2021, 1, 1), "td",
-                           requests.Session())
-    assert seen["symbol"] == "TUR" and seen["interval"] == "30min"
-
-
 # --- Alpaca deepening ---------------------------------------------------------
 
 def _fund():
@@ -2016,6 +1997,34 @@ def test_a_rolled_future_re_asks_its_front_contract_from_the_roll(tmp_path, monk
     assert 22 < seen["days"] < 23                  # back to 2026-09-15's open
 
 
+def test_marketwatch_serves_the_bund_by_its_contract_and_ttf_by_its_series(
+        tmp_path, monkeypatch):
+    # The Bund's bars from the contract the store holds, and none from before
+    # the session it became front; TTF's continuous series as it comes.
+    from jump import backfill
+
+    now = datetime(2026, 12, 7, 12, tzinfo=timezone.utc)
+    asked = []
+    first = int(datetime(2026, 12, 3, 12, tzinfo=timezone.utc).timestamp())
+    served = [Candle(open_time=first + k * 86400, open=1.0, high=1.0, low=1.0, close=1.0,
+                     volume=0.0, close_time=first + k * 86400 + HOUR) for k in range(4)]
+    monkeypatch.setattr(backfill.marketwatch, "fetch_hourly",
+                        lambda key, session=None, now=None: asked.append(key) or served)
+    bund = Asset(ticker="FGBL=F", source="marketwatch", block="rates", has_volume=False,
+                 tick_size=0.01, session_template="eurex_bund", fetch_interval="1h",
+                 label="Bund", in_basket=True)
+    path = tmp_path / "bund"
+    backfill.fetch_missing(bund, str(path), date(2024, 1, 1), "", None, now=now)
+    assert asked == ["FUTURE/DE/XEUR/FGBLH27"]                # front from 2026-12-04
+    assert bars.load(str(path))["hour_utc"].min() == first + 86400
+    ttf = Asset(ticker="TFM=F", source="marketwatch", block="energy", has_volume=False,
+                tick_size=0.005, session_template="ice_endex", fetch_interval="1h",
+                label="TTF", in_basket=True)
+    backfill.fetch_missing(ttf, str(tmp_path / "ttf"), date(2024, 1, 1), "", None, now=now)
+    assert asked[-1] == "FUTURE/UK/NDEX/TFMI00"
+    assert len(bars.load(str(tmp_path / "ttf"))) == 4
+
+
 def test_a_removed_day_is_not_a_gap_for_fill_gaps(tmp_path):
     # The 14 fund days the old vendor shifted (LQD 2006-10-02 among them):
     # deleted, fill-gaps would re-ask Twelve Data for each; removed, the
@@ -2131,3 +2140,106 @@ def test_wallstreetcn_off_the_stores_level_writes_nothing(tmp_path, monkeypatch)
     assert out["added"] == 0 and "median level gap" in out["skipped"]
     assert len(bars.load(path)) == before
     assert backfill.deepen_from_wallstreetcn(asset(), path, None)["skipped"] == "not an LME metal"
+
+
+# --- Yahoo: a market abroad's history (deepen_from_yahoo) -------------------------
+
+def _index(ticker="^N225", template="tokyo", interval="30min"):
+    return Asset(ticker=ticker, source="yahoo", block="equity", has_volume=False,
+                 tick_size=0.01, session_template=template, fetch_interval=interval,
+                 label="Nikkei 225", in_basket=True)
+
+
+def _z(y, m, d, h, mi=0):
+    return int(datetime(y, m, d, h, mi, tzinfo=timezone.utc).timestamp())
+
+
+def test_yahoos_hourly_bars_are_filed_by_the_hour_they_end_in():
+    from jump import backfill
+    bar = lambda t: Candle(t, 1.0, 1.0, 1.0, 1.0, 0.0, t + HOUR)  # noqa: E731
+    # Shanghai, 2026-10-08: 09:30 local (01:30 UTC) ends at 10:30 - the 02:00 hour;
+    # 14:30 ends at the 15:00 close, not 15:30 - the 06:00 hour; 16:00 is shut.
+    got = backfill.yahoo_hours_by_end(
+        [bar(_z(2026, 10, 8, 1, 30)), bar(_z(2026, 10, 8, 6, 30)), bar(_z(2026, 10, 8, 8))],
+        "shanghai")
+    assert [(c.open_time, c.close_time) for c in got] == [
+        (_z(2026, 10, 8, 2), _z(2026, 10, 8, 2, 30)), (_z(2026, 10, 8, 6), _z(2026, 10, 8, 7))]
+    # Tokyo's bars sit on the round hour and keep it; the last ends at 15:30.
+    got = backfill.yahoo_hours_by_end([bar(_z(2026, 10, 8, 6))], "tokyo")
+    assert [(c.open_time, c.close_time) for c in got] == [(_z(2026, 10, 8, 6),
+                                                          _z(2026, 10, 8, 6, 30))]
+
+
+def _tokyo_days(first, days):
+    from jump import sessions
+    hours = []
+    for k in range(days):
+        d = first + timedelta(days=k)
+        hours += [h for h in range(_z(d.year, d.month, d.day, 0), _z(d.year, d.month, d.day, 7), HOUR)
+                  if sessions.daily_session_of(h, "tokyo") == d]
+    return hours
+
+
+def _yahoo_answers(monkeypatch, hourly, halves):
+    from jump import backfill
+    monkeypatch.setattr(backfill.yahoo, "fetch_full_history",
+                        lambda symbol, interval, days, **k: hourly if interval == "1h" else halves)
+
+
+def _halves(hours, closes):
+    out = []
+    for h, c in zip(hours, closes):
+        out += [Candle(h, c, c, c, c, 0.0, h + 1800), Candle(h + 1800, c, c, c, c, 0.0, h + HOUR)]
+    return out
+
+
+def test_yahoos_hourly_years_are_taken_where_they_agree_with_the_folded_days(
+        tmp_path, monkeypatch):
+    from jump import backfill
+    hours = _tokyo_days(date(2026, 6, 1), 120)
+    closes = list(_walk(len(hours), 31, start=40000.0))
+    recent = [i for i, h in enumerate(hours) if h >= hours[-1] - 57 * 86400]
+    _yahoo_answers(monkeypatch, _lme_bars(hours, closes),
+                   _halves([hours[i] for i in recent], [closes[i] for i in recent]))
+    path = str(tmp_path / "yahoo__N225")
+    out = backfill.deepen_from_yahoo(_index(), path, None,
+                                     now=datetime.fromtimestamp(hours[-1] + HOUR, timezone.utc))
+    assert out["skipped"] is None and out["check"]["ok"]
+    assert out["older"] == recent[0] and out["added"] == len(hours)
+    assert set(bars.load(path)["hour_utc"]) == set(hours)
+
+
+def test_yahoos_hourly_years_off_the_folded_days_are_left_out(tmp_path, monkeypatch):
+    from jump import backfill
+    hours = _tokyo_days(date(2026, 6, 1), 120)
+    closes = list(_walk(len(hours), 32, start=40000.0))
+    recent = [i for i, h in enumerate(hours) if h >= hours[-1] - 57 * 86400]
+    other = list(_walk(len(hours), 33, start=40000.0))          # another series
+    _yahoo_answers(monkeypatch, _lme_bars(hours, other),
+                   _halves([hours[i] for i in recent], [closes[i] for i in recent]))
+    path = str(tmp_path / "yahoo__N225")
+    out = backfill.deepen_from_yahoo(_index(), path, None,
+                                     now=datetime.fromtimestamp(hours[-1] + HOUR, timezone.utc))
+    assert not out["check"]["ok"] and out["older"] == 0 and out["added"] == len(recent)
+    assert backfill.deepen_from_yahoo(_nickel(), path, None)["skipped"] == \
+        "not a market abroad from Yahoo"
+
+
+def test_a_five_hour_market_is_asked_the_funds_29_sessions_not_200_hours(
+        tmp_path, monkeypatch):
+    # Taipei trades five hours a day: about 150 hours of overlap here, short of
+    # the funds' 200 but more than its own 29 sessions (145).
+    from jump import backfill, sessions
+    hours = []
+    for k in range(120):
+        d = date(2026, 6, 1) + timedelta(days=k)
+        hours += [h for h in range(_z(d.year, d.month, d.day, 0), _z(d.year, d.month, d.day, 6), HOUR)
+                  if sessions.daily_session_of(h, "taipei") == d]
+    closes = list(_walk(len(hours), 34, start=20000.0))
+    recent = [i for i, h in enumerate(hours) if h >= hours[-1] - 41 * 86400]
+    assert 145 <= len(recent) < 200
+    _yahoo_answers(monkeypatch, _lme_bars(hours, closes),
+                   _halves([hours[i] for i in recent], [closes[i] for i in recent]))
+    out = backfill.deepen_from_yahoo(_index("^TWII", "taipei"), str(tmp_path / "yahoo__TWII"),
+                                     None, now=datetime.fromtimestamp(hours[-1] + HOUR, timezone.utc))
+    assert out["check"]["ok"] and out["older"] == recent[0]

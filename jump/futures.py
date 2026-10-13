@@ -56,11 +56,53 @@ MONTH_CODES = "FGHJKMNQUVXZ"
 #             its last day the series sat on a contract hardly trading
 #             (October 2025 moved +2.2% on 213 contracts, every other flat).
 #   suffix    Yahoo's exchange suffix for a single contract.
+# A contract whose last trading day falls before its delivery month counts it
+# from an earlier month's end (ltd_months: Brent the second month before, sugar
+# the month before), and rolls on business days before it (roll_ltd, in place of
+# roll_back). The grains' last trading day is the business day before the 15th of
+# the delivery month (ltd_day, in place of ltd_back); the Bund's the second
+# business day before the 10th (ltd_day_back).
+#
+# The Bund, the long gilt and TTF (2026-10-13), live from MarketWatch
+# (price_monitor.marketwatch.STORE): the Bund and the gilt one contract at a time,
+# rolled where their volume moves - the Bund three business days before its last
+# trading day, the gilt five before its first notice day (two business days
+# before the delivery month); TTF as MarketWatch's continuous series - only its roll
+# nights are taken from here. That series is on the next month from the last trading
+# day itself (the second-last business day of the month before delivery): its daily
+# value there is already the next month's, a session before Yahoo's TTF=F changes,
+# 2024-26 - and a session earlier still where a holiday moves that day (2026-08-27,
+# before London's bank holiday). So its last day on the expiring month is the business
+# day before (roll_ltd 1), and the nights into that day, the last trading day and the
+# day after are left unscored.
+#
+# Stage 2's (2026-10-12): each held month and roll set where the volume moves -
+# Yahoo's own series came onto the contract held now on the same day: Brent and
+# platinum 09-28 (Brent's November last traded 09-30), the Treasuries 08-27,
+# wheat 08-12, sugar 09-09 (October last traded 09-30). Yahoo's corn and soybeans
+# went from July straight to December and November at July's last trading day,
+# past September (and August); held here the same way, rolled before July's
+# first notice as wheat is before September's.
 SPECS: "dict[str, dict]" = {
     "KC=F": dict(listed="HKNUZ", ltd_back=8, held="HKNUZ", roll_back=12, suffix="NYB"),
     "CC=F": dict(listed="HKNUZ", ltd_back=11, held="HKNUZ", roll_back=15, suffix="NYB"),
     "CT=F": dict(listed="HKNVZ", ltd_back=16, held="HKNZ", roll_back=10, suffix="NYB"),
     "LE=F": dict(listed="GJMQVZ", ltd_back=0, held="GJMQVZ", roll_back=12, suffix="CME"),
+    "BZ=F": dict(listed=MONTH_CODES, ltd_months=2, ltd_back=0, held=MONTH_CODES, roll_ltd=3,
+                 suffix="NYM"),
+    "ZT=F": dict(listed="HMUZ", ltd_back=0, held="HMUZ", roll_back=3, suffix="CBT"),
+    "ZN=F": dict(listed="HMUZ", ltd_back=7, held="HMUZ", roll_back=3, suffix="CBT"),
+    "ZB=F": dict(listed="HMUZ", ltd_back=7, held="HMUZ", roll_back=3, suffix="CBT"),
+    "ZC=F": dict(listed="HKNUZ", ltd_day=15, held="HKNZ", roll_back=14, suffix="CBT"),
+    "ZW=F": dict(listed="HKNUZ", ltd_day=15, held="HKNUZ", roll_back=14, suffix="CBT"),
+    "ZS=F": dict(listed="FHKNQUX", ltd_day=15, held="FHKNX", roll_back=14, suffix="CBT"),
+    "SB=F": dict(listed="HKNV", ltd_months=1, ltd_back=0, held="HKNV", roll_ltd=16, suffix="NYB"),
+    "PL=F": dict(listed="FJNV", ltd_back=2, held="FJNV", roll_back=3, suffix="NYM"),
+    "FGBL=F": dict(listed="HMUZ", ltd_day=10, ltd_day_back=2, held="HMUZ", roll_ltd=3,
+                   suffix="EUX"),
+    "RLI=F": dict(listed="HMUZ", ltd_back=2, held="HMUZ", roll_back=7, suffix="ICE"),
+    "TFM=F": dict(listed=MONTH_CODES, ltd_months=1, ltd_back=1, held=MONTH_CODES,
+                  roll_ltd=1, suffix="NDX"),
 }
 
 # Volume under this share of the series' trailing median is a quote, not a
@@ -103,12 +145,21 @@ def _contracts(months: str, first_year: int, last_year: int) -> "list[tuple[int,
             for c in months]
 
 
+def _last_trading_day(spec: dict, year: int, month: int) -> date:
+    """The contract of this delivery month's last trading day, on weekdays."""
+    if "ltd_day" in spec:
+        return _business_days_before(date(year, month, spec["ltd_day"]),
+                                     spec.get("ltd_day_back", 1))
+    back = month - 1 - spec.get("ltd_months", 0)
+    return _business_days_before(_month_end(year + back // 12, back % 12 + 1), spec["ltd_back"])
+
+
 def last_trading_days(ticker: str, first_year: int, last_year: int) -> "list[date]":
     """Each listed contract's last trading day, by the exchange's rule on weekdays."""
     if ticker not in SPECS:
         return []
     spec = SPECS[ticker]
-    return [_business_days_before(_month_end(y, m), spec["ltd_back"])
+    return [_last_trading_day(spec, y, m)
             for y, m, _ in _contracts(spec["listed"], first_year, last_year)]
 
 
@@ -118,8 +169,10 @@ def roll_days(ticker: str, first_year: int, last_year: int) -> "list[tuple[str, 
     spec = SPECS[ticker]
     out = []
     for y, m, code in _contracts(spec["held"], first_year, last_year + 1):
-        if spec["roll_back"] is None:
-            last = _business_days_before(_month_end(y, m), spec["ltd_back"])
+        if "roll_ltd" in spec:
+            last = _business_days_before(_last_trading_day(spec, y, m), spec["roll_ltd"])
+        elif spec["roll_back"] is None:
+            last = _last_trading_day(spec, y, m)
         else:
             last = _business_days_before(_month_start(y, m), spec["roll_back"] + 1)
         out.append((f"{ticker[:-2]}{code}{y % 100:02d}.{spec['suffix']}", last))
@@ -198,3 +251,4 @@ def thin(volume: pd.Series) -> pd.Series:
     median = (v.where(v > 0).rolling(THIN_WINDOW, min_periods=THIN_MIN_BARS)
               .median().shift(1).ffill())
     return (v <= 0) | (v < THIN_SHARE * median).fillna(False).to_numpy(dtype=bool)
+

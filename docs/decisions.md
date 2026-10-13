@@ -146,8 +146,9 @@ without volume, so no thin-bar rule:
 - the Bund and the gilt one contract at a time, rolled where their volume moves (the
   Bund three business days before its last trading day, the gilt five before first
   notice), each session's hours what the live source or the history holds (08:00-18:00
-  Frankfurt, 08:00-18:00 London); their history from Dukascopy's CFDs (the Bund's 0.4 bp
-  from MarketWatch's contract on 20 shared hours); the Bund voted by the FT's S&P
+  Frankfurt, 08:00-18:00 London); their history from Dukascopy's CFDs from 2018-05
+  ("The stored history"; 0.999 and 0.4 bp at the median over the Bund's 100 hours shared
+  with MarketWatch's contract, 0.998 and 0.7 bp over the gilt's 60); the Bund voted by the FT's S&P
   Euro-Bund futures index (0.95, four bars a day), the gilt by none;
 - TTF as MarketWatch's continuous series (it names no single month), its roll nights
   unscored from the exchange's rule; no hourly history anywhere, so it scores once it has
@@ -469,6 +470,18 @@ out of any fetch's reach. Done before then, and kept:
   CFD switch could be located, and live cattle's September from 09-15, after its roll.
 - **A dividend refresh keeps the splits already declared**, or a split Tiingo does not list
   is lost for good.
+- **The Bund's and gilt's history is Dukascopy's CFDs from 2018-05, less their switches**
+  (2026-10-13). Each quarter's change of contract is a large hour near the expiry that the
+  10-year yield does not explain: the CFD's move between the yield's daily fixings, less
+  what the yield's change makes of it. The Bundesbank's Bund yield moves with the CFD's
+  10:00 Frankfurt bar at -0.97 (the residual 6.8 bp at the median deviation), the Bank of
+  England's gilt yield with the 15:00 London bar at -0.94 (11 bp), 2018-26 outside the
+  switch windows. Found in 29 of the Bund's 34 quarters (12 hours dropped, 17 roll nights)
+  and 25 of the gilt's (9 and 16), 35-201 bp; in the others the largest hour (the Bund's
+  14-44 bp, the gilt's 30-87 bp) is one the yield made, or too small to tell. MarketWatch's
+  continuous settlements were tried first and missed five of the Bund's 145-175 bp
+  switches: they rolled the same day. The gilt's CFD switched from three business days
+  before first notice to the delivery month's first business day (2021-12-01 -119 bp).
 
 ---
 
@@ -546,10 +559,10 @@ the official 99,394.
 **The Bund, JGB, gilt and TTF** (stage 2, deferred by the user, 2026-10-12, and searched in
 the source audit of 2026-10-13):
 - the Bund: MarketWatch's single contract live (FGBLZ26, about 13 days back, no volume),
-  Dukascopy's history from 2018, the FT's contract as a voter (0.95 hour by hour, 33 days
-  back); Wallstreetcn's yield moves opposite (-0.99);
-- the gilt: MarketWatch's single contract live (RLIZ26), Dukascopy's history from 2018; no
-  voter (the FT's candidates 0.15-0.23);
+  Dukascopy's history from 2018 (built), the FT's contract as a voter (0.95 hour by hour, 33
+  days back); Wallstreetcn's yield moves opposite (-0.99);
+- the gilt: MarketWatch's single contract live (RLIZ26), Dukascopy's history from 2018
+  (built); no voter (the FT's candidates 0.15-0.23);
 - the JGB: no future anywhere; MarketWatch's 10-year yield live, Wallstreetcn's at 0.68
   against it; the TSE bond funds move weakly and opposite (-0.32 to -0.64);
 - TTF: MarketWatch's ICE Endex series only, about 13 days back; NYMEX's look-alike 0.77-0.80.

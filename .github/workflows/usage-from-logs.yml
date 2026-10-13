@@ -12,6 +12,7 @@ on:
     paths:
       - "tools/usage_from_logs.py"
       - ".github/workflows/usage-from-logs.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read

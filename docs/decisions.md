@@ -222,9 +222,9 @@ repository's workflows, so our own count is the truth for what we spend:
 - every run writes it, by day and purpose, into its workflow's usage file;
 - the limits and their shares are one table (`config/provider_limits.csv`), which the
   caps are read from;
-- the providers' own figures are checked against ours where their meaning is known:
-  Twelve Data's credits left in the day. SiftingIO's month is on its account page only,
-  and Tiingo's header is recorded until its window is known.
+- the providers' own figures are checked against ours where they exist: Twelve Data's
+  day, from its usage endpoint once a day (its `api-credits-left` is the minute's).
+  SiftingIO's month is on its account page only, and Tiingo sends none.
 - The 30 days before the files existed are added up from the runs' logs
   (`tools/usage_from_logs.py`, run once and deleted).
 

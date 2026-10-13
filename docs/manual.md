@@ -193,9 +193,11 @@ provider gave.
   nothing.
 
 A run that takes a day or month past 80% of a limit says so on the health chat, once.
-So does a day on which Twelve Data's own count (its limit less `api-credits-left`) runs
-20 credits ahead of ours: another caller on the key, or one of ours not counted. The page
-sets the last 30 days against each limit.
+So does a day on which Twelve Data's own count runs 20 credits ahead of ours: another
+caller on the key, or one of ours not counted. That count is its usage endpoint's
+`daily_usage`, which costs a credit and is asked once a day by the 23:00 UTC run. The
+"left" the answers carry are short windows: Twelve Data's minute (8), Alpaca's minute
+(200), SiftingIO's few seconds. The page sets the last 30 days against each limit.
 
 **Repair** (`backfill.repair_from_yahoo`), by hand: a fund's in-session hours missing in
 the last 58 days are filled from Yahoo's 30-minute bars, folded to the hour, only if

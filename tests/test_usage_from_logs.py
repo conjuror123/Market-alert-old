@@ -12,9 +12,9 @@ def test_requests_lines_are_read_by_their_own_time():
                              ("2026-10-12T09:06:01", "twelvedata", 1, "793")]
 
 
-def test_a_day_adds_up_and_twelve_data_is_its_own_count():
-    # Two runs: Tiingo's requests add up; Twelve Data's day is 800 less the last
-    # credits it said were left, whatever the lines counted as requests.
+def test_a_day_adds_up_and_twelve_datas_requests_are_its_batchs_credits():
+    # Two runs: Tiingo's requests add up; Twelve Data's one batch request a run is
+    # its seven funds' credits (its "left" is the minute's).
     seen = [("2026-10-12T09:06:01", "tiingo", 27, "4973"),
             ("2026-10-12T09:06:01", "twelvedata", 1, "793"),
             ("2026-10-12T10:06:01", "tiingo", 27, "4946"),

@@ -10,9 +10,9 @@ on any branch. In each log, the lines `requests: tiingo 27 (left 4973), sifting
 17, ...` (jump.usage.Usage.line) are added up per UTC day, by the line's own time,
 and provider: the hourly run's as fetch (its vote's calls among them: one session
 then), the walks' as manual, the dashboard's as dashboard. Twelve Data counts
-credits, which the line does not (a batch of seven is one request): its day is the
-limit less the last figure left it gave that day, which is its own count of every
-caller. Writes hourly.csv, manual.csv and dashboard.csv in jump.usage's form, and
+credits, which the line does not: the live run asks its TWELVEDATA_BATCH funds in one
+request an hour, so a request is that many credits (its `api-credits-left` is the
+minute's, not the day's). Writes hourly.csv, manual.csv and dashboard.csv in jump.usage's form, and
 prints them. Deleted once its rows are committed (the manual's rule).
 """
 from __future__ import annotations
@@ -35,7 +35,7 @@ API = "https://api.github.com"
 WORKFLOWS = {"price-monitor.yml": "fetch", "backfill-jump-bars.yml": "manual",
              "measure.yml": "dashboard"}
 FILES = {"fetch": "hourly.csv", "manual": "manual.csv", "dashboard": "dashboard.csv"}
-TWELVEDATA_DAY = 800
+TWELVEDATA_BATCH = 7          # the live basket's Twelve Data funds, one batch
 LINE = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)\S*\s.*?requests: (.+)$")
 PART = re.compile(r"([\w.\-]+) (\d+)(?: \(left ([^)]*)\))?")
 # Leaves GitHub's API this many of its hourly requests for everything else.
@@ -55,8 +55,8 @@ def parse(text: str) -> "list[tuple[str, str, int, str]]":
 
 
 def day_rows(seen: "list[tuple[str, str, int, str]]", purpose: str) -> pd.DataFrame:
-    """jump.usage rows: requests summed per day and provider, the last figure left
-    kept, and Twelve Data's day its limit less its last figure left."""
+    """jump.usage rows: requests summed per day and provider (Twelve Data's as
+    credits), the last figure left kept."""
     if not seen:
         return pd.DataFrame(columns=usage.COLUMNS)
     frame = pd.DataFrame(seen, columns=["at", "provider", "calls", "left"]).sort_values("at")
@@ -66,10 +66,10 @@ def day_rows(seen: "list[tuple[str, str, int, str]]", purpose: str) -> pd.DataFr
         with_left = g[g["left"] != ""]
         left = with_left.iloc[-1] if len(with_left) else None
         calls = int(g["calls"].sum())
-        if provider == "twelvedata" and left is not None and str(left["left"]).isdigit():
-            calls = TWELVEDATA_DAY - int(left["left"])
+        if provider == "twelvedata":
+            calls *= TWELVEDATA_BATCH
         rows.append({"day": day, "provider": provider, "purpose": purpose, "calls": calls,
-                     "left": "" if left is None else left["left"],
+                     "reported": "", "left": "" if left is None else left["left"],
                      "left_at": "" if left is None else left["left_at"]})
     return pd.DataFrame(rows, columns=usage.COLUMNS)
 

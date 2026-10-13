@@ -193,9 +193,9 @@ def test_a_day_past_four_fifths_of_its_limit_is_named_once():
     now = datetime(2026, 10, 12, 18, tzinfo=timezone.utc)
     limits = pd.DataFrame([{"provider": "tiingo", "window": "day", "limit": 1000, "live": 0,
                             "manual": 0, "dashboard": 0, "votes": 0}])
-    before = _table([["2026-10-12", "tiingo", "fetch", 790, "", ""]])
-    after = _table([["2026-10-12", "tiingo", "fetch", 810, "", ""]])
-    later = _table([["2026-10-12", "tiingo", "fetch", 830, "", ""]])
+    before = _table([["2026-10-12", "tiingo", "fetch", 790, "", "", ""]])
+    after = _table([["2026-10-12", "tiingo", "fetch", 810, "", "", ""]])
+    later = _table([["2026-10-12", "tiingo", "fetch", 830, "", "", ""]])
     assert u.warnings(before, after, limits, now) == ["tiingo: 810 of 1,000 this day (81%)"]
     assert u.warnings(after, later, limits, now) == []
 
@@ -208,31 +208,57 @@ def test_sifting_is_counted_by_its_month():
     now = datetime(2026, 10, 30, 12, tzinfo=timezone.utc)
     limits = pd.DataFrame([{"provider": "sifting", "window": "month", "limit": 10000,
                             "live": 0, "manual": 0, "dashboard": 0, "votes": 0}])
-    before = _table([["2026-09-30", "sifting", "fetch", 9000, "", ""],
-                     ["2026-10-29", "sifting", "fetch", 7990, "", ""]])
-    after = _table([["2026-09-30", "sifting", "fetch", 9000, "", ""],
-                    ["2026-10-29", "sifting", "fetch", 7990, "", ""],
-                    ["2026-10-30", "sifting", "fetch", 20, "", ""]])
+    before = _table([["2026-09-30", "sifting", "fetch", 9000, "", "", ""],
+                     ["2026-10-29", "sifting", "fetch", 7990, "", "", ""]])
+    after = _table([["2026-09-30", "sifting", "fetch", 9000, "", "", ""],
+                    ["2026-10-29", "sifting", "fetch", 7990, "", "", ""],
+                    ["2026-10-30", "sifting", "fetch", 20, "", "", ""]])
     assert u.warnings(before, after, limits, now) == ["sifting: 8,010 of 10,000 this month (80%)"]
 
 
 def test_twelve_datas_count_ahead_of_ours_is_named_once():
-    # It says 760 credits left of 800 - 40 used - when we counted 10: another
-    # caller on the key, or one of ours not counted.
+    # Its usage endpoint says 40 credits today when we counted 10: another caller on
+    # the key, or one of ours not counted.
     from datetime import datetime, timezone
 
     import pandas as pd
     from jump import usage as u
-    now = datetime(2026, 10, 12, 18, tzinfo=timezone.utc)
+    now = datetime(2026, 10, 12, 23, 5, tzinfo=timezone.utc)
     limits = pd.DataFrame([{"provider": "twelvedata", "window": "day", "limit": 800,
                             "live": 0, "manual": 0, "dashboard": 0, "votes": 0}])
-    before = _table([["2026-10-12", "twelvedata", "fetch", 9, "791", "17:05"]])
-    after = _table([["2026-10-12", "twelvedata", "fetch", 10, "760", "18:05"]])
+    before = _table([["2026-10-12", "twelvedata", "fetch", 9, "", "", ""]])
+    after = _table([["2026-10-12", "twelvedata", "fetch", 10, "40", "", ""]])
     assert u.warnings(before, after, limits, now) == [
         "twelvedata counts 40 today, we counted 10: another caller on the key, "
         "or one of ours not counted"]
-    again = _table([["2026-10-12", "twelvedata", "fetch", 11, "759", "19:05"]])
+    again = _table([["2026-10-12", "twelvedata", "fetch", 11, "41", "", ""]])
     assert u.warnings(after, again, limits, now) == []
+
+
+def test_twelve_data_is_asked_its_day_once_at_the_report_hour(monkeypatch):
+    # Its usage endpoint costs a credit: the 23:00 UTC run only.
+    from datetime import datetime, timezone
+
+    from jump import usage as u
+    seen = []
+
+    class Reply:
+        def json(self):
+            return {"daily_usage": 67, "plan_daily_limit": 800}
+
+    def get(self, url, params=None, timeout=None):
+        seen.append(url)
+        return Reply()
+
+    monkeypatch.setattr(requests.Session, "get", get)
+    usage = Usage()
+    u.ask_twelvedata(usage, "key", now=datetime(2026, 10, 12, 22, 5, tzinfo=timezone.utc))
+    assert seen == [] and usage.reported == {}
+    u.ask_twelvedata(usage, "key", now=datetime(2026, 10, 12, 23, 5, tzinfo=timezone.utc))
+    assert usage.reported == {"twelvedata": 67}
+    usage.spent[("twelvedata", "fetch")] += 7
+    row = usage.rows(datetime(2026, 10, 12, 23, 6, tzinfo=timezone.utc)).iloc[0]
+    assert row["reported"] == "67" and row["calls"] == 7
 
 
 def test_the_hourly_run_records_its_count_and_names_what_it_crossed(tmp_path, monkeypatch):

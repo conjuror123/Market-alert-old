@@ -1881,6 +1881,10 @@ def _main(argv: "list[str] | None", usage: Usage) -> int:
             dark.append(("VIX", "cboe/fred", str(exc)))
             log.error("VIX: failed - %s", exc)
 
+    if not args.live_pass and not args.instruments:
+        # Twelve Data's own count of the day, once a day (jump.usage): set beside ours.
+        from jump.usage import ask_twelvedata
+        ask_twelvedata(usage, api_key)
     log.info(usage.line())
     text = format_provider_failure(
         dark, tiingo_gone=tiingo_gone, tiingo_skipped=tiingo_skipped,

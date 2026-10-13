@@ -19,10 +19,12 @@ THE LIMITS (LIMITS_PATH): each keyed provider's limit per window, and its shares
 the live run's, the room kept for manual fetches, the dashboard's, the votes'.
 `warnings` names, once, a day or month that passes WARN_SHARE of a limit, and a
 provider whose own count of the day runs GAP_MARGIN ahead of ours: another caller
-on the key, or one of ours not counted. Only Twelve Data's figure is known to be
-the day's (`api-credits-left`, credits left until 00:00 UTC); SiftingIO's
-counts a short window (price_monitor.sifting), and Tiingo's is recorded until its
-window is known.
+on the key, or one of ours not counted. Only Twelve Data says what it counted in a
+day, on its usage endpoint (`daily_usage`), which costs a credit: asked once a day,
+by the hourly run at REPORT_HOUR UTC, into the row's `reported`. The figures left
+the answers carry are each a short window - Twelve Data's `api-credits-left` its
+minute (8), Alpaca's its minute (200), SiftingIO's a few seconds - and are kept for
+the log only.
 """
 from __future__ import annotations
 
@@ -67,7 +69,9 @@ REMAINING = ("X-RateLimit-Remaining", "X-Quota-Remaining", "api-credits-left")
 PURPOSES = ("fetch", "votes", "manual", "dashboard")
 USAGE_FILE_ENV = "USAGE_FILE"
 USAGE_DIR = os.path.join("data", "jump", "usage")
-COLUMNS = ["day", "provider", "purpose", "calls", "left", "left_at"]
+COLUMNS = ["day", "provider", "purpose", "calls", "reported", "left", "left_at"]
+REPORT_HOUR = 23
+TWELVEDATA_USAGE = "https://api.twelvedata.com/api_usage"
 LIMITS_PATH = os.path.join("config", "provider_limits.csv")
 WARN_SHARE = 0.8
 # Twelve Data's count of the day ahead of ours by more than this many credits.
@@ -94,6 +98,7 @@ class Usage:
         self.spent: Counter = Counter()             # (provider, purpose) -> calls
         self.left: dict[str, str] = {}
         self.left_purpose: dict[str, str] = {}
+        self.reported: dict[str, int] = {}          # a provider's own count of the day
         self._lock = threading.Lock()
 
     def session(self, purpose: str = "fetch") -> requests.Session:
@@ -134,8 +139,10 @@ class Usage:
         out = []
         for (provider, purpose), calls in sorted(self.spent.items()):
             mine = self.left_purpose.get(provider) == purpose
+            told = self.reported.get(provider) if purpose == "fetch" else None
             out.append({"day": day, "provider": provider, "purpose": purpose,
-                        "calls": int(calls), "left": self.left[provider] if mine else "",
+                        "calls": int(calls), "reported": "" if told is None else str(told),
+                        "left": self.left[provider] if mine else "",
                         "left_at": at if mine else ""})
         return pd.DataFrame(out, columns=COLUMNS)
 
@@ -159,6 +166,9 @@ def read(path: str) -> pd.DataFrame:
     if not os.path.exists(path):
         return pd.DataFrame(columns=COLUMNS)
     table = pd.read_csv(path, dtype=str, keep_default_na=False)
+    for col in COLUMNS:
+        if col not in table:
+            table[col] = ""
     table["calls"] = pd.to_numeric(table["calls"]).astype(int)
     return table[COLUMNS]
 
@@ -173,7 +183,10 @@ def add(table: pd.DataFrame, rows: pd.DataFrame) -> pd.DataFrame:
     calls = both.groupby(key, as_index=False)["calls"].sum()
     with_left = both[both["left"].astype(str) != ""]
     latest = with_left.groupby(key, as_index=False).last()[key + ["left", "left_at"]]
-    out = calls.merge(latest, on=key, how="left").fillna({"left": "", "left_at": ""})
+    said = both[both["reported"].astype(str) != ""]
+    said = said.groupby(key, as_index=False).last()[key + ["reported"]]
+    out = calls.merge(latest, on=key, how="left").merge(said, on=key, how="left")
+    out = out.fillna({"left": "", "left_at": "", "reported": ""})
     return out.sort_values(key).reset_index(drop=True)[COLUMNS]
 
 
@@ -209,19 +222,27 @@ def spent_in(table: pd.DataFrame, provider: str, window: str, now: datetime) -> 
     return int(mine["calls"].sum())
 
 
-def _reported_used(table: pd.DataFrame, provider: str, limit: int, now: datetime
-                   ) -> "int | None":
-    """What the provider says it counted today: its limit less its last figure
-    left today. Twelve Data's only."""
-    if provider != "twelvedata" or table.empty:
+def _reported(table: pd.DataFrame, provider: str, now: datetime) -> "int | None":
+    """What the provider says it counted today (`reported`), if it was asked."""
+    if table.empty:
         return None
-    today = table[(table["provider"] == provider)
-                  & (table["day"] == now.strftime("%Y-%m-%d"))
-                  & (table["left"].astype(str).str.strip().str.isdigit())]
-    if today.empty:
-        return None
-    last = today.sort_values("left_at").iloc[-1]
-    return limit - int(last["left"])
+    said = table[(table["provider"] == provider) & (table["day"] == now.strftime("%Y-%m-%d"))
+                 & (table["reported"].astype(str).str.strip().str.isdigit())]
+    return int(said["reported"].astype(int).max()) if len(said) else None
+
+
+def ask_twelvedata(usage: "Usage", api_key: str, now: "datetime | None" = None) -> None:
+    """Twelve Data's own count of the day (its usage endpoint, one credit), once a
+    day at REPORT_HOUR UTC, into this run's rows."""
+    now = now or datetime.now(timezone.utc)
+    if not api_key or now.hour != REPORT_HOUR:
+        return
+    try:
+        got = usage.session("fetch").get(TWELVEDATA_USAGE, params={"apikey": api_key},
+                                         timeout=30).json()
+        usage.reported["twelvedata"] = int(got["daily_usage"])
+    except Exception:
+        return
 
 
 def warnings(before: pd.DataFrame, after: pd.DataFrame, table: pd.DataFrame,
@@ -241,8 +262,7 @@ def warnings(before: pd.DataFrame, after: pd.DataFrame, table: pd.DataFrame,
             out.append(f"{row.provider}: {is_:,} of {row.limit:,} this {row.window} "
                        f"({is_ / row.limit:.0%})")
         if row.window == "day":
-            told, said = _reported_used(before, row.provider, row.limit, now), \
-                _reported_used(after, row.provider, row.limit, now)
+            told, said = _reported(before, row.provider, now), _reported(after, row.provider, now)
             if said is not None and said - is_ > GAP_MARGIN and \
                     (told is None or told - was <= GAP_MARGIN):
                 out.append(f"{row.provider} counts {said:,} today, we counted {is_:,}: "

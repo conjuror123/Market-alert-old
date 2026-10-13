@@ -15,12 +15,15 @@ passes the gates every splice passes (jump.backfill.verify_alignment).
 ITS SWITCHES. The CFD changes contract on its own day each quarter: the Bund's
 in an hour of the business day before its last trading day, the gilt's around
 its first notice day. The step is the calendar spread - 50-200 bp in 2018-25, a
-few bp in 2026 - so a switch is a large hourly move in those days that
-MarketWatch's daily settlements confirm (the CFD over the settlement steps that
-day; the market moves both). Dropped inside a session, a roll night at or
-outside its start (written to data/jump/rolls.csv, left unscored by
-jump.futures.roll_sessions). Where none is confirmed, the spread was too small
-to tell, and to matter.
+few bp in some quarters - so a switch is a large hourly move in those days that
+the yield does not explain: the CFD's move between two of the yield's daily
+fixings, less what the yield's change makes of it (the Bundesbank's 10-year Bund
+yield, fixed near 11:00 Frankfurt; the Bank of England's 10-year gilt yield, near
+16:00 London). Neither rolls, as MarketWatch's continuous series does - on the
+CFD's own day in some quarters, which hid the switch from a check against it.
+Dropped inside a session, a roll night at or outside its start (written to
+data/jump/rolls.csv, left unscored by jump.futures.roll_sessions). Where none is
+confirmed, the spread was too small to tell, and to matter.
 
 Its stray closes - a close far from both its own bar's open and the next open,
 the next bar taking it back - are set to the next open, as stage 2's were. Its
@@ -53,20 +56,25 @@ from price_monitor.models import Candle, ExchangeError
 CFD = {"FGBL=F": "BUNDTREUR", "RLI=F": "UKGILTTRGBP"}
 FIRST = date(2018, 5, 1)
 # Where each CFD changes contract: the Bund's in an hour of the business day before
-# its last trading day (2018-09-05 -156 bp at 14:00 UTC, 2018-12-05 +50 bp,
-# 2019-03-06 -148 bp; MarketWatch's daily series the day after), the gilt's from
-# two business days before its first notice day to that day, in an hour or at the
-# open (2018-08-28 -65 bp at 15:00 London, 2020-05-28 -82 bp at the open,
-# 2025-11-26 -201 bp); looked for from SWITCH_DAYS business days before to after
-# each edge (switch_edges), a day wider for the gilt.
-SWITCH_DAYS = {"FGBL=F": (2, 0), "RLI=F": (3, 1)}
+# its last trading day, or at that day's open (2018-09-05 -156 bp at 14:00 UTC,
+# 2019-06-05 +147 bp, 2021-09-07 -174 bp at the open); the gilt's from three
+# business days before its first notice day to the delivery month's first business
+# day, in an hour or at the open (2018-08-28 -65 bp at 15:00 London, 2020-05-28
+# -82 bp at the open, 2021-12-01 -119 bp at the open, 2025-11-26 -201 bp); looked
+# for from SWITCH_DAYS business days before to after each edge (switch_edges).
+SWITCH_DAYS = {"FGBL=F": (2, 0), "RLI=F": (3, 2)}
 SWITCH_TYPICAL, TOP_HOURS = 4.0, 3
-# MarketWatch's continuous series, daily: its settlement, and the local hour whose
-# bar closes nearest it (the Bund 17:15 Frankfurt, the gilt 16:15 London).
-DAILY = {"FGBL=F": ("FUTURE/DE/XEUR/FGBL00", "Europe/Berlin", 16),
-         "RLI=F": ("FUTURE/UK/IFEU/RLI00", "Europe/London", 15)}
-# The settlement ratio moves 18 bp a day at the standard deviation (the gilt,
-# 2018-26); a switch is confirmed past CONFIRM_BP and half the hour's move.
+# The daily 10-year yields, and the local hour whose bar closes nearest their
+# fixing: there the CFD's daily move follows the yield's most closely, 2018-26
+# outside the switch windows (the Bund's 10:00 bar -0.97, its residual 6.8 bp at
+# the median deviation; the gilt's 15:00 bar -0.94, 11 bp).
+YIELDS = {
+    "FGBL=F": ("https://api.statistiken.bundesbank.de/rest/data/BBSIS/"
+               "D.I.ZST.ZI.EUR.S1311.B.A604.R10XX.R.A.A._Z._Z.A", "Europe/Berlin", 10),
+    "RLI=F": ("https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp",
+              "Europe/London", 15)}
+# A switch is confirmed where the residual over the fixings around its hour is
+# the hour's way, at least CONFIRM_SHARE of it and CONFIRM_BP.
 CONFIRM_SHARE, CONFIRM_BP = 0.5, 30.0
 STRAY_MULT, STRAY_FLOOR = 8.0, 0.002
 MIN_HOURS = 50
@@ -182,41 +190,60 @@ def reset_stray_closes(frame: pd.DataFrame) -> "tuple[pd.DataFrame, int]":
     return out, int(stray.sum())
 
 
-def daily_settlements(ticker: str, session) -> pd.Series:
-    """MarketWatch's daily continuous closes (the settlement), by session date."""
-    import json
+def daily_yields(ticker: str, session) -> pd.Series:
+    """The 10-year yield in percent, by local date, from 2018."""
+    import io
 
-    from price_monitor import marketwatch
+    url = YIELDS[ticker][0]
+    if ticker == "FGBL=F":
+        text = session.get(url, params={"startPeriod": "2018-01-01", "format": "csv"},
+                           timeout=60).text
+        rows = [line.split(";") for line in text.lstrip("\ufeff").splitlines()
+                if line[:2] == "20"]
+        return pd.Series({r[0]: float(r[1].replace(",", ".")) for r in rows
+                          if r[1] not in ("", ".")}, dtype=float)
+    text = session.get(url, params={"csv.x": "yes", "Datefrom": "01/Jan/2018", "Dateto": "now",
+                                    "SeriesCodes": "IUDMNZC", "CSVF": "TN", "UsingCodes": "Y",
+                                    "VPD": "Y", "VFD": "N"},
+                       headers={"User-Agent": "curl/8.5.0"}, timeout=60).text   # refuses requests
+    got = pd.read_csv(io.StringIO(text))
+    got["DATE"] = pd.to_datetime(got["DATE"], format="%d %b %Y").dt.date.astype(str)
+    return got.set_index("DATE")["IUDMNZC"].astype(float)
 
-    query = marketwatch._query(DAILY[ticker][0], "P10Y")
-    query["Step"] = "P1D"
-    got = session.get(marketwatch.URL, params={"json": json.dumps(query),
-                                                "ckey": marketwatch.CKEY},
-                      headers=marketwatch.HEADERS, timeout=60).json()
-    ticks, points = got["TimeInfo"]["Ticks"], got["Series"][0]["DataPoints"]
-    return pd.Series({datetime.fromtimestamp(t // 1000, timezone.utc).date().isoformat(): p[3]
-                      for t, p in zip(ticks, points) if p and p[3] is not None})
 
-
-def ratio_steps(ticker: str, record: pd.DataFrame, daily: pd.Series) -> pd.Series:
-    """By local date, the step from the session before in the CFD's close at
-    the settlement's hour over MarketWatch's settlement: the market moves both,
-    a change of contract on one side only moves it."""
-    _, zone, hour = DAILY[ticker]
-    local = pd.to_datetime(record["hour_utc"], unit="s", utc=True).dt.tz_convert(zone)
-    mine = record.assign(d=local.dt.date.astype(str))[local.dt.hour == hour] \
-        .groupby("d")["close"].last()
-    both = pd.concat([mine.rename("cfd"), daily.rename("mw")], axis=1, join="inner").dropna()
-    return np.log(both["cfd"] / both["mw"]).diff()
+def yield_steps(ticker: str, record: pd.DataFrame, yields: pd.Series) -> pd.Series:
+    """By each bar's hour_utc, the CFD's log move between the yield's fixings
+    around it - the fixing hour's bar close before the bar and the first at or
+    after its end - less what the yield's change makes of it (fitted on every
+    such interval, the outliers left out)."""
+    _, zone, hour = YIELDS[ticker]
+    rec = record.sort_values("hour_utc")
+    local = pd.to_datetime(rec["hour_utc"], unit="s", utc=True).dt.tz_convert(zone)
+    fix = rec.assign(d=local.dt.date.astype(str))[local.dt.hour == hour] \
+        .groupby("d").last()
+    fix = fix.join(yields.rename("y"), how="inner").dropna(subset=["y"])
+    move, dy = np.log(fix["close"]).diff(), fix["y"].diff()
+    ok = move.notna() & dy.notna()
+    beta = np.polyfit(dy[ok], move[ok], 1)[0]
+    res = move - beta * dy
+    keep = ok & ((res - res[ok].median()).abs() < 5 * (res[ok] - res[ok].median()).abs().median())
+    beta = np.polyfit(dy[keep], move[keep], 1)[0]
+    res = (move - beta * dy).to_numpy()
+    ends = (fix["hour_utc"] + 3600).to_numpy()
+    at = np.searchsorted(ends, rec["hour_utc"].to_numpy() + 3600, side="left")
+    inside = (at > 0) & (at < len(ends))
+    out = np.full(len(rec), np.nan)
+    out[inside] = res[at[inside]]
+    return pd.Series(out, index=rec["hour_utc"].astype(int).to_numpy())
 
 
 def switches(ticker: str, template: str, record: pd.DataFrame, first: date, last: date,
              steps: pd.Series) -> "tuple[pd.DataFrame, list[str], list[str]]":
     """The CFD's switches: in each SWITCH_DAYS window, the largest hourly move
     from the bar before (of the TOP_HOURS largest, at least SWITCH_TYPICAL
-    times the record's median) that the settlement ratio confirms - its step
-    that day (`steps`, ratio_steps) the same way, at least CONFIRM_SHARE of
-    the move and CONFIRM_BP. Inside a session that bar is dropped, so the next
+    times the record's median) that the yield does not explain - the residual
+    over the fixings around it (`steps`, yield_steps, by hour_utc) the same
+    way, at least CONFIRM_SHARE of the move and CONFIRM_BP. Inside a session that bar is dropped, so the next
     is measured from its own open; on a session's first bar, or outside the
     session (its step then falls in the next session's night), that night is a
     roll night. Returns the record without the dropped bars, the roll nights
@@ -245,7 +272,7 @@ def switches(ticker: str, template: str, record: pd.DataFrame, first: date, last
         for at, size in w.items():
             if abs(size) < SWITCH_TYPICAL * typical:
                 break
-            step = steps.get(day.iloc[at].isoformat(), np.nan)
+            step = steps.get(int(out.loc[at, "hour_utc"]), np.nan)
             if np.isfinite(step) and np.sign(step) == np.sign(size) and \
                     abs(step) >= max(CONFIRM_SHARE * abs(size), CONFIRM_BP / 1e4):
                 found = (int(at), float(size), float(step))
@@ -256,7 +283,7 @@ def switches(ticker: str, template: str, record: pd.DataFrame, first: date, last
             continue
         at, size, step = found
         when = pd.Timestamp(int(out.loc[at, "hour_utc"]), unit="s", tz="UTC")
-        said = f"{1e4 * size:+.0f} bp at {when:%Y-%m-%d %H:%M} UTC, the ratio {1e4 * step:+.0f}"
+        said = f"{1e4 * size:+.0f} bp at {when:%Y-%m-%d %H:%M} UTC, the residual {1e4 * step:+.0f}"
         if key.iloc[at] is not None and key.iloc[at] == key.iloc[at - 1]:
             keep[at] = False
             lines.append(f"{lo}..{hi}: an hour, {said}: dropped")
@@ -285,7 +312,10 @@ def build(asset, today: date, session, bars_dir: str, dry_run: bool,
     if own.empty:
         print(f"{ticker}: no stored bars to splice under")
         return 1
-    seam_day = sessions.daily_session_of(int(own["hour_utc"].min()), template)
+    # The first session with a stored bar: MarketWatch's bars outside it (the
+    # gilt's from 01:00 London) are kept, and the session gate drops them.
+    seam_day = next(d for d in (sessions.daily_session_of(int(h), template)
+                                for h in sorted(own["hour_utc"])) if d is not None)
     seam = sessions.daily_session_open(seam_day, template)
     record = archive(ticker, today, session, cache)
     print(f"{ticker}: MarketWatch from {seam_day} ({len(own)} hours); Dukascopy "
@@ -298,12 +328,12 @@ def build(asset, today: date, session, bars_dir: str, dry_run: bool,
     if not check["ok"]:
         print(f"   refused: {check['why']}")
         return 1
-    below = record[record["hour_utc"] < seam].copy()
+    below = record[record["hour_utc"] < min(seam, int(own["hour_utc"].min()))].copy()
     below["volume"] = 0.0
     below, strays = reset_stray_closes(below)
     print(f"   {strays} stray closes set to the next open")
     first = pd.Timestamp(int(below["hour_utc"].min()), unit="s").date()
-    steps = ratio_steps(ticker, below, daily_settlements(ticker, session))
+    steps = yield_steps(ticker, below, daily_yields(ticker, session))
     below, nights, lines = switches(ticker, template, below, first, seam_day, steps)
     for line in lines:
         print(f"   {line}")

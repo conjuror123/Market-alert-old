@@ -1857,6 +1857,10 @@ def _main(argv: "list[str] | None", usage: Usage) -> int:
                 vote.append(f"{name} stopped for the run (a rate limit, or no answer twice "
                             "in a row): an outage in the vote, left out of the count of the "
                             "moves it is asked about until a later count")
+            for name in (r or {}).get("capped", []):
+                vote.append(f"{name} has spent the votes' share of its allowance "
+                            "(config/provider_limits.csv): an outage in the vote until "
+                            "the share renews")
         except Exception as exc:
             # Not a failed run: an unvoted move is scored, as every move never
             # voted is. Named, though.

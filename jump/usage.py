@@ -17,6 +17,9 @@ everyone else's requests.
 
 THE LIMITS (LIMITS_PATH): each keyed provider's limit per window, and its shares -
 the live run's, the room kept for manual fetches, the dashboard's, the votes'.
+The votes' share is enforced: `votes_left` is what the vote (jump.verify) may
+still ask this run, its share of the hour, day or month less what it has spent
+(purpose `votes`); its share of a minute is a pace (jump.verify.per_minute).
 `warnings` names, once, a day or month that passes WARN_SHARE of a limit, and a
 provider whose own count of the day runs GAP_MARGIN ahead of ours: another caller
 on the key, or one of ours not counted. Only Twelve Data says what it counted in a
@@ -58,6 +61,10 @@ PROVIDERS = {
     "api.kraken.com": "kraken",
     "api-ddc-wscn.awtmt.com": "wallstreetcn",
     "markets.ft.com": "ft",
+    "www.bitstamp.net": "bitstamp",
+    "api-pub.bitfinex.com": "bitfinex",
+    "api.stock.naver.com": "naver",
+    "www.twse.com.tw": "twse",
 }
 
 # The headers a provider says what is left in: Tiingo, SiftingIO, Twelve Data.
@@ -207,12 +214,16 @@ def limits(path: str = LIMITS_PATH) -> pd.DataFrame:
     return table
 
 
-def spent_in(table: pd.DataFrame, provider: str, window: str, now: datetime) -> int:
-    """Calls of `provider` in the day or month `now` is in."""
+def spent_in(table: pd.DataFrame, provider: str, window: str, now: datetime,
+             purpose: "str | None" = None) -> int:
+    """Calls of `provider` in the day or month `now` is in, for `purpose` or
+    all."""
     if table.empty:
         return 0
     day = now.strftime("%Y-%m-%d")
     mine = table[table["provider"] == provider]
+    if purpose is not None:
+        mine = mine[mine["purpose"] == purpose]
     if window == "day":
         mine = mine[mine["day"] == day]
     elif window == "month":
@@ -220,6 +231,29 @@ def spent_in(table: pd.DataFrame, provider: str, window: str, now: datetime) -> 
     else:
         return 0                          # hours and minutes: the provider's 429
     return int(mine["calls"].sum())
+
+
+def votes_left(now: "datetime | None" = None, limits_path: str = LIMITS_PATH,
+               usage_dir: "str | None" = None) -> "dict[str, float]":
+    """What the vote (jump.verify) may still ask of each provider in the limits
+    file this run: in each of its hour, day and month windows, the votes' share
+    less what the vote has spent of it - a day's or a month's from every usage
+    file (purpose `votes`), an hour's being this run's own, one vote an hour.
+    The least over its windows. A minute's share is a pace, not a count
+    (jump.verify.per_minute): a provider with only that is not limited here."""
+    now = now or datetime.now(timezone.utc)
+    usage_dir = usage_dir or os.path.dirname(os.environ.get(USAGE_FILE_ENV, "").strip()) \
+        or USAGE_DIR
+    spent = read_all(usage_dir)
+    out: "dict[str, float]" = {}
+    for row in limits(limits_path).itertuples():
+        left = float("inf")
+        if row.window in ("hour", "day", "month"):
+            used = spent_in(spent, row.provider, row.window, now, purpose="votes") \
+                if row.window != "hour" else 0
+            left = max(0, row.votes - used)
+        out[row.provider] = min(out.get(row.provider, float("inf")), left)
+    return out
 
 
 def _reported(table: pd.DataFrame, provider: str, now: datetime) -> "int | None":

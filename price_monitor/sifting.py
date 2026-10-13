@@ -13,7 +13,9 @@ silver from SiftingIO"). Asked at 04:02 UTC on 2026-10-12, it held the bar that
 ended at 04:00 and the forming one, 117-118 hours a week with no Saturday bars,
 and moved with Dukascopy's at 0.9992 (gold) and 0.9980 (silver) over 799 hours,
 medians 0.25 and 1.06 bps. It keeps a thin bar in the metals' daily break (21:00
-UTC in New York's summer) that Dukascopy and Wallstreetcn leave empty.
+UTC in New York's summer) that Dukascopy and Wallstreetcn leave empty. Its spot
+platinum (XPT/USD) votes on the platinum future, as do its SPY and UNG on those
+funds (jump.verify, within the votes' share of config/provider_limits.csv).
 
 NOT FOR THIN FUNDS. Its equity bars are "aggregated, derived" rather than the
 consolidated tape, and on the thin commodity funds they drift from it - UGA by a
@@ -51,7 +53,7 @@ FX_ENDPOINT = "/hist/forex/{pair}/bars"
 STOCK_ENDPOINT = "/hist/stocks/{ticker}/bars"
 COMMODITY_ENDPOINT = "/hist/commodities/{symbol}/bars"
 # Spelled as pairs, served by the commodities endpoint.
-COMMODITIES = {"XAU/USD", "XAG/USD"}
+COMMODITIES = {"XAU/USD", "XAG/USD", "XPT/USD"}
 
 # This app's interval names -> SiftingIO's.
 INTERVAL_CODES = {"30min": "30m", "1h": "1h"}

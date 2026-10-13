@@ -1,4 +1,4 @@
-"""The coins' voters, Coinbase and Kraken: what an answer becomes."""
+"""The coins' voters, Coinbase, Kraken and Alpaca: what an answer becomes."""
 import pytest
 
 from price_monitor import coinbase, kraken
@@ -52,3 +52,35 @@ def test_kraken_rows_and_an_untraded_hour():
 def test_kraken_says_what_it_refused():
     with pytest.raises(ExchangeError, match="EQuery:Unknown asset pair"):
         kraken.parse({"error": ["EQuery:Unknown asset pair"]}, "NOPEUSD")
+
+
+def test_alpacas_coin_bars_are_paged_and_asked_without_a_key(monkeypatch):
+    # Rows of 2026-10-12's answer, the first page carrying a token for the next.
+    from datetime import datetime, timezone
+
+    from price_monitor import alpaca
+    pages = [
+        {"bars": {"BTC/USD": [
+            {"c": 83858.1595, "h": 83892.895, "l": 83622.43, "n": 26, "o": 83675.3715,
+             "t": "2026-10-12T00:00:00Z", "v": 0.031230259, "vw": 83765.624431},
+            {"c": 83566.2755, "h": 83944.484, "l": 83354.125, "n": 27, "o": 83857.5025,
+             "t": "2026-10-12T01:00:00Z", "v": 0.017849965, "vw": 83585.886878}]},
+         "next_page_token": "QlRD"},
+        {"bars": {"BTC/USD": [
+            {"c": 83740.77, "h": 83917.8145, "l": 83522.4705, "n": 29, "o": 83577.203,
+             "t": "2026-10-12T02:00:00Z", "v": 0.034733564, "vw": 83716.709874}]},
+         "next_page_token": None}]
+    asked = []
+
+    def get(session, url, params, auth, symbol):
+        asked.append((url, dict(params), auth))
+        return pages[len(asked) - 1]
+
+    monkeypatch.setattr(alpaca, "_get", get)
+    out = alpaca.fetch_crypto("BTC/USD", datetime(2026, 10, 12, tzinfo=timezone.utc),
+                              datetime(2026, 10, 12, 3, tzinfo=timezone.utc))
+    assert [c.open_time for c in out] == [1791763200, 1791766800, 1791770400]
+    assert (out[0].open, out[0].close, out[0].close_time) == (83675.3715, 83858.1595,
+                                                              1791766800)
+    assert asked[0][0].endswith("/v1beta3/crypto/us/bars") and asked[0][2] == {}
+    assert asked[1][1]["page_token"] == "QlRD"

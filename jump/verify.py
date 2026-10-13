@@ -20,29 +20,46 @@ Which feed was wrong cannot always be told - sources lag by an hour, miss hours
 and print their own bad ticks - so the vote is "not seen elsewhere", never "a
 mistake".
 
-WHO IS ASKED (SOURCES, sources_for). Every source of the instrument's class
-that carries it, except its own provider. The currency pairs: Yahoo's hourly
-FX, MarketWatch's and Wallstreetcn's - Yahoo reaches back two years but had as
-little as a fifth of some pairs' hours (USD/INR's, 2026-10),
-MarketWatch has every hour of the last nine trading days. Funds: Yahoo's and
-Sina's half-hour bars and MarketWatch's hourly ones, and Alpaca's consolidated
-tape (Alpaca_SIP), fifteen minutes behind - asked once it serves the move's
-hour whole (Source.delay). Coffee, cocoa and cotton: Sina's global futures
-(SINA_FUTURES), Wallstreetcn's cocoa and cotton, and the FT's coffee. Live
-cattle: MarketWatch's continuous contract, and the FT's bars of the contract
-the store holds. The coins, served by Binance, whose prices are its own
-trades: Coinbase's and Kraken's dollar pairs - a wick on one exchange is real
-there and not the market's. The LME's metals, served by Sina: Wallstreetcn's
-hourly bars. Spot gold and silver, served by SiftingIO: Wallstreetcn's and
-Sina's. Stage 2's futures (Brent, the Treasuries, the grains, sugar, platinum):
-MarketWatch's continuous series, the FT's bars of the contract the store holds
-for the grains and platinum, and Sina's Brent and spot platinum. Two vendors
-printing the same bars agree: each is a voice.
+WHO IS ASKED (SOURCES, sources_for). Every source that carries the instrument
+and moves with its store - each held to one bar in the source audit of
+2026-10-13 (docs/decisions.md, "Every source on every instrument") - except its
+own provider:
+
+    the pairs          Yahoo, MarketWatch, Wallstreetcn, Tiingo, Twelve Data (not USD/CNH)
+    gold, silver       Yahoo's and MarketWatch's COMEX futures, Sina's and
+                       Wallstreetcn's spot, Tiingo, Twelve Data (gold)
+    the funds          Yahoo's and Sina's half hours, MarketWatch, Alpaca's tape
+                       (Alpaca_SIP, fifteen minutes behind: asked once it serves the
+                       move's hour whole, Source.delay); UNG also Wallstreetcn's
+                       natural gas future, Tiingo and SiftingIO; SPY SiftingIO;
+                       REMX Tiingo
+    the coins          Coinbase, Kraken, Bitstamp, Bitfinex, Alpaca's and Yahoo's
+                       dollar pairs - a wick on Binance, whose prices are its own
+                       trades, is real there and not the market's
+    the futures        MarketWatch's continuous series; the FT's bars of the
+                       contract the store holds (grains, platinum, live cattle) or
+                       its continuous series (coffee, cocoa, Brent); Sina's
+                       softs, Brent and spot platinum; Wallstreetcn's cocoa,
+                       cotton and Brent; SiftingIO's spot platinum
+    the LME            Wallstreetcn; copper also Yahoo's COMEX future
+    the indices        MarketWatch (not the TAIEX or CSI 300), Wallstreetcn's
+                       Sensex, Saudi and Canadian, the FT's Euro Stoxx, FTSE, SMI,
+                       Bovespa and IPC, Naver's KOSPI, the Taiwan exchange's
+                       TAIEX, Sina's CSI 300
+
+Two vendors printing the same bars agree: each is a voice. A source whose bar
+in one local hour is another grid's is not asked about a move in that hour
+(Source.skip_hours: the FT's last hour in Europe, the TAIEX's 13:00, the CSI
+300's 11:00), where it is neither a vote nor an outage. The keyed providers -
+Tiingo, Twelve Data, SiftingIO - vote within the votes' share of their
+allowance (config/provider_limits.csv, vote_room); past it, each is an outage
+for the rest of the run, named on the health chat.
 
 THE VOTE (judge_all, combine) is taken with what the sources serve when it is
 taken: a source that has not shown the move yet counts against, until the
-next count. Every source of an instrument is asked, or none that run (MAX_REQUESTS): a vote of all of them, not of
-whichever were asked. With every other source down, the move is uncertain
+next count. Every source of an instrument is asked, or none that run
+(MAX_REQUESTS, VOTE_SECONDS): a vote of all of them, not of whichever were
+asked. With every other source down, the move is uncertain
 until a count after they are back.
 
 WHICH BARS (candidates). The detector's own readings, ended within the
@@ -70,9 +87,9 @@ on the first run after each end of its market's session (due,
 sessions.last_close: the NYSE close for funds, a daily-session market's own
 close, 00:00 UTC for coins and pairs) - its own provider re-read first
 (recount_hours, jump.backfill) - until the closest-reaching of its
-sources no longer serves its hour (recount_days: nine days for the funds,
-pairs and cattle, 29 for the coins, 30 for coffee, 79 for cocoa, cotton and
-the LME); after that the further ones would vote alone, and the vote stands. A
+sources no longer serves its hour (recount_days: nine days wherever MarketWatch
+votes, 29 for the coins, 79 for the LME, 365 for the CSI 300); after that the
+further ones would vote alone, and the vote stands. A
 source that corrects its bars turns the vote back; a bar that heals into no far
 move loses its vote. A move not real is kept for good, because the detector rescores the whole history
 every run; the rest go after KEEP_DAYS. A record from before the vote reads in
@@ -97,15 +114,16 @@ import csv
 import logging
 import math
 import os
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Callable
+from typing import Callable, Mapping
 
 import numpy as np
 import pandas as pd
 import requests
 
-from price_monitor import alpaca, ft, marketwatch, sina, wallstreetcn
+from price_monitor import alpaca, coinbase, ft, kraken, marketwatch, sina, wallstreetcn
 from price_monitor.models import UNANSWERED_IN_A_ROW, Unreachable
 from jump import atomic, bars, sessions
 from jump.basket import Asset
@@ -121,8 +139,13 @@ CANDIDATE_SIGMA = 4.0
 REAL_SHARE = 0.5
 PENDING_HOURS = 24
 TAIL_DAYS = 200                   # bars read before the window: the detector's half-year and more
-MAX_REQUESTS = 40
-KEEP_DAYS = 90                    # longer than any recount (the softs' and the LME's, 79 days)
+# A run's requests and seconds for the vote, at most: the busiest count, at
+# 00:00 UTC when the pairs, metals and coins all close their day, asks about 70
+# (13 instruments, 4-7 sources each); the hourly job's fetch step has twelve
+# minutes, and the whole run takes about three (2026-10-13).
+MAX_REQUESTS = 120
+VOTE_SECONDS = 300
+KEEP_DAYS = 90                    # longer than the LME's recount, 79 days
 
 # One source's answer about a move (judge).
 CONFIRMED, UNCONFIRMED, UNKNOWN = "confirmed", "unconfirmed", "unknown"
@@ -164,24 +187,35 @@ ROLL_STEP_BP = 50.0
 MARKETWATCH_CATTLE = "FUTURE/US/XCME/LC00"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Source:
     """A feed that can be asked about another feed's move. `name` is the
     provider it is, so an instrument is never asked of its own provider;
-    `days`, how far back it serves, measured; `symbol(asset)`, what it calls
-    the instrument (None: it does not carry it); `own_rolls`, a continuous
-    future that changes contract on its own days; `delay`, seconds it serves
-    behind the clock - it is not asked about a move it cannot serve whole
-    yet, and joins the next count; `keys`, the secrets it needs - without
-    them it is no voter at all, rather than an outage named on every vote."""
+    `symbols`, what it calls each instrument it votes on, by ticker - a name,
+    or a function of the instrument for one that changes (the FT's contract the
+    store holds today); `days`, how far back it serves, measured; `own_rolls`,
+    a continuous future that changes contract on its own days, or a spot price
+    beside a future the store rolls; `delay`, seconds it serves behind the
+    clock - it is not asked about a move it cannot serve whole yet, and joins
+    the next count; `keys`, the secrets it needs - without them it is no voter
+    at all, rather than an outage named on every vote; `skip_hours`, by ticker,
+    the local hours of the instrument's market whose moves it is not asked
+    about, its bar there being another grid's (the FT's last hour in Europe):
+    there it is neither a vote nor an outage."""
     name: str
     label: str
     days: float
     interval: str
-    symbol: "Callable[[Asset], str | None]"
+    symbols: "Mapping[str, str | Callable[[Asset], str | None]]"
     own_rolls: bool = False
     delay: int = 0
     keys: "tuple[str, ...]" = ()
+    skip_hours: "Mapping[str, tuple[int, ...]]" = field(default_factory=dict)
+
+    def symbol(self, asset: Asset) -> "str | None":
+        """What it calls the instrument, or None: it does not vote on it."""
+        name = self.symbols.get(asset.ticker)
+        return name(asset) if callable(name) else name
 
     def serves(self, c: dict, now: int) -> bool:
         """Whether it can answer about the move by `now`: one without a delay
@@ -189,12 +223,36 @@ class Source:
         whole."""
         return not self.delay or c["hour"] + HOUR + self.delay <= now
 
+    def skips(self, asset: Asset, c: dict) -> bool:
+        """Whether the move is in one of the hours it is not asked about."""
+        hours = self.skip_hours.get(asset.ticker)
+        if not hours:
+            return False
+        from zoneinfo import ZoneInfo
+        zone = ZoneInfo(sessions.DAILY_SESSIONS[asset.session_template][0])
+        return datetime.fromtimestamp(c["hour"], zone).hour in hours
+
 
 ALPACA_KEYS = ("ALPACA_KEY_ID", "ALPACA_SECRET_KEY")
+KEYS = {"tiingo": "TIINGO_API_KEY", "twelvedata": "TWELVEDATA_API_KEY",
+        "sifting": "SIFTING_API_KEY"}
+# The provider a source's calls count against, where its name is not that
+# (config/provider_limits.csv, jump.usage).
+PROVIDER = {"alpaca_sip": "alpaca", "alpaca_crypto": "alpaca"}
+
+PAIRS = ("EUR/USD", "USD/JPY", "GBP/USD", "AUD/USD", "USD/CHF", "USD/CAD", "USD/CNH")
+COINS = ("BTC", "ETH", "SOL", "XRP")
+FUNDS = ("XLK", "XLF", "XLE", "XLV", "SPY", "IWM", "TIP", "LQD", "HYG", "EMB", "UNG", "REMX")
 
 
-def _pair(asset: Asset) -> str:
-    return asset.ticker.replace("/", "").upper()
+def _pair(ticker: str) -> str:
+    return ticker.replace("/", "").upper()
+
+
+def _coins(name: "Callable[[str], str]") -> "dict[str, str]":
+    """The coins (BTC/USDT) by what a source calls each coin against the
+    dollar, `name` given the coin (BTC)."""
+    return {f"{coin}/USDT": name(coin) for coin in COINS}
 
 
 def _ft_cattle(asset: Asset) -> "str | None":
@@ -218,111 +276,103 @@ def _ft_future(asset: Asset) -> "str | None":
 SINA_STAGE2 = {"BZ=F": "OIL", "PL=F": "XPT"}
 
 
-def _exchange(name: str) -> "Callable[[Asset], str | None]":
-    def symbol(asset: Asset) -> "str | None":
-        from price_monitor import coinbase, kraken
-        return (coinbase.product_for if name == "coinbase" else kraken.pair_for)(asset.ticker)
-    return symbol
-
-
-# Every source, by class. Reach measured 2026-10-08: Yahoo's 30-minute bars 59
-# days and hourly 729 (price_monitor.yahoo); Sina's fund bars about 78 trading
-# days and its softs back to 2026-05-12 (coffee, cocoa) and 07-20 (cotton);
-# MarketWatch about nine trading days; Kraken 720 hours; Coinbase pages back to
-# a coin's listing; Alpaca's consolidated tape (SIP) from 2016-01-01, to fifteen
-# minutes back on the free plan (price_monitor.alpaca); the FT 24 trading days
-# (2026-10-10), counted as 30. Wallstreetcn's bars reach about 170 days
-# (2026-10-10); the LME's are counted to 79, as Sina's softs are: the record
-# keeps a vote KEEP_DAYS, and the store's LME bars before 2026-07-08 (tin) and
-# -15 are Wallstreetcn's own, where it would be no voter (SUPPLIED) - 79 days
-# back from 2026-10-09 is 07-22. Never Tiingo, SiftingIO or Twelve Data, whose
-# allowances the live run uses.
-SOURCES: "dict[str, tuple[Source, ...]]" = {
-    "fx": (
-        Source("yahoo", "Yahoo", 729, "1h", lambda a: _pair(a) + "=X"),
-        Source("marketwatch", "MarketWatch", 9, "1h",
-               lambda a: "CURRENCY/US/XTUP/" + _pair(a)),
-        Source("wallstreetcn", "Wallstreetcn", 170, "1h",
-               lambda a: wallstreetcn.pair_code(a.ticker)),
-    ),
-    "us_equity": (
-        Source("yahoo", "Yahoo", 59, "30min", lambda a: a.ticker),
-        Source("sina", "Sina", 77, "30min", lambda a: a.ticker),
-        Source("marketwatch", "MarketWatch", 9, "1h", lambda a: "FUND/US/{}/{}".format(
-            MARKETWATCH_FUND_EXCHANGE.get(a.ticker, "ARCX"), a.ticker)),
-        # Every exchange's trades: another source than the IEX feeds the funds
-        # are fetched from, which are one exchange's (the user's, 2026-10-08).
-        Source("alpaca_sip", "Alpaca_SIP", (datetime.now(timezone.utc) - alpaca.FIRST).days + 1,
-               "30min", lambda a: a.ticker, delay=15 * 60, keys=ALPACA_KEYS),
-    ),
-    "softs": (
-        Source("sina", "Sina", 79, "1h", lambda a: SINA_FUTURES.get(a.ticker), own_rolls=True),
-        Source("wallstreetcn", "Wallstreetcn", 170, "1h",
-               lambda a: wallstreetcn.SOFTS.get(a.ticker), own_rolls=True),
-        Source("ft", "FT", 30, "1h", lambda a: ft.SOFTS.get(a.ticker), own_rolls=True),
-    ),
-    "cme_cattle": (
-        Source("marketwatch", "MarketWatch", 9, "1h", lambda a: MARKETWATCH_CATTLE),
-        # The store's own contract, so the FT's changes are the store's: a
-        # move across one sees the step, as across Sina's (own_rolls).
-        Source("ft", "FT", 30, "1h", _ft_cattle, own_rolls=True),
-    ),
-    "lme": (
-        Source("wallstreetcn", "Wallstreetcn", 79, "1h", lambda a: wallstreetcn.LME.get(a.ticker)),
-    ),
-    # The stock indices abroad (the basket's stage 1): each source that moves with
-    # Yahoo's folded bars at 0.90 or more hour by hour (2026-10-11; the record's
-    # voters were accepted at 0.92-0.999, Sina's live cattle refused at 0.80).
-    # MarketWatch is Yahoo's upstream to the cent; India's two are the Sensex.
-    # None yet for the KOSPI, the TAIEX or the JSE Top 40.
-    "indices": (
-        Source("marketwatch", "MarketWatch", 9, "1h", lambda a: marketwatch.INDICES.get(a.ticker)),
-        Source("wallstreetcn", "Wallstreetcn", 170, "1h",
-               lambda a: wallstreetcn.INDICES.get(a.ticker)),
-        Source("ft", "FT", 30, "1h", lambda a: ft.INDICES.get(a.ticker)),
-        Source("sina", "Sina", 365, "1h", lambda a: sina.CN_INDICES.get(a.ticker)),
-    ),
-    # Stage 2's futures (2026-10-12), each source against Yahoo's single contract
-    # close to close: MarketWatch's continuous series 0.991-1.000 for all nine; the
-    # FT's own contract for corn, wheat, soybeans (0.97-0.98) and platinum (0.98);
-    # Sina's Brent (0.94) and spot platinum (0.93). Left out under 0.90:
-    # Wallstreetcn's grains (0.11-0.58) and Brent (0.86), the FT's Treasuries
-    # (0.885-0.89). Each changes contract on its own days, or none (spot), so a move
-    # across a step in its offset to the store is not asked of it (own_rolls).
-    "futures": (
-        Source("marketwatch", "MarketWatch", 9, "1h",
-               lambda a: marketwatch.FUTURES.get(a.ticker), own_rolls=True),
-        Source("ft", "FT", 30, "1h", _ft_future, own_rolls=True),
-        Source("sina", "Sina", 60, "1h", lambda a: SINA_STAGE2.get(a.ticker), own_rolls=True),
-    ),
-    "crypto_24_7": (
-        Source("coinbase", "Coinbase", 365, "1h", _exchange("coinbase")),
-        Source("kraken", "Kraken", 29, "1h", _exchange("kraken")),
-    ),
-    # Spot gold and silver: against SiftingIO's bars over 964 hours to 2026-10-12,
-    # Wallstreetcn moved at 0.9975 and 0.9969, Sina's London metals at 0.9977
-    # and 0.9970 - in part one upstream (73% of gold's closes the same, 7% of
-    # silver's). Sina's 1,023 bars reached 62 days, counted as 60. Yahoo has
-    # no spot metals (404); its futures roll, MarketWatch refuses the pair (400).
-    "metals": (
-        Source("wallstreetcn", "Wallstreetcn", 170, "1h",
-               lambda a: wallstreetcn.pair_code(a.ticker)),
-        Source("sina", "Sina", 60, "1h", lambda a: SINA_METALS.get(a.ticker)),
-    ),
-}
-_CLASS = {"fx_continuous": "fx",
-          "ice_coffee": "softs", "ice_cocoa": "softs", "ice_cotton": "softs",
-          "nymex_globex": "futures", "cbot_rates": "futures", "cbot_grains": "futures",
-          "ice_sugar": "futures",
-          **{name: "indices" for name in sessions.EXCHANGES}}
-# Ahead of the template: gold and silver keep the pairs' week, not their voters.
-_TICKER_CLASS = {"XAU/USD": "metals", "XAG/USD": "metals"}
+# Every source, and what it calls each instrument it votes on. Each was held to
+# the same bar (the source audit, 2026-10-13, docs/decisions.md "Every source on
+# every instrument"): hourly moves 0.90 or more with the store's, nine in ten of
+# the store's big moves confirmed, and no local hour where three or more were
+# not. Reach measured 2026-10-08 to 13: Yahoo's 30-minute bars 59 days and hourly
+# 729 (price_monitor.yahoo); Sina's fund bars about 78 trading days, its softs
+# back to 2026-05-12 (coffee, cocoa) and 07-20 (cotton), its Brent and metals 62
+# days, counted as 60; MarketWatch about nine trading days; Wallstreetcn about
+# 170 days, its LME counted to 79 (the record keeps a vote KEEP_DAYS, and the
+# store's LME bars before 2026-07-22 are Wallstreetcn's own); the FT 24 trading
+# days, counted as 30; Kraken 720 hours; Coinbase, Bitstamp, Bitfinex and
+# Alpaca's coins page back years, counted as 365; Alpaca's consolidated tape
+# (SIP) from 2016-01-01, to fifteen minutes back on the free plan
+# (price_monitor.alpaca); Naver's KOSPI about 12 days, counted as 10; the Taiwan
+# exchange's day reports any day, asked to nine (a request a day). The keyed
+# providers - Tiingo, Twelve Data, SiftingIO - vote within the votes' share of
+# config/provider_limits.csv, on the instruments that share covers (vote_room).
+SOURCES: "tuple[Source, ...]" = (
+    # Yahoo: the pairs' and coins' hourly bars, the funds' half hours folded,
+    # COMEX's gold, silver and copper futures.
+    Source("yahoo", "Yahoo", 729, "1h",
+           {**{t: _pair(t) + "=X" for t in PAIRS}, **_coins(lambda c: f"{c}-USD")}),
+    Source("yahoo", "Yahoo", 729, "1h",
+           {"XAU/USD": "GC=F", "XAG/USD": "SI=F", "CAD": "HG=F"}, own_rolls=True),
+    Source("yahoo", "Yahoo", 59, "30min", {t: t for t in FUNDS}),
+    # Sina: the funds' half hours, its global futures and London's metals, the
+    # CSI 300. Its softs change contract on their own days (SINA_FUTURES).
+    Source("sina", "Sina", 77, "30min", {t: t for t in FUNDS}),
+    Source("sina", "Sina", 79, "1h", SINA_FUTURES, own_rolls=True),
+    Source("sina", "Sina", 60, "1h", SINA_STAGE2, own_rolls=True),
+    Source("sina", "Sina", 60, "1h", SINA_METALS),
+    # Its CSI 300 apart from 11:00, the morning session's last half hour before
+    # the lunch break: 0.69 there, 0.98 in the afternoon (the user's, 2026-10-13).
+    Source("sina", "Sina", 365, "1h", sina.CN_INDICES, skip_hours={"000300.SS": (11,)}),
+    # MarketWatch: the pairs, the funds by their listing exchange, the indices,
+    # live cattle's continuous contract; the futures' continuous series.
+    Source("marketwatch", "MarketWatch", 9, "1h", {
+        **{t: "CURRENCY/US/XTUP/" + _pair(t) for t in PAIRS},
+        **{t: "FUND/US/{}/{}".format(MARKETWATCH_FUND_EXCHANGE.get(t, "ARCX"), t)
+           for t in FUNDS},
+        **marketwatch.INDICES, "LE=F": MARKETWATCH_CATTLE}),
+    Source("marketwatch", "MarketWatch", 9, "1h",
+           {**marketwatch.FUTURES, **marketwatch.METALS, **marketwatch.SOFTS}, own_rolls=True),
+    # Wallstreetcn: the pairs and spot metals, the indices, the LME, its
+    # continuous softs and futures.
+    Source("wallstreetcn", "Wallstreetcn", 170, "1h",
+           {t: wallstreetcn.pair_code(t) for t in PAIRS + ("XAU/USD", "XAG/USD")}),
+    Source("wallstreetcn", "Wallstreetcn", 170, "1h", wallstreetcn.INDICES),
+    Source("wallstreetcn", "Wallstreetcn", 79, "1h", wallstreetcn.LME),
+    Source("wallstreetcn", "Wallstreetcn", 170, "1h",
+           {**wallstreetcn.SOFTS, **wallstreetcn.FUTURES}, own_rolls=True),
+    # The FT: its continuous softs and Brent, the contract the store holds for
+    # live cattle, the grains and platinum - each across a change of contract
+    # an outage (own_rolls) - and five indices. Europe's three end their last
+    # hour before the closing auction that Yahoo's bar holds: 0.08-0.19 in that
+    # hour, so not asked about a move in it (the user's, 2026-10-13).
+    Source("ft", "FT", 30, "1h",
+           {**ft.SOFTS, **ft.FUTURES_CONTINUOUS, "LE=F": _ft_cattle,
+            **{t: _ft_future for t in ("ZC=F", "ZW=F", "ZS=F", "PL=F")}}, own_rolls=True),
+    Source("ft", "FT", 30, "1h", ft.INDICES,
+           skip_hours={"^STOXX50E": (17,), "^FTSE": (16,), "^SSMI": (17,)}),
+    # Every exchange's trades: another source than the IEX feeds the funds are
+    # fetched from, which are one exchange's (the user's, 2026-10-08).
+    Source("alpaca_sip", "Alpaca_SIP", (datetime.now(timezone.utc) - alpaca.FIRST).days + 1,
+           "30min", {t: t for t in FUNDS}, delay=15 * 60, keys=ALPACA_KEYS),
+    # The coins, served by Binance, whose prices are its own trades: other
+    # exchanges' dollar pairs - a wick on one exchange is real there and not the
+    # market's.
+    Source("coinbase", "Coinbase", 365, "1h",
+           _coins(lambda c: coinbase.product_for(f"{c}/USDT"))),
+    Source("kraken", "Kraken", 29, "1h", _coins(lambda c: kraken.pair_for(f"{c}/USDT"))),
+    Source("bitstamp", "Bitstamp", 365, "1h", _coins(lambda c: f"{c.lower()}usd")),
+    Source("bitfinex", "Bitfinex", 365, "1h", _coins(lambda c: f"t{c}USD")),
+    Source("alpaca_crypto", "Alpaca", 365, "1h", _coins(lambda c: f"{c}/USD")),
+    # Korea's and Taiwan's own. The exchange's TAIEX apart from 13:00, whose bar
+    # holds its 13:30 closing auction: 0.50 there, 1.00 in the hours before
+    # (the user's, 2026-10-13).
+    Source("naver", "Naver", 10, "1h", {"^KS11": "KOSPI"}),
+    Source("twse", "TWSE", 9, "1h", {"^TWII": "TAIEX"}, skip_hours={"^TWII": (13,)}),
+    # The keyed providers, within the votes' share of their allowance.
+    Source("tiingo", "Tiingo", 365, "1h", {t: t for t in PAIRS + ("XAU/USD", "XAG/USD")},
+           keys=(KEYS["tiingo"],)),
+    Source("tiingo", "Tiingo", 365, "30min", {"UNG": "UNG", "REMX": "REMX"},
+           keys=(KEYS["tiingo"],)),
+    Source("twelvedata", "Twelve Data", 365, "1h",
+           {t: t for t in PAIRS + ("XAU/USD",) if t != "USD/CNH"}, keys=(KEYS["twelvedata"],)),
+    Source("sifting", "SiftingIO", 365, "30min", {"SPY": "SPY", "UNG": "UNG"},
+           keys=(KEYS["sifting"],)),
+    Source("sifting", "SiftingIO", 365, "1h", {"PL=F": "XPT/USD"}, own_rolls=True,
+           keys=(KEYS["sifting"],)),
+)
 # What the channel calls each provider: the sources, and the stores' own.
-LABELS = {**{s.name: s.label for group in SOURCES.values() for s in group},
+LABELS = {**{s.name: s.label for s in SOURCES},
           "binance": "Binance", "sifting": "SiftingIO", "tiingo": "Tiingo",
           "alpaca": "Alpaca_IEX", "twelvedata": "Twelve Data",
           # named in the record by the history check before the vote
-          "dukascopy": "Dukascopy", "bitstamp": "Bitstamp", "bitfinex": "Bitfinex"}
+          "dukascopy": "Dukascopy"}
 
 
 # Who supplied which stretch of a store by hand, inside the live recount: a
@@ -384,13 +434,77 @@ def recount_hours(asset: Asset, record: dict, now: int) -> "list[int]":
 
 
 def sources_for(asset: Asset) -> "list[Source]":
-    """Every source of the instrument's class that carries it, except its own
-    provider."""
-    kind = _TICKER_CLASS.get(asset.ticker) or _CLASS.get(asset.session_template,
-                                                         asset.session_template)
-    group = SOURCES.get(kind, ())
-    return [s for s in group if s.name != asset.fetched_from and s.symbol(asset)
+    """Every source that votes on the instrument, except its own provider, and
+    a keyed one only with its keys."""
+    return [s for s in SOURCES if s.name != asset.fetched_from and s.symbol(asset)
             and all(os.environ.get(k, "").strip() for k in s.keys)]
+
+
+def provider(name: str) -> str:
+    """The provider a source's calls count against (config/provider_limits.csv)."""
+    return PROVIDER.get(name, name)
+
+
+_asked_at: "dict[str, list[float]]" = {}
+
+
+def _pace(name: str) -> None:
+    """Before a request: if the provider's minute share for the vote
+    (per_minute) is spent in the last sixty seconds of this process, wait
+    until it is not."""
+    share = per_minute().get(provider(name))
+    if not share:
+        return
+    recent = [t for t in _asked_at.get(provider(name), []) if time.monotonic() - t < 60]
+    if len(recent) >= share:
+        time.sleep(max(0.0, 60 - (time.monotonic() - recent[-share])))
+    _asked_at[provider(name)] = recent[-share:] + [time.monotonic()]
+
+
+_PER_MINUTE: "dict[str, int] | None" = None
+
+
+def per_minute() -> "dict[str, int]":
+    """The vote's requests a minute to a provider whose limit is a minute's:
+    the votes' share of that minute in config/provider_limits.csv (Twelve
+    Data's six of eight, the hourly batch's one beside it). Read once."""
+    global _PER_MINUTE
+    if _PER_MINUTE is None:
+        from jump import usage
+        try:
+            table = usage.limits()
+            minute = table[(table["window"] == "minute") & (table["votes"] > 0)]
+            _PER_MINUTE = {row.provider: int(row.votes) for row in minute.itertuples()}
+        except (OSError, ValueError, KeyError) as exc:
+            log.warning("verify: the limits are unreadable - %s; Twelve Data asked "
+                        "one a minute", exc)
+            _PER_MINUTE = {"twelvedata": 1}
+    return _PER_MINUTE
+
+
+def vote_room(now: datetime) -> "dict[str, float]":
+    """How many requests the vote may still make of each provider this run
+    (jump.usage.votes_left): its votes' share of each hour, day and month less
+    what the vote has spent of it. A provider without a limit is not here. With
+    the limits unreadable, the keyed providers are asked nothing."""
+    from jump import usage
+    try:
+        return usage.votes_left(now)
+    except (OSError, ValueError, KeyError) as exc:
+        log.warning("verify: the limits are unreadable - %s; the keyed providers "
+                    "do not vote this run", exc)
+        return dict.fromkeys(KEYS, 0)
+
+
+def _frame(candles) -> pd.DataFrame:
+    return bars.to_hourly(bars.candles_to_frame(candles))
+
+
+def _regular(candles) -> list:
+    """A US fund's half-hour bars inside its regular session only, as the
+    tape's (price_monitor.alpaca): a pre-market bar folded into the opening
+    hour would put its price in that hour's open."""
+    return [c for c in candles if alpaca.regular_session(c.open_time)]
 
 
 def fetch_verifier(name: str, symbol: str, interval: str, days: float,
@@ -398,29 +512,50 @@ def fetch_verifier(name: str, symbol: str, interval: str, days: float,
     """A source's bars folded onto the store's hourly grid."""
     from datetime import timedelta
 
-    from price_monitor import alpaca, coinbase, kraken, marketwatch, sina, yahoo
+    from price_monitor import (bitfinex, bitstamp, naver, sifting, tiingo, twelvedata,
+                               twse, yahoo)
 
+    days = max(days, 1.0)
+    # Only hours that have ended, for those that serve the open one.
+    hour = now.replace(minute=0, second=0, microsecond=0)
+    _pace(name)
     if name == "alpaca_sip":
         # The free plan refuses an end less than fifteen minutes back.
         end = now - timedelta(minutes=16)
         auth = alpaca.headers(*(os.environ.get(k, "").strip() for k in ALPACA_KEYS))
-        return bars.to_hourly(bars.candles_to_frame(alpaca.fetch_history(
-            symbol, end - timedelta(days=max(days, 1.0)), end, auth, session, feed="sip")))
-    if name in ("coinbase", "kraken"):
-        # Only hours that have ended: the open one is still moving.
-        end = now.replace(minute=0, second=0, microsecond=0)
-        start = end - timedelta(days=max(days, 1.0))
-        client = coinbase if name == "coinbase" else kraken
-        return bars.to_hourly(bars.candles_to_frame(
-            client.fetch_history(symbol, start, end, session)))
+        return _frame(alpaca.fetch_history(symbol, end - timedelta(days=days), end, auth,
+                                           session, feed="sip"))
+    if name in ("coinbase", "kraken", "bitstamp", "bitfinex", "alpaca_crypto"):
+        start = hour - timedelta(days=days)
+        if name == "alpaca_crypto":
+            return _frame(alpaca.fetch_crypto(symbol, start, hour, session))
+        client = {"coinbase": coinbase, "kraken": kraken, "bitstamp": bitstamp,
+                  "bitfinex": bitfinex}[name]
+        return _frame(client.fetch_history(symbol, start, hour, session))
+    key = os.environ.get(KEYS.get(name, ""), "").strip()
+    if name == "tiingo":
+        candles = tiingo.fetch_full_history(symbol, interval, days, api_key=key,
+                                            session=session, end=now)
+        return _frame(_regular(candles) if interval == "30min" else candles)
+    if name == "twelvedata":
+        return _frame(twelvedata.fetch_full_history(
+            symbol, interval, days, "https://api.twelvedata.com", key, session, end=now))
+    if name == "sifting":
+        candles = sifting.fetch_full_history(symbol, interval, days, api_key=key,
+                                             session=session, end=now)
+        return _frame(_regular(candles) if interval == "30min" else candles)
     if name == "marketwatch":
         candles = marketwatch.fetch_hourly(symbol, session, now)
     elif name == "wallstreetcn":
-        candles = wallstreetcn.fetch_hourly(symbol, session, now, days=max(days, 1.0))
+        candles = wallstreetcn.fetch_hourly(symbol, session, now, days=days)
     elif name == "ft":
-        candles = ft.fetch_hourly(symbol, session, now, days=max(days, 1.0))
+        candles = ft.fetch_hourly(symbol, session, now, days=days)
+    elif name == "naver":
+        candles = naver.fetch_hourly(symbol, session, now, days=days)
+    elif name == "twse":
+        candles = twse.fetch_hourly(session, now, days=days)
     elif name == "yahoo":
-        days = min(max(days, 1.0), float(yahoo.MAX_LOOKBACK_DAYS[interval]))
+        days = min(days, float(yahoo.MAX_LOOKBACK_DAYS[interval]))
         candles = yahoo.fetch_full_history(symbol, interval, days=days, session=session,
                                            end=now)
     elif name == "sina" and interval == "30min":
@@ -431,7 +566,7 @@ def fetch_verifier(name: str, symbol: str, interval: str, days: float,
         candles = sina.fetch_bars(symbol, session, now, url=sina.GLOBAL_URL)
     else:
         raise ValueError(f"unknown verifier {name}")
-    return bars.to_hourly(bars.candles_to_frame(candles))
+    return _frame(candles)
 
 
 # --- which bars ----------------------------------------------------------------
@@ -659,10 +794,12 @@ def judge_found(asset: Asset, frame: pd.DataFrame, found: "list[dict]",
             # A source across its own change of contract has nothing to
             # say about the move: an outage for it. One that cannot serve
             # the move whole yet is no voter on it this time.
+            # One whose bar there is another grid's is not asked about it.
             usable = [(src.name, None if v is None or crosses(c, changed.get(src.name, []))
                        else v)
                       for src, (_, v) in zip(sources, asked)
-                      if src.serves(c, now_ts) and not supplied(src.name, asset, c)]
+                      if src.serves(c, now_ts) and not supplied(src.name, asset, c)
+                      and not src.skips(asset, c)]
             out.append((c, judge_all(c, usable)))
         except Exception as exc:
             # One instrument's surprise costs that reading, not the pass.
@@ -833,21 +970,37 @@ def verify(instruments, bars_dir: str, table, session=None, now: "datetime | Non
     # yet judged first, so a busy hour cannot leave the same ones unasked run
     # after run. A source that fails leaves the others to answer; a rate limit
     # stops that source for the rest of the run, as does not answering
-    # UNANSWERED_IN_A_ROW requests in a row (~96 s each of a 20-minute job).
+    # UNANSWERED_IN_A_ROW requests in a row (~96 s each of a 20-minute job). A
+    # keyed provider past the votes' share of its allowance (vote_room) is an
+    # outage for the rest of the run. Past VOTE_SECONDS no instrument is
+    # started: those left are due, and counted on a run after.
+    from price_monitor import sifting, tiingo, twelvedata
+    from price_monitor.models import KeyRefused
+
+    stops = (yahoo.RateLimited, tiingo.RateLimited, sifting.RateLimited,
+             alpaca.RateLimited, twelvedata.DailyQuotaExhausted, KeyRefused)
     counts = {REAL: 0, UNCERTAIN: 0, NOT_REAL: 0, OVERNIGHT: 0}
     unanswered: dict[str, int] = {}
     requests_left = MAX_REQUESTS
+    room = vote_room(now_dt)
+    capped: set[str] = set()
+    began = time.monotonic()
+    late = 0
     doubted: list[str] = []
     for _, asset, found, frame in sorted(todo, key=lambda d: d[0]):
+        if time.monotonic() - began > VOTE_SECONDS:
+            late += 1
+            continue
         # From before the earliest bar a move starts at: a Monday gap starts at
         # Friday's close.
         days = (now_ts - min(c["prev_hour"] for c in found)) / 86400 + 1
         # Every source is asked, or none this run: a vote of all of them, not
         # of whichever were asked. One that is stopped, or fails, is an outage
         # (None), left out of the count. A source whose delay keeps it from
-        # serving any of the moves whole is not asked, and joins the next count.
+        # serving any of the moves whole, or that is not asked about any of
+        # their hours, is not asked, and joins the next count.
         sources = [src for src in sources_for(asset)
-                   if any(src.serves(c, now_ts) for c in found)]
+                   if any(src.serves(c, now_ts) and not src.skips(asset, c) for c in found)]
         if requests_left < sum(src.name not in blocked for src in sources):
             continue
         asked: "list[tuple[str, pd.DataFrame | None]]" = []
@@ -856,7 +1009,13 @@ def verify(instruments, bars_dir: str, table, session=None, now: "datetime | Non
             if name in blocked:
                 asked.append((name, None))
                 continue
+            if room.get(provider(name), math.inf) <= 0:
+                capped.add(provider(name))
+                asked.append((name, None))
+                continue
             requests_left -= 1
+            if provider(name) in room:
+                room[provider(name)] -= 1
             try:
                 asked.append((name, _priced(fetch_verifier(name, src.symbol(asset), src.interval,
                                                            days, session, now_dt))))
@@ -864,7 +1023,7 @@ def verify(instruments, bars_dir: str, table, session=None, now: "datetime | Non
             except Exception as exc:
                 log.warning("verify: %s from %s failed - %s", asset.ticker, name, exc)
                 asked.append((name, None))
-                if isinstance(exc, yahoo.RateLimited) or "answered 429" in str(exc):
+                if isinstance(exc, stops) or "answered 429" in str(exc):
                     blocked.add(name)
                 elif isinstance(exc, Unreachable):
                     unanswered[name] = unanswered.get(name, 0) + 1
@@ -884,12 +1043,20 @@ def verify(instruments, bars_dir: str, table, session=None, now: "datetime | Non
                                    for n, m in zip(names, moves))
                 doubted.append(f"{asset.ticker} {datetime.fromtimestamp(c['hour'], timezone.utc):%Y-%m-%d %H:%M}"
                                f" {c['check']} ({asset.fetched_from} {100 * stored:+.2f}%; {theirs})")
+    if capped:
+        log.warning("verify: the votes' share spent for %s (config/provider_limits.csv): "
+                    "an outage in the rest of this run's votes", ", ".join(sorted(capped)))
+    if late:
+        log.warning("verify: %d instruments left for a later run: the vote's %d seconds "
+                    "were spent", late, VOTE_SECONDS)
     write(record, now_ts, path)
     if doubted:
         log.warning("verify: not real, most sources did not see it - %s", "; ".join(doubted))
     log.info("verify: %s", ", ".join(f"{k} {n}" for k, n in counts.items()))
-    # The sources stopped during this pass, by a rate limit or silence.
-    return dict(counts, not_real_moves=doubted, stopped=sorted(blocked - told))
+    # The sources stopped during this pass, by a rate limit or silence; the
+    # providers past the votes' share of their allowance.
+    return dict(counts, not_real_moves=doubted, stopped=sorted(blocked - told),
+                capped=sorted(capped))
 
 
 def main(argv: "list[str] | None" = None) -> int:

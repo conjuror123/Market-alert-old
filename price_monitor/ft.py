@@ -1,4 +1,5 @@
-"""The FT's hourly bars: a voter on live cattle and coffee.
+"""The FT's hourly bars: a voter on live cattle, coffee, cocoa, Brent, the grains,
+platinum and five stock indices abroad.
 
 THE ENDPOINT is the one the FT's markets pages chart from (markets.ft.com's
 chartapi/series): an instrument's hourly bars by its xid, the last
@@ -41,7 +42,9 @@ SEARCH = "https://markets.ft.com/data/searchapi/searchsecurities"
 HEADERS = {"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"}
 # The continuous series the FT names, by xid.
 CONTINUOUS = {"KC.1": "1046650"}
-SOFTS = {"KC=F": "KC.1"}
+# Cocoa's continuous series by its xid (found by the FT's search, 2026-10-13:
+# 0.92 hour by hour with the stored contract).
+SOFTS = {"KC=F": "KC.1", "CC=F": "1055540"}
 # The stock indices abroad, for the basket's stage 1, by xid: those moving with
 # Yahoo's folded bars at 0.90 or more hour by hour over its 24 days to
 # 2026-10-09 - Europe's and the Americas' 0.92-0.98. Asia's lag it (the Nikkei
@@ -61,6 +64,9 @@ _found: "dict[str, str]" = {}
 # (US@PLF272 for PLF27). Its Treasuries (US@TYZ262, ...) moved with Yahoo's at
 # 0.885-0.89 and are not asked; it holds no Brent or sugar contract.
 FUTURES_ROOTS = {"ZC": "C", "ZW": "W", "ZS": "S"}
+# Brent by its continuous series' xid, which its search finds (the source audit,
+# 2026-10-13: 0.977 hour by hour with the stored contract, 34 days back).
+FUTURES_CONTINUOUS = {"BZ=F": "1054972"}
 
 
 def futures_symbol(contract: "str | None") -> "str | None":

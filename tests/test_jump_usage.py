@@ -171,12 +171,43 @@ def test_every_workflows_file_is_read_together(tmp_path):
     assert u.spent_in(table, "tiingo", "day", datetime(2026, 10, 12, 23, tzinfo=timezone.utc)) == 102
 
 
-def test_the_limits_file_reads_an_undecided_share_as_none():
+def test_the_limits_file_reads_an_undecided_share_as_none(tmp_path):
     from jump import usage as u
     table = u.limits()
     tiingo_day = table[(table.provider == "tiingo") & (table.window == "day")].iloc[0]
-    assert tiingo_day.limit == 1000 and tiingo_day.votes == 0
+    assert tiingo_day.limit == 1000
     assert set(table.window) <= {"minute", "hour", "day", "month"}
+    # Each window's shares fit its limit, but a minute's, which the hourly run,
+    # a walk and the vote use in different minutes (config/provider_limits.csv).
+    for row in table[table.window != "minute"].itertuples():
+        assert row.live + row.manual + row.dashboard + row.votes <= row.limit, row
+    path = tmp_path / "limits.csv"
+    path.write_text("provider,window,limit,live,manual,dashboard,votes,note\n"
+                    "tiingo,day,1000,240,200,0,,\n")
+    assert u.limits(str(path)).iloc[0].votes == 0
+
+
+def test_the_votes_left_are_each_windows_share_less_what_the_vote_spent(tmp_path):
+    # Tiingo's day share of 100 with 95 voted today, its hour's 14 this run's
+    # own: 5 left. SiftingIO's month share, less this month's votes only - not
+    # its fetches, nor last month's. Alpaca's minute is a pace, not a count.
+    from datetime import datetime, timezone
+    from jump import usage as u
+    limits = tmp_path / "limits.csv"
+    limits.write_text("provider,window,limit,live,manual,dashboard,votes,note\n"
+                      "tiingo,hour,50,10,15,11,14,\ntiingo,day,1000,240,200,110,100,\n"
+                      "sifting,month,10000,4700,1000,300,300,\n"
+                      "twelvedata,day,800,24,600,70,,\nalpaca,minute,200,0,100,50,50,\n")
+    usage_dir = tmp_path / "usage"
+    usage_dir.mkdir()
+    (usage_dir / "hourly.csv").write_text(
+        "day,provider,purpose,calls,reported,left,left_at\n"
+        "2026-10-12,tiingo,votes,40,,,\n2026-10-13,tiingo,votes,95,,,\n"
+        "2026-10-13,tiingo,fetch,200,,,\n2026-09-30,sifting,votes,250,,,\n"
+        "2026-10-02,sifting,votes,20,,,\n2026-10-13,sifting,fetch,300,,,\n")
+    left = u.votes_left(datetime(2026, 10, 13, 12, tzinfo=timezone.utc), str(limits),
+                        str(usage_dir))
+    assert left == {"tiingo": 5, "sifting": 280, "twelvedata": 0, "alpaca": float("inf")}
 
 
 def _table(rows):

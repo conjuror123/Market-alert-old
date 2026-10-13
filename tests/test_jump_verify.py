@@ -3,6 +3,7 @@ scored, and its message says so. The verdicts are pinned on real cases,
 checked by hand against Yahoo.
 """
 import math
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -56,39 +57,59 @@ def _asked(asset):
     return [(src.name, src.symbol(asset), src.interval) for src in verify.sources_for(asset)]
 
 
-def test_every_instrument_is_asked_of_every_source_of_its_class_but_its_own(basket):
-    # The pairs: Yahoo, MarketWatch for the hours Yahoo lacks, and
-    # Wallstreetcn.
+KEYED = {"TIINGO_API_KEY": "t", "TWELVEDATA_API_KEY": "d", "SIFTING_API_KEY": "s",
+         "ALPACA_KEY_ID": "k", "ALPACA_SECRET_KEY": "s"}
+
+
+def test_every_instrument_is_asked_of_every_source_that_moves_with_it_but_its_own(
+        monkeypatch, basket):
+    # The source audit's voters (2026-10-13), with every key set.
+    for k, v in KEYED.items():
+        monkeypatch.setenv(k, v)
     assert _asked(basket["EUR/USD"]) == [
         ("yahoo", "EURUSD=X", "1h"), ("marketwatch", "CURRENCY/US/XTUP/EURUSD", "1h"),
-        ("wallstreetcn", "EURUSD.OTC", "1h")]
+        ("wallstreetcn", "EURUSD.OTC", "1h"), ("tiingo", "EUR/USD", "1h"),
+        ("twelvedata", "EUR/USD", "1h")]
     for pair in (a for a in basket.values() if a.block == "FX"):
-        assert [n for n, _, _ in _asked(pair)] == ["yahoo", "marketwatch", "wallstreetcn"]
-    # A fund: Yahoo's, Sina's and MarketWatch's bars, less its own provider.
+        names = [n for n, _, _ in _asked(pair)]
+        assert names[:4] == ["yahoo", "marketwatch", "wallstreetcn", "tiingo"]
+        assert ("twelvedata" in names) == (pair.ticker != "USD/CNH")
+    # A fund: Yahoo's, Sina's and MarketWatch's bars and the tape, less its own
+    # provider; UNG, SPY and REMX more. Not the FT (the user's, 2026-10-13).
     for fund in (a for a in basket.values() if a.session_template == "us_equity"):
         names = [n for n, _, _ in _asked(fund)]
-        assert names == [n for n in ("yahoo", "sina", "marketwatch") if n != fund.fetched_from]
-    assert _asked(basket["TIP"]) == [("yahoo", "TIP", "30min"), ("sina", "TIP", "30min"),
-                                     ("marketwatch", "FUND/US/ARCX/TIP", "1h")]
-    # The softs Yahoo serves: Sina's global futures, hourly, and Wallstreetcn's
-    # cocoa and cotton (not coffee), each with its own rolls.
-    # Coffee: Sina's and the FT's continuous series (Wallstreetcn has none).
-    assert _asked(basket["KC=F"]) == [("sina", "KC", "1h"), ("ft", "KC.1", "1h")]
-    assert _asked(basket["CT=F"]) == [("sina", "CT", "1h"), ("wallstreetcn", "USCT.OTC", "1h")]
-    assert _asked(basket["CC=F"])[1] == ("wallstreetcn", "USCC.OTC", "1h")
-    assert all(src.own_rolls for src in verify.sources_for(basket["CC=F"]))
-    # Stage 2's futures: MarketWatch's continuous series for each; the FT's bars of
-    # the contract the store holds for the grains and platinum; Sina's Brent and
-    # spot platinum - each with its own rolls, all counted again for nine days.
+        assert [n for n in names if n in ("yahoo", "sina", "marketwatch", "alpaca_sip")] == [
+            n for n in ("yahoo", "sina", "marketwatch", "alpaca_sip") if n != fund.fetched_from]
+        assert "ft" not in names
+    assert [n for n, _, _ in _asked(basket["UNG"])] == [
+        "yahoo", "sina", "marketwatch", "wallstreetcn", "alpaca_sip", "tiingo", "sifting"]
+    assert ("tiingo", "REMX", "30min") in _asked(basket["REMX"])
+    assert ("sifting", "SPY", "30min") in _asked(basket["SPY"])
+    # Gold and silver: COMEX's futures on Yahoo and MarketWatch, with their own
+    # rolls; Sina's and Wallstreetcn's spot; the keyed providers' spot.
+    assert _asked(basket["XAU/USD"]) == [
+        ("yahoo", "GC=F", "1h"), ("sina", "XAU", "1h"),
+        ("marketwatch", "FUTURE/US/XNYM/GC00", "1h"), ("wallstreetcn", "XAUUSD.OTC", "1h"),
+        ("tiingo", "XAU/USD", "1h"), ("twelvedata", "XAU/USD", "1h")]
+    rolls = {s.name: s.own_rolls for s in verify.sources_for(basket["XAU/USD"])}
+    assert rolls == {"yahoo": True, "sina": False, "marketwatch": True,
+                     "wallstreetcn": False, "tiingo": False, "twelvedata": False}
+    assert "twelvedata" not in [n for n, _, _ in _asked(basket["XAG/USD"])]
+    # The softs: Sina's, MarketWatch's, Wallstreetcn's (not coffee) and the
+    # FT's (not cotton) continuous series, each with its own rolls.
+    assert [n for n, _, _ in _asked(basket["KC=F"])] == ["sina", "marketwatch", "ft"]
+    assert [n for n, _, _ in _asked(basket["CC=F"])] == ["sina", "marketwatch",
+                                                         "wallstreetcn", "ft"]
+    assert [n for n, _, _ in _asked(basket["CT=F"])] == ["sina", "marketwatch", "wallstreetcn"]
+    assert all(src.own_rolls for t in ("KC=F", "CC=F", "CT=F", "BZ=F", "PL=F")
+               for src in verify.sources_for(basket[t]))
+    # Stage 2's futures.
     assert [n for n, _, _ in _asked(basket["ZN=F"])] == ["marketwatch"]
-    assert _asked(basket["BZ=F"]) == [("marketwatch", "FUTURE/UK/IFEU/BRN00", "1h"),
-                                      ("sina", "OIL", "1h")]
+    assert _asked(basket["BZ=F"]) == [
+        ("sina", "OIL", "1h"), ("marketwatch", "FUTURE/UK/IFEU/BRN00", "1h"),
+        ("wallstreetcn", "UKOIL.OTC", "1h"), ("ft", "1054972", "1h")]
     assert [n for n, _, _ in _asked(basket["ZC=F"])] == ["marketwatch", "ft"]
-    assert [n for n, _, _ in _asked(basket["PL=F"])] == ["marketwatch", "ft", "sina"]
-    assert all(src.own_rolls for src in verify.sources_for(basket["PL=F"]))
-    assert verify.recount_days(basket["SB=F"]) == 9
-    assert verify.recount_days(basket["CC=F"]) == 79 and verify.recount_days(basket["EUR/USD"]) == 9
-    assert verify.recount_days(basket["KC=F"]) == 30                 # the FT's reach
+    assert _asked(basket["PL=F"])[-1] == ("sifting", "XPT/USD", "1h")
     # Live cattle: MarketWatch's continuous contract, and the FT's of the
     # contract the store holds today, with its own rolls.
     from jump import futures
@@ -96,34 +117,46 @@ def test_every_instrument_is_asked_of_every_source_of_its_class_but_its_own(bask
     assert _asked(basket["LE=F"]) == [("marketwatch", "FUTURE/US/XCME/LC00", "1h"),
                                       ("ft", "LC" + held[2:5], "1h")]
     assert verify.sources_for(basket["LE=F"])[1].own_rolls
-    assert verify.recount_days(basket["LE=F"]) == 9
-    # The coins: two other exchanges' dollar pairs, Kraken naming BTC its own
-    # way.
-    assert _asked(basket["BTC/USDT"]) == [("coinbase", "BTC-USD", "1h"), ("kraken", "XBTUSD", "1h")]
-    for asset in basket.values():
-        if asset.session_template == "crypto_24_7":
-            assert [n for n, _, _ in _asked(asset)] == ["coinbase", "kraken"]
-    # The LME's metals: Wallstreetcn's bars, counted again as long as the softs.
+    # The coins: other exchanges' and Yahoo's dollar pairs, each named its way.
+    assert _asked(basket["BTC/USDT"]) == [
+        ("yahoo", "BTC-USD", "1h"), ("coinbase", "BTC-USD", "1h"), ("kraken", "XBTUSD", "1h"),
+        ("bitstamp", "btcusd", "1h"), ("bitfinex", "tBTCUSD", "1h"),
+        ("alpaca_crypto", "BTC/USD", "1h")]
+    # The LME's metals: Wallstreetcn's bars; copper also COMEX's.
     assert [_asked(basket[t]) for t in ("SND", "NID", "AHD")] == [
         [("wallstreetcn", "UKSN.OTC", "1h")], [("wallstreetcn", "UKNI.OTC", "1h")],
         [("wallstreetcn", "UKAH.OTC", "1h")]]
-    assert verify.recount_days(basket["SND"]) == 79 < verify.KEEP_DAYS
-    # Every instrument has a source to ask, but the three indices none was
-    # found for (docs/basket-proposal.md, gate B).
-    assert {a.ticker for a in basket.values() if not verify.sources_for(a)} == {
-        "^KS11", "^TWII", "^J200.JO"}
+    assert _asked(basket["CAD"]) == [("yahoo", "HG=F", "1h"), ("wallstreetcn", "UKCA.OTC", "1h")]
+    # No instrument has the same provider twice, and every one has a source.
+    for asset in basket.values():
+        names = [n for n, _, _ in _asked(asset)]
+        assert len(names) == len(set(names)) and names, asset.ticker
 
 
-def test_gold_and_silver_keep_the_pairs_week_but_not_their_voters(basket):
-    # Served by SiftingIO like the pairs, on the pairs' week; asked of
-    # Wallstreetcn and Sina's London metals, not of Yahoo or MarketWatch, which
-    # carry no spot metal.
-    from dataclasses import replace
-    pair = basket["EUR/USD"]
-    gold, silver = (replace(pair, ticker=t) for t in ("XAU/USD", "XAG/USD"))
-    assert _asked(gold) == [("wallstreetcn", "XAUUSD.OTC", "1h"), ("sina", "XAU", "1h")]
-    assert _asked(silver) == [("wallstreetcn", "XAGUSD.OTC", "1h"), ("sina", "XAG", "1h")]
-    assert verify.recount_days(gold) == 60
+def test_each_recount_runs_while_its_closest_reaching_source_serves_the_hour(basket):
+    # MarketWatch's nine days wherever it votes; the coins' Kraken 29; the LME's
+    # Wallstreetcn 79 (copper's Yahoo reaches further); the CSI 300's Sina.
+    days = {t: verify.recount_days(basket[t]) for t in (
+        "EUR/USD", "XAU/USD", "KC=F", "CC=F", "SB=F", "LE=F", "^BVSP", "^KS11", "^TWII",
+        "BTC/USDT", "SND", "CAD", "000300.SS")}
+    assert days == {"EUR/USD": 9, "XAU/USD": 9, "KC=F": 9, "CC=F": 9, "SB=F": 9, "LE=F": 9,
+                    "^BVSP": 9, "^KS11": 9, "^TWII": 9, "BTC/USDT": 29, "SND": 79,
+                    "CAD": 79, "000300.SS": 365}
+    assert verify.recount_days(basket["SND"]) < verify.KEEP_DAYS
+
+
+def test_the_keyed_providers_vote_only_with_their_keys_and_a_share_of_their_allowance(
+        basket):
+    from jump import usage
+    # No keys here: none of them is a voter.
+    keyed = {"tiingo", "twelvedata", "sifting", "alpaca_sip"}
+    for asset in basket.values():
+        assert not {n for n, _, _ in _asked(asset)} & keyed, asset.ticker
+    # Each votes within a share of the limits file.
+    shares = usage.limits()
+    for name in ("tiingo", "twelvedata", "sifting"):
+        assert shares.loc[shares["provider"] == name, "votes"].min() > 0
+    assert {verify.provider(n) for n in ("alpaca_sip", "alpaca_crypto")} == {"alpaca"}
 
 
 def test_alpacas_tape_votes_on_every_fund_with_its_keys_and_is_no_voter_without(
@@ -175,11 +208,6 @@ def test_the_supplier_of_a_moves_bars_is_not_asked_about_it(monkeypatch, tmp_pat
     verify.verify([asset], str(tmp_path / "bars"), None, now=now, path=path)
     assert verify.load(path)[(asset.asset_id, int(hours[bad]), "close")]["verifier"] == \
         "marketwatch,wallstreetcn"
-
-
-def test_no_source_spends_an_allowance_the_live_run_needs():
-    names = {src.name for group in verify.SOURCES.values() for src in group}
-    assert not names & {"tiingo", "sifting", "twelvedata"}
 
 
 def test_a_wick_on_binance_alone_is_unconfirmed():
@@ -1004,8 +1032,8 @@ def test_a_real_gap_across_sinas_change_is_a_tie_not_rejected(monkeypatch, tmp_p
     # The session after Sina moved to another month: our +2% open, and Sina's
     # -5% that is only its spread between the two contracts. Judged across it,
     # a real move read as not seen and left scoring for good. Sina has nothing
-    # to say about it - an outage - nor the FT, given the same bars here:
-    # nobody could check the move, uncertain.
+    # to say about it - an outage - nor MarketWatch or the FT, given the same
+    # bars here: nobody could check the move, uncertain.
     asset = basket["KC=F"]
     days = (6, 7, 8, 9)
     store = _sessions_of_coffee(days, lambda d, h: 306.0 if d >= 8 else 300.0)
@@ -1022,7 +1050,7 @@ def test_a_real_gap_across_sinas_change_is_a_tie_not_rejected(monkeypatch, tmp_p
 
     row = verify.load(path)[(asset.asset_id, c["hour"], "open")]
     assert (row["verdict"], row["verifier"], row["verifier_move"]) == (
-        verify.UNCERTAIN, "sina,ft", ",")
+        verify.UNCERTAIN, "sina,marketwatch,ft", ",,")
 
 
 # --- the night correction ---------------------------------------------------------
@@ -1113,28 +1141,123 @@ def test_an_overnight_verdict_is_kept_for_good_and_read_as_the_feeds_median(tmp_
     assert verify.not_real(path) == {}
 
 
-def test_lme_copper_is_voted_by_wallstreetcn_as_the_other_metals_are():
-    from jump.basket import Asset
-    copper = Asset(ticker="CAD", source="sina", block="industrial_metals", has_volume=True,
-                   tick_size=0.5, session_template="lme", fetch_interval="1h",
-                   label="Copper (LME)", in_basket=True)
-    assert _asked(copper) == [("wallstreetcn", "UKCA.OTC", "1h")]
-    assert verify.recount_days(copper) == 79
+def test_the_indices_abroad_are_voted_by_the_sources_that_move_with_them(basket):
+    asked = {t: _asked(basket[t]) for t in ("^FTSE", "000300.SS", "^NSEI", "^BVSP", "^TWII",
+                                             "^KS11", "^J200.JO", "^N225")}
+    assert asked["^FTSE"] == [("marketwatch", "INDEX/UK//UKX", "1h"), ("ft", "572009", "1h")]
+    assert asked["000300.SS"] == [("sina", "sh000300", "1h")]
+    assert [n for n, _, _ in asked["^NSEI"]] == ["marketwatch", "wallstreetcn"]
+    assert asked["^BVSP"] == [("marketwatch", "INDEX/BR/BVMF/BVSP", "1h"), ("ft", "570637", "1h")]
+    assert asked["^TWII"] == [("twse", "TAIEX", "1h")]
+    assert asked["^KS11"] == [("marketwatch", "INDEX/KR/XKRX/180721", "1h"),
+                              ("naver", "KOSPI", "1h")]
+    assert asked["^J200.JO"] == [("marketwatch", "INDEX/XX/XJSE/168635", "1h")]
+    # Wallstreetcn's Nikkei, stale and 0.67, is dropped (the user's, 2026-10-13).
+    assert asked["^N225"] == [("marketwatch", "INDEX/JP/XTKS/NIK", "1h")]
 
 
-def test_the_indices_abroad_are_voted_by_the_sources_that_move_with_them():
-    from jump.basket import Asset
-    index = lambda t, tpl: Asset(ticker=t, source="yahoo", block="equity",  # noqa: E731
-                                 has_volume=False, tick_size=0.01, session_template=tpl,
-                                 fetch_interval="30min", label=t, in_basket=True)
-    assert _asked(index("^FTSE", "london")) == [("marketwatch", "INDEX/UK//UKX", "1h"),
-                                                ("ft", "572009", "1h")]
-    assert _asked(index("000300.SS", "shanghai")) == [("sina", "sh000300", "1h")]
-    assert [n for n, _, _ in _asked(index("^NSEI", "mumbai"))] == ["marketwatch", "wallstreetcn"]
-    assert _asked(index("^BVSP", "sao_paulo")) == [("ft", "570637", "1h")]
-    # None found yet for these.
-    assert _asked(index("^TWII", "taipei")) == _asked(index("^KS11", "seoul")) == []
-    assert verify.recount_days(index("^FTSE", "london")) == 9
+def test_a_source_is_not_asked_about_a_move_in_its_skipped_hour(basket):
+    # The FT's FTSE ends its 16:00 bar before the closing auction Yahoo's holds;
+    # the exchange's TAIEX holds its 13:30 auction in its 13:00 bar; Sina's CSI
+    # 300 has the lunch break in its 11:00 bar. Local hours, summer and winter.
+    def move(text):
+        return {"hour": ts(text), "prev_hour": ts(text) - HOUR, "check": "close"}
+    ft_ = next(s for s in verify.sources_for(basket["^FTSE"]) if s.name == "ft")
+    assert ft_.skips(basket["^FTSE"], move("2026-07-01 15:00"))      # 16:00 BST
+    assert ft_.skips(basket["^FTSE"], move("2026-12-01 16:00"))      # 16:00 GMT
+    assert not ft_.skips(basket["^FTSE"], move("2026-07-01 14:00"))
+    assert not ft_.skips(basket["^BVSP"], move("2026-07-01 15:00"))  # not its hour there
+    twse = verify.sources_for(basket["^TWII"])[0]
+    assert twse.skips(basket["^TWII"], move("2026-10-12 05:00"))     # 13:00 Taipei
+    assert not twse.skips(basket["^TWII"], move("2026-10-12 04:00"))
+    sina = verify.sources_for(basket["000300.SS"])[0]
+    assert sina.skips(basket["000300.SS"], move("2026-10-12 03:00"))  # 11:00 Shanghai
+    assert not sina.skips(basket["000300.SS"], move("2026-10-12 05:00"))
+
+
+def test_a_move_in_a_skipped_hour_is_neither_a_vote_nor_an_outage(basket):
+    # The FT's closing hour on the FTSE: only MarketWatch is counted; an hour
+    # before, both are.
+    asset = basket["^FTSE"]
+    sources = verify.sources_for(asset)
+    v = bars_of({"2026-07-01 13:00": 100.0, "2026-07-01 14:00": 100.0,
+                 "2026-07-01 15:00": 103.0})
+    late = {"hour": ts("2026-07-01 15:00"), "prev_hour": ts("2026-07-01 14:00"),
+            "check": "close", "from_open": False, "prev_close": 100.0, "price": 103.0}
+    early = dict(late, hour=ts("2026-07-01 14:00"), prev_hour=ts("2026-07-01 13:00"))
+    out = verify.judge_found(asset, v, [late, early], sources,
+                             [("marketwatch", v), ("ft", v)], ts("2026-07-02 00:00"))
+    assert out[0][1][2] == ["marketwatch"] and out[1][1][2] == ["marketwatch", "ft"]
+
+
+def test_a_keyed_provider_past_its_votes_share_is_an_outage(monkeypatch, tmp_path, basket):
+    # Tiingo with one request left of its share: the first pair asks it, the
+    # second has it as an outage, named; the free sources answer both.
+    for k, v in KEYED.items():
+        monkeypatch.setenv(k, v)
+    asset, hours, bad, frame, market = _inr_store(tmp_path, basket)
+    other = basket["GBP/USD"]
+    c = {"hour": int(hours[bad]), "check": "close", "from_open": False,
+         "prev_hour": int(hours[bad - 1]), "prev_close": 1.0, "price": 1.03}
+    monkeypatch.setattr(verify, "candidates", lambda *a, **k: [dict(c)])
+    monkeypatch.setattr(verify.bars, "load", lambda path, since=None: frame)
+    asked = []
+    monkeypatch.setattr(verify, "fetch_verifier",
+                        lambda name, *a, **k: asked.append(name) or market)
+    monkeypatch.setattr(verify, "vote_room", lambda now: {"tiingo": 1, "twelvedata": 50})
+    path = str(tmp_path / "verified.csv")
+    now = datetime.fromtimestamp(int(hours[bad]) + 2 * HOUR + 300, timezone.utc)
+    r = verify.verify([asset, other], str(tmp_path / "bars"), None, now=now, path=path)
+    assert asked.count("tiingo") == 1 and asked.count("twelvedata") == 2
+    assert r["capped"] == ["tiingo"]
+    rows = [row for k, row in verify.load(path).items() if k[1] == c["hour"]]
+    moves = [dict(zip(row["verifier"].split(","), row["verifier_move"].split(",")))
+             for row in rows]
+    assert sorted(m["tiingo"] == "" for m in moves) == [False, True]
+    assert all(m["yahoo"] != "" for m in moves)
+
+
+def test_the_vote_waits_out_a_providers_minute_share(monkeypatch):
+    # Twelve Data's six a minute: the seventh request waits until the first is
+    # a minute old.
+    clock = [1000.0]
+    slept = []
+    monkeypatch.setattr(verify.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(verify.time, "sleep", lambda s: slept.append(s) or
+                        clock.__setitem__(0, clock[0] + s))
+    monkeypatch.setattr(verify, "_asked_at", {})
+    monkeypatch.setattr(verify, "_PER_MINUTE", {"twelvedata": 6})
+    for _ in range(6):
+        verify._pace("twelvedata")
+        clock[0] += 2
+    assert slept == []
+    verify._pace("twelvedata")
+    assert slept == [pytest.approx(48.0)]
+    verify._pace("yahoo")                                # no minute share: never waits
+    assert len(slept) == 1
+
+
+def test_the_votes_share_of_a_minute_is_read_from_the_limits_file(monkeypatch):
+    monkeypatch.setattr(verify, "_PER_MINUTE", None)
+    assert verify.per_minute()["twelvedata"] == 6
+
+
+def test_the_keyed_fund_voters_keep_the_regular_session_only(monkeypatch):
+    # A pre-market half hour folded into the opening hour would put its price
+    # in that hour's open.
+    from price_monitor import sifting, tiingo
+    from price_monitor.models import Candle
+    at = lambda h, m: int(datetime(2026, 10, 9, h, m, tzinfo=timezone.utc).timestamp())  # noqa: E731
+    half = [Candle(at(h, m), p, p, p, p, 1.0, at(h, m) + 1800)
+            for h, m, p in ((13, 0, 9.0), (13, 30, 10.0), (14, 0, 10.5))]  # 09:00 EDT pre-market
+    monkeypatch.setattr(tiingo, "fetch_full_history", lambda *a, **k: half)
+    monkeypatch.setattr(sifting, "fetch_full_history", lambda *a, **k: half)
+    monkeypatch.setattr(verify, "_PER_MINUTE", {})
+    now = datetime(2026, 10, 9, 18, tzinfo=timezone.utc)
+    for name in ("tiingo", "sifting"):
+        v = verify.fetch_verifier(name, "UNG", "30min", 2, None, now)
+        assert v["hour_utc"].tolist() == [at(13, 0), at(14, 0)]
+        assert v["open"].tolist() == [10.0, 10.5]
 
 
 def test_an_indexs_night_is_asked_about_to_its_first_hours_close(basket):

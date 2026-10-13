@@ -1,5 +1,7 @@
 """Alpaca's bars: the consolidated tape (SIP) from 2016 for history and the vote,
-and the IEX exchange's bars for the hour.
+the IEX exchange's bars for the hour, and its own coins' hourly bars for the
+coins' vote (fetch_crypto: the four coins against the dollar, 0.997-0.999 hour by
+hour with Binance's over 720 hours to 2026-10-13, the source audit).
 
 LIVE: IEX. The free plan's IEX bars are current - measured 2026-10-01 at 15:05
 UTC, the half-hour bar opened at 15:00 was served, minute bars to 15:04 - and
@@ -111,6 +113,31 @@ def fetch_history(symbol: str, start: datetime, end: datetime, auth: dict,
                                   low=float(row["l"]), close=float(row["c"]),
                                   volume=float(row.get("v") or 0.0),
                                   close_time=t + BAR_SECONDS))
+        token = payload.get("next_page_token")
+        if not token:
+            return out
+        params["page_token"] = token
+
+
+CRYPTO_URL = "https://data.alpaca.markets/v1beta3/crypto/us/bars"
+
+
+def fetch_crypto(symbol: str, start: datetime, end: datetime,
+                 session: requests.Session | None = None) -> list[Candle]:
+    """Alpaca's own hourly bars of a coin against the dollar (BTC/USD) from
+    `start` to `end`, paged; no key. Each bar is stamped at its start in UTC,
+    an hour without a trade not served. A voter on the coins (jump.verify)."""
+    params = {"symbols": symbol, "timeframe": "1Hour", "limit": PAGE_LIMIT,
+              "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "end": end.strftime("%Y-%m-%dT%H:%M:%SZ")}
+    out: list[Candle] = []
+    while True:
+        payload = _get(session, CRYPTO_URL, params, {}, symbol)
+        for row in (payload.get("bars") or {}).get(symbol) or []:
+            t = int(datetime.fromisoformat(row["t"].replace("Z", "+00:00")).timestamp())
+            out.append(Candle(open_time=t, open=float(row["o"]), high=float(row["h"]),
+                              low=float(row["l"]), close=float(row["c"]),
+                              volume=float(row.get("v") or 0.0), close_time=t + 3600))
         token = payload.get("next_page_token")
         if not token:
             return out

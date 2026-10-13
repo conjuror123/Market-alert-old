@@ -28,7 +28,8 @@ def test_each_voter_is_saved_and_a_failure_is_listed(monkeypatch, tmp_path):
     assert failed == ["BTC/USDT kraken: status 503"]
     assert "BTC/USDT kraken: status 503" in (tmp_path / "failed.txt").read_text()
     # Each source over the shorter of the days asked and its own reach.
-    assert dict(asked) == {"coinbase": 35, "kraken": 29}
+    assert dict(asked) == {"yahoo": 35, "coinbase": 35, "kraken": 29, "bitstamp": 35,
+                           "bitfinex": 35, "alpaca_crypto": 35}
 
 
 def test_the_recount_fetch_asks_each_instrument_back_to_the_bar_before_its_window(
@@ -58,7 +59,9 @@ def test_the_recount_fetch_asks_each_instrument_back_to_the_bar_before_its_windo
 
     monkeypatch.setattr(verify, "fetch_verifier", fetch)
     # One no source votes on has no window, and is passed by.
-    unvoted = next(a for a in load_basket().instruments if not verify.sources_for(a))
+    from dataclasses import replace
+    unvoted = replace(asset, ticker="NOK/SEK")
+    assert not verify.sources_for(unvoted)
     voter_bars.dump([unvoted, asset], str(tmp_path / "out"), None, now=now,
                     bars_dir=str(tmp_path / "bars"))
     span = (now.timestamp() - friday) / 86400 + 1

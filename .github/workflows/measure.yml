@@ -84,10 +84,15 @@ jobs:
       # As far back as the live pass would ask for the moves it votes: each instrument's
       # recount window, from the store's last bar before it. A source that fails is
       # listed in failed.txt and named on the page.
+      # The keyed voters cost the dashboard's share of config/provider_limits.csv: a
+      # call per instrument each votes on.
       - name: Fetch the voters' bars
         env:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          SIFTING_API_KEY: ${{ secrets.SIFTING_API_KEY }}
         run: PYTHONPATH=. python -m tools.voter_bars "$RUNNER_TEMP/voters" --recount --purpose dashboard
 
       # What each provider was asked, by day (jump.usage): the live branch's usage files,
@@ -107,11 +112,15 @@ jobs:
           fi
           ls -l "$RUNNER_TEMP/usage"
 
-      # Alpaca's keys again: without them the vote would not ask its tape.
+      # The keys again: without them the vote would not ask the keyed voters. Nothing
+      # is fetched here.
       - name: Measure
         env:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          SIFTING_API_KEY: ${{ secrets.SIFTING_API_KEY }}
         run: |
           PYTHONPATH=. python -m tools.measure "$RUNNER_TEMP/measure.json" \
             --voters "$RUNNER_TEMP/voters" --usage "$RUNNER_TEMP/usage"

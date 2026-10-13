@@ -2,8 +2,9 @@
 
     python -m tools.voter_bars OUT [--days 35 | --recount [--bars-dir DIR]] [--instruments A,B]
 
-Each source the live vote asks (jump.verify.sources_for - never Tiingo,
-SiftingIO or Twelve Data; Alpaca's tape only where its keys are set)
+Each source the live vote asks (jump.verify.sources_for - the keyed ones
+only where their keys are set, each costing one call of the dashboard's share
+of config/provider_limits.csv per instrument it votes on)
 is fetched as the vote fetches it (verify.fetch_verifier) and written to
 OUT/<source>/<file_stem>.parquet. A source that fails is listed in
 OUT/failed.txt; a run with lines there is partial. The bot never runs this: it

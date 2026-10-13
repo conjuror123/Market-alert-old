@@ -58,12 +58,18 @@ LME = {"SND": "UKSN.OTC", "NID": "UKNI.OTC", "AHD": "UKAH.OTC", "CAD": "UKCA.OTC
 SOFTS = {"CC=F": "USCC.OTC", "CT=F": "USCT.OTC"}
 # The stock indices abroad it carries as cash indices, for the basket's stage 1,
 # each moving with Yahoo's folded bars at 0.90 or more hour by hour (2026-08 to
-# 10): the Nikkei 0.92, Saudi Arabia's 0.99, Canada's 0.95; India's is the Sensex,
-# not the Nifty, at 0.91. Below 0.90, left out: the ASX 200 (0.80), the KOSPI
-# (0.89), the Euro Stoxx 50 (0.86); its index futures (HK40F, UK100F) change
-# contract on their own days, and MarketWatch carries both indices.
-INDICES = {"^N225": "JP225.OTC", "^TASI.SR": "TASI.OTC", "^GSPTSE": "SPTSX.OTC",
-           "^NSEI": "SENSEX.OTC"}
+# 10): Saudi Arabia's 0.99, Canada's 0.95; India's is the Sensex, not the Nifty,
+# at 0.91. Below 0.90, left out: the ASX 200 (0.80), the KOSPI (0.89, 0.84 in the
+# source audit), the Euro Stoxx 50 (0.86); its index futures (HK40F, UK100F)
+# change contract on their own days, and MarketWatch carries both indices. The
+# Nikkei (JP225.OTC, 0.92 then) was dropped on 2026-10-13: 0.67 in the source
+# audit, its last bar 3.5 days old (the user's).
+INDICES = {"^TASI.SR": "TASI.OTC", "^GSPTSE": "SPTSX.OTC", "^NSEI": "SENSEX.OTC"}
+# Its continuous futures for two more (the source audit, 2026-10-13): ICE Brent
+# for Brent, 0.987 hour by hour with the stored contract; NYMEX natural gas for
+# the natural gas fund, 0.985 with UNG's own hours. Each changes contract on its
+# own days.
+FUTURES = {"BZ=F": "UKOIL.OTC", "UNG": "USNG.OTC"}
 # The most one answer serves (measured 2026-10-09: 4,096 and 4,100 bring the
 # same 2,046 bars, 4,500 one).
 MAX_TICKS = 4096

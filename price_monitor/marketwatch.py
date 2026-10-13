@@ -1,5 +1,5 @@
-"""MarketWatch's hourly bars: a voter on the currency pairs, the funds, live cattle
-and the stock indices abroad.
+"""MarketWatch's hourly bars: a voter on the currency pairs, the funds, the
+futures, gold and silver, and the stock indices abroad.
 
 THE ENDPOINT is the one MarketWatch's own charts read (api.wsj.net, Dow Jones'
 "michelangelo" time series): hourly bars for about the last ten days, keyed as
@@ -12,15 +12,22 @@ as nulls.
 It has every hour of the pairs (the 17 of 2026-10-04), 0-0.6 bp from the stored
 bars at the median, and its quotes are its own; live cattle's continuous contract moves
 with the stored front contract at 0.92 hour by hour (docs/decisions.md, "The
-sources' vote"). Its coffee is Yahoo's, one upstream, so not a voter on the
-softs.
+sources' vote").
 
 ITS INDICES (INDICES, for the basket's stage 1) are Yahoo's to the cent where both
 hold the hour - hourly correlation 0.96-1.00 and 0 bp at the median over its ten
 days to 2026-10-09 - one upstream's prices from two vendors, which is agreement,
 not a copy (docs/decisions.md, "The sources' vote"). India's is the Sensex, not
-the Nifty: another index of the same market, moving with it at 0.99. Not carried:
-the KOSPI, TAIEX, CSI 300, JSE Top 40 and Bovespa (keys tried 2026-10-11).
+the Nifty: another index of the same market, moving with it at 0.99. The KOSPI,
+JSE Top 40 and Bovespa are found by Dow Jones' own search under keys of their
+own (the source audit, 2026-10-13: 1.00, 0.99 and 1.00 hour by hour); the TAIEX
+(0.86, its 13:00 hour 0.47) and the CSI 300 are not voters.
+
+ITS FUTURES' CONTINUOUS SERIES (FUTURES, METALS, SOFTS) hold the nearest month and
+change it on their own days. Yahoo's single contracts to the cent where both hold
+the month, and gold's and silver's COMEX series move with SiftingIO's spot at
+0.998-0.999, coffee's, cocoa's and cotton's with the stored contract at
+0.998-1.00 (the source audit, 2026-10-13): each a voter with its own rolls.
 
 AND THE STANDING RISK. An undocumented endpoint that wants the access token
 MarketWatch's own pages send with every chart: public, in their page, not a
@@ -87,6 +94,8 @@ INDICES = {
     "^NSEI": "INDEX/IN/XBOM/1", "^STOXX50E": "INDEX/XX/XSTX/SX5E", "^FTSE": "INDEX/UK//UKX",
     "^SSMI": "INDEX/CH/XSWX/SMI", "XU100.IS": "INDEX/TR/XIST/XU100",
     "^TASI.SR": "INDEX/SA//TASI", "^GSPTSE": "INDEX/CA/XTSE/GSPTSE", "^MXX": "INDEX/MX//IPC",
+    "^KS11": "INDEX/KR/XKRX/180721", "^J200.JO": "INDEX/XX/XJSE/168635",
+    "^BVSP": "INDEX/BR/BVMF/BVSP",
 }
 
 # Stage 2's futures, each its continuous series (the nearest month, changing on its
@@ -99,6 +108,10 @@ FUTURES = {
     "ZC=F": "FUTURE/US/XCBT/C00", "ZW=F": "FUTURE/US/XCBT/W00", "ZS=F": "FUTURE/US/XCBT/S00",
     "SB=F": "FUTURE/US/IFUS/SB00", "PL=F": "FUTURE/US/XNYM/PL00",
 }
+# Spot gold and silver, voted on by COMEX's continuous series.
+METALS = {"XAU/USD": "FUTURE/US/XNYM/GC00", "XAG/USD": "FUTURE/US/XNYM/SI00"}
+SOFTS = {"KC=F": "FUTURE/US/IFUS/KC00", "CC=F": "FUTURE/US/IFUS/CC00",
+         "CT=F": "FUTURE/US/IFUS/CT00"}
 
 
 def fetch_hourly(key: str, session: requests.Session | None = None,

@@ -134,7 +134,10 @@ puts the futures in place of the funds that stood in for them - Brent, the 2-, 1
 30-year Treasuries, corn, wheat, soybeans, sugar and platinum for BNO, SHY, IEF, TLT,
 CORN, WEAT, SOYB, CANE and PPLT - and leaves out the Bund, JGB, gilt and TTF, which no
 free source carries live (the user's). The 134 that left in stage 1 and the nine funds
-keep their bars on disk; the code only they used went with them.
+keep their bars on disk; the code only they used went with them. The rates block (the 2-,
+10- and 30-year) is kept as it measures (the user's, 2026-10-13: "it is ok"): 9 pushes a
+year as funds, 31 as futures, mostly the 08:00 ET hour of a data release and FOMC's 14:00,
+their 23-hour sessions reading a release hour at 10-13σ.
 
 **One provider per instrument, chosen by measurement**, against the stored bars hour by
 hour in basis points: a feed a few bp off on a thin fund sends alerts for moves that did
@@ -298,9 +301,11 @@ is wrong.
 down turns a clear vote into a tie. When none can answer, the move is uncertain.
 
 **A vote is taken when the move is found, then at each end of its market's session, while
-its closest source still reaches the hour**: 9 days for funds, pairs and cattle, 29 for
-coins, 79 for the softs and the LME. Further back the further sources would vote alone. The
-record keeps a vote 90 days.
+its closest source still reaches the hour**: 9 days wherever MarketWatch votes, 29 for
+coins, 79 for the LME. Further back the further sources would vote alone. The record keeps
+a vote 90 days. Kept when MarketWatch joined gold, silver and the softs (the user's,
+2026-10-12: "keep the shortest reach"), which cut their recount from 60, 30 and 79 days to
+9.
 
 **A provider's corrections come in through its ordinary request**: on a vote's run the fetch
 reaches back to the voted hour; a separate request would spend allowances the live run
@@ -330,10 +335,64 @@ after lunch).
 (Sina's and Wallstreetcn's softs): found as a step of 50 bp or more in the session's median
 offset, which a one-hour bad print cannot make.
 
-**Every source of the class is asked, except the instrument's own provider** and a source
-that mended that stretch of the store (`verify.SUPPLIED`, empty since TUR left). The same
-price from two vendors is agreement, not a copy: vendors of one tape print identical bars on
-many hours.
+**Every source that moves with the instrument is asked, except its own provider** and a
+source that mended that stretch of the store (`verify.SUPPLIED`, empty since TUR left). The
+same price from two vendors is agreement, not a copy: vendors of one tape print identical
+bars on many hours.
+
+**Every source on every instrument** (the source audit, 2026-10-13; the user's: "take
+everything possible, from 1 to 99999999 voters per asset"). Each of 13 clients and 4 new
+fetches tried on each of the 58 and on the Bund, gilt, JGB and TTF, from a runner with the
+keys, on its last ~30 days against the store (a one-off tool, deleted): 507 pairs, then 199
+again after the Yahoo funds were asked as the vote asks them. Accepted, as the vote judges:
+- hourly moves correlated 0.90 or more with the store's;
+- nine in ten of the store's big moves (2.5 robust σ or more) confirmed, the same way and
+  at least half as far;
+- no local hour where three or more big moves were not.
+
+A local hour under 0.5 is another grid's (the FT's last hour in Europe); the pairs' 20:00-22:00
+UTC hours are weak for every voter, from the store's own thin rollover bars, and do not
+count against one.
+
+- **Added:** Tiingo and Twelve Data on the pairs (Twelve Data not USD/CNH) and gold, Tiingo
+  on silver, UNG and REMX; MarketWatch's, Yahoo's COMEX gold and silver; SiftingIO on SPY,
+  UNG and platinum (spot); Wallstreetcn's natural gas future on UNG and Brent on Brent; the
+  FT's Brent and cocoa; MarketWatch's coffee, cocoa and cotton; Yahoo's copper (COMEX) on
+  the LME's; Alpaca's, Bitstamp's, Bitfinex's and Yahoo's dollar pairs on the coins;
+  MarketWatch's KOSPI, JSE Top 40 and Bovespa; Naver's KOSPI; the Taiwan exchange's TAIEX.
+- **A bad hour skipped, not the source** (the user's): the FT on the Euro Stoxx 50 (17:00
+  local, 0.19), FTSE 100 (16:00, 0.08) and SMI (17:00, 0.15), whose last bar ends before
+  the closing auction Yahoo's holds (0.92-0.94 overall, that hour in); the Taiwan
+  exchange at 13:00 (0.50, the 13:30 auction; 1.00 in its other hours); Sina's CSI 300 at
+  11:00 (0.69, the lunch break; 0.98 at 14:00). Each votes in every other hour.
+- **Dropped** (the user's): the FT on the funds (0.91-0.93 overall, its 15:00 hour -0.47 to
+  0.14; each fund keeps four to seven voters without it); Wallstreetcn's Nikkei (0.67, its
+  last bar 3.5 days old).
+- **Left out:** MarketWatch's Bitcoin, Kraken's own pair under another vendor's name, which
+  would give Kraken two votes; Sina's COMEX gold and silver and natural gas, a second Sina
+  voice where its spot or the fund itself votes; MarketWatch's TAIEX (0.86, its 13:00 hour
+  0.47), not in the user's skipped hours; the keyed providers on the coins, which keep six
+  free voters each.
+- **Still none or one:** the TAIEX, JSE Top 40, Nikkei, ASX 200, Hang Seng, BIST 100,
+  sugar and the Treasuries have one voter; MarketWatch is often Yahoo's upstream to the cent.
+
+**The keyed providers vote within a share of their allowance** (the user's, 2026-10-12).
+Whether an instrument has enough voters cannot be judged without knowing the limits hold,
+with room left for manual fetches. The shares are in `config/provider_limits.csv`, enforced
+(`usage.votes_left`): past one, the provider is an outage for the rest of the run.
+
+| provider | limit | the live run | manual | dashboard | the vote | the vote's use |
+|---|---|---|---|---|---|---|
+| Tiingo | 50/hour, 1,000/day | 10, 240 | 15, 200 | 11, 110 | 14, 100 | 11 instruments: about 9 at 00:05 UTC, 15-30 a day |
+| Twelve Data | 8/minute, 800/day | 1, 24 | 7, 600 | 6, 70 | 6, 50 | 7 instruments: about 7 at 00:05 UTC |
+| SiftingIO | 10,000/month | 4,700 | 1,000 | 300 | 300 | 3 instruments: 3-5 a day |
+| Alpaca | 200/minute | 0 | 100 | 50 | 50 | 12 funds' tape and 4 coins |
+
+The vote asks a keyed provider once a run per instrument, on the run that finds a far move
+and the runs after its market's session ends. A minute's shares do not add up: the hourly
+batch spends its credit at about :05, the vote in the minutes after it, which a history
+walk waits out (`LIVE_SLOT_MINUTES`); a dashboard run on a push can meet a 429, an outage
+there.
 
 **Alpaca's consolidated tape votes on every fund**: every exchange's trades, against the IEX
 feeds' one. Fifteen minutes behind, it is asked once it serves the move's hour whole.
@@ -352,16 +411,20 @@ reach it, stands too. A replay of the vote over all history was tried and droppe
 other source the vote cannot call a move not real, and most of history has one at most. Do
 not reopen without a second source for those stretches.
 
+Hourly-move correlation with the store over its last ~30 days, from the source audit
+(2026-10-13) unless dated:
+
 | instruments | verified against | why |
 |---|---|---|
-| FX pairs | Yahoo, MarketWatch and Wallstreetcn | MarketWatch has every hour (Yahoo 21–72%), 0–0.6 bp off; Wallstreetcn its own quotes, 0.8–3.4 bp off |
-| funds | Yahoo 30-minute, Sina 30-minute and MarketWatch hourly, but the fund's own, and Alpaca's consolidated tape | Sina matches the tape to 0.0 bp |
-| coffee, cocoa, cotton | Sina global futures; Wallstreetcn for cocoa and cotton; the FT for coffee | Sina 0.2–2.2 bp off, hourly correlation 0.96–0.99 |
-| live cattle | MarketWatch continuous; the FT's bars of the store's contract | MarketWatch hourly correlation 0.92; the FT 2.3 bp off |
-| stage 2's futures (Brent, the Treasuries, corn, wheat, soybeans, sugar, platinum) | MarketWatch continuous, each; the FT's bars of the store's contract for the grains and platinum; Sina's Brent and spot platinum | against Yahoo's contract close to close, 2026: MarketWatch 0.991–1.000, the FT 0.97–0.98, Sina 0.93–0.94; under 0.90 and left out: Wallstreetcn's grains (0.11–0.58) and Brent (0.86), Sina's grains (0.78–0.85), the FT's Treasuries (0.885–0.89) |
-| coins | Coinbase and Kraken | other exchanges' dollar pairs, hourly correlation 0.988–1.000 with Binance's |
-| LME metals | Wallstreetcn | the only feed a runner reaches |
-| stock indices abroad | MarketWatch (11), Wallstreetcn (4), the FT (5), Sina for the CSI 300 | each at 0.90 or more against Yahoo's folded bars, 2026-08 to 10; none for the KOSPI, TAIEX or JSE Top 40 (the user's, 2026-10-12): Wallstreetcn's KOSPI is on another grid (0.65–0.70 at 03:00–04:00 UTC), the FT's Top 40 files the official close in its bar ending 14:00 UTC (its last two hours 0.70 and 0.05, the rest 0.99), the Taiwan exchange's own feed refuses some days; the FT's KOSPI and CNBC's three answer 403 |
+| FX pairs | Yahoo, MarketWatch, Wallstreetcn, Tiingo, Twelve Data (not USD/CNH) | Tiingo 0.996–0.999, MarketWatch 0.98–0.999 (every hour; Yahoo 21–72%, 2026-10-04), Yahoo 0.94–0.997, Wallstreetcn 0.93–0.99 (its own quotes), Twelve Data 0.91–0.98 |
+| gold, silver | Yahoo's and MarketWatch's COMEX futures, Sina's and Wallstreetcn's spot, Tiingo, Twelve Data (gold) | 0.985–0.999 |
+| funds | Yahoo 30-minute, Sina 30-minute and MarketWatch hourly, but the fund's own, and Alpaca's consolidated tape; UNG also Wallstreetcn's natural gas future, Tiingo, SiftingIO; SPY SiftingIO; REMX Tiingo | 0.994–1.000; Tiingo 0.95–0.995, Wallstreetcn 0.985; Sina matches the tape to 0.0 bp |
+| coffee, cocoa, cotton | Sina global futures, MarketWatch continuous; Wallstreetcn for cocoa and cotton; the FT for coffee and cocoa | MarketWatch 0.998–1.000, Sina and Wallstreetcn 0.989–0.992, the FT 0.92–0.99 |
+| live cattle | MarketWatch continuous; the FT's bars of the store's contract | MarketWatch 1.00 (0.92 on 2026-10-07); the FT 2.3 bp off |
+| stage 2's futures (Brent, the Treasuries, corn, wheat, soybeans, sugar, platinum) | MarketWatch continuous, each; the FT's bars of the store's contract for the grains and platinum, its continuous Brent; Sina's Brent and spot platinum; Wallstreetcn's Brent; SiftingIO's spot platinum | MarketWatch 0.995–1.000, the FT 0.97–0.99, Sina, Wallstreetcn and SiftingIO 0.98–0.99; under 0.90 and left out (2026-10-12): Wallstreetcn's grains (0.11–0.58), Sina's grains (0.78–0.85), the FT's Treasuries (0.885–0.89) |
+| coins | Coinbase, Kraken, Bitstamp, Bitfinex, Alpaca, Yahoo | other exchanges' dollar pairs, 0.997–1.000 with Binance's |
+| LME metals | Wallstreetcn; copper also Yahoo's COMEX future | Wallstreetcn 0.99; COMEX copper 0.93 |
+| stock indices abroad | MarketWatch (14), Wallstreetcn (3), the FT (5), Naver's KOSPI, the Taiwan exchange's TAIEX, Sina for the CSI 300 | MarketWatch 0.96–1.00, Naver 1.00, the FT 0.92–0.98, Wallstreetcn 0.95–0.99 (the TSX too few hours to judge, kept); the Taiwan exchange 0.85 and Sina 0.80 with their skipped hour in, 0.98–1.00 without; under the bar: Wallstreetcn's KOSPI (0.84, another grid at 03:00–04:00 UTC), the FT's Top 40 (its official close in the bar ending 14:00 UTC) and Nikkei (0.80) |
 
 ---
 
@@ -460,12 +523,18 @@ To act: a source that carries it. The JSE Top 40's closing auction (16:50–17:0
 Johannesburg) is missing the same way: 2026-10-07 closed the store's day at 99,353 against
 the official 99,394.
 
-**The Bund, JGB, gilt and TTF** (stage 2, left out by the user, 2026-10-12). No free source
-carries their futures live: Yahoo has none of the three bonds, MarketWatch only the Bund
-(nine days, no volume), and Dukascopy holds the Bund's and the gilt's history from 2018
-but no live bars; Wallstreetcn has their yields, which the detector would have to score in
-basis points. Yahoo's TTF is NYMEX's look-alike, 100 bars in seven weeks, with no voter.
-To act: a live source, or a reading in basis points.
+**The Bund, JGB, gilt and TTF** (stage 2, deferred by the user, 2026-10-12, and searched in
+the source audit of 2026-10-13):
+- the Bund: MarketWatch's single contract live (FGBLZ26, about 13 days back, no volume),
+  Dukascopy's history from 2018, the FT's contract as a voter (0.95 hour by hour, 33 days
+  back); Wallstreetcn's yield moves opposite (-0.99);
+- the gilt: MarketWatch's single contract live (RLIZ26), Dukascopy's history from 2018; no
+  voter (the FT's candidates 0.15-0.23);
+- the JGB: no future anywhere; MarketWatch's 10-year yield live, Wallstreetcn's at 0.68
+  against it; the TSE bond funds move weakly and opposite (-0.32 to -0.64);
+- TTF: MarketWatch's ICE Endex series only, about 13 days back; NYMEX's look-alike 0.77-0.80.
+
+The user's, 2026-10-13: add everything good, and look for what is missing later.
 
 **What else Wallstreetcn carries**, hourly, about 170 days back, without volume (2026-10-10):
 sugar, lean hogs, wheat, corn, soybeans and soybean oil, the LME's lead and zinc, 38 stock

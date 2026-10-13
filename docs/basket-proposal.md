@@ -144,13 +144,16 @@ bars stay on disk.
   its switches there, and Dukascopy's sugar is London's white sugar
   (`tools/futures_history.py`, deleted once done; `docs/decisions.md`).
 
-**Left out** (the user's, 2026-10-12): the **Bund, JGB and gilt** - no free source carries
-their futures live (MarketWatch's Bund only: nine days, no volume; Dukascopy holds the
-Bund's and the gilt's history from 2018), and a yield would need the detector to score
-basis points; **TTF** - Yahoo's is NYMEX's thin look-alike (100 bars in seven weeks), with
-no voter. **No voter** yet for the KOSPI, the TAIEX or the JSE Top 40 (the user's): the
-FT's Top 40 files the official close an hour early, the Taiwan exchange's own feed refuses
-some days from here, nothing usable carries the KOSPI hourly.
+**Deferred** (the user's, 2026-10-12), then searched in the source audit of 2026-10-13: the
+**Bund, JGB, gilt and TTF**. Found: MarketWatch's Bund and gilt contracts live (about 13
+days back, no volume), Dukascopy's history of both from 2018, the FT's Bund as a voter;
+the JGB only as MarketWatch's 10-year yield, which the detector would score in basis
+points; TTF only as MarketWatch's ICE Endex series, about 13 days back, no history. The
+user's, 2026-10-13: add everything good, look for what is missing later.
+
+**Voters** for every instrument since the source audit of 2026-10-13 (`docs/decisions.md`,
+"Every source on every instrument"): the KOSPI from MarketWatch and Naver, the TAIEX from
+the Taiwan exchange (not its 13:00 hour), the JSE Top 40 from MarketWatch.
 
 **Left**: the user's go, for stages 1 and 2 together.
 

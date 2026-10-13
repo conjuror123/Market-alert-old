@@ -614,6 +614,7 @@ twelvedata:USD/INR,1789340400,close,uncertain,sifting,yahoo,,0.005693,,179111409
 twelvedata:USD/INR,1789344000,close,uncertain,sifting,yahoo,,-0.006787,,1791114096
 twelvedata:USD/INR,1789347600,close,uncertain,sifting,yahoo,,0.004549,,1791114096
 twelvedata:USD/INR,1791763200,close,uncertain,sifting,"yahoo,marketwatch,wallstreetcn",,-0.009476,",,",1791853608
+twelvedata:USD/INR,1791860400,close,real,sifting,"yahoo,marketwatch,wallstreetcn","marketwatch,wallstreetcn",-0.003737,",-0.004073,-0.004631",1791864398
 twelvedata:USD/JPY,1356494400,close,overnight,sifting,dukascopy,,0.005221,0.005664,1791362566
 twelvedata:USD/JPY,1357099200,close,not_real,sifting,dukascopy,,0.005731,-0.001147,1791362566
 twelvedata:USD/JPY,1788940800,close,real,sifting,yahoo,,0.003614,0.003599,1791114096

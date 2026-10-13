@@ -835,8 +835,8 @@ yahoo:ZB=F,1791223200,close,real,yahoo,marketwatch,marketwatch,0.004291,0.004291
 yahoo:ZB=F,1791464400,close,real,yahoo,marketwatch,marketwatch,0.005516,0.005516,1791885988
 yahoo:ZB=F,1791475200,close,real,yahoo,marketwatch,marketwatch,0.006403,0.006403,1791885988
 yahoo:ZB=F,1791853200,close,real,yahoo,marketwatch,marketwatch,0.005124,0.005124,1791885988
-yahoo:ZC=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.065101,"-0.065101,-0.065631",1791885988
+yahoo:ZC=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.065101,"-0.065101,-0.065631",1791918380
 yahoo:ZN=F,1791295200,close,real,yahoo,marketwatch,marketwatch,0.002393,0.002393,1791885988
 yahoo:ZN=F,1791475200,close,real,yahoo,marketwatch,marketwatch,0.002992,0.002992,1791885988
-yahoo:ZW=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.031171,"-0.031171,-0.030806",1791885988
+yahoo:ZW=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.031171,"-0.031171,-0.030806",1791918380
 yahoo:^BVSP,1791205200,open,real,yahoo,"marketwatch,ft","marketwatch,ft",0.081274,"0.081274,0.078479",1791885988

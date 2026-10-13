@@ -1,137 +1,24 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1791882450
+    "last_run_utc": 1791886015
   },
   "floor_pending_replies": [],
   "jump_delivery": {
     "week": {
-      "detector": "83904489c68a",
-      "events": {
-        "binance:ATOM/USDT|1791615600": {
-          "asset": "binance:ATOM/USDT",
-          "body": "\u2b1c <b>ATOM/USDT</b> \u00b7 Cosmos -4.63% \u00b7 6.4\u00d7\u03c3",
-          "context": "",
-          "form": "row",
-          "hour": 1791612000,
-          "members": {
-            "jump:binance:ATOM/USDT:hour:1791612000": [
-              -0.046285927757234974,
-              0.007207274654012073
-            ]
-          },
-          "message": 100,
-          "peak": "jump:binance:ATOM/USDT:hour:1791612000",
-          "seen": 1791882450,
-          "shown": [
-            "noticeable",
-            6.4,
-            1791612000,
-            -4.63
-          ],
-          "size": 6.422112376620611,
-          "start": 1791615600,
-          "story": [
-            [
-              "noticeable",
-              6.4,
-              1791612000,
-              ""
-            ]
-          ],
-          "tier": "noticeable"
-        },
-        "binance:FIL/USDT|1791601200": {
-          "asset": "binance:FIL/USDT",
-          "body": "\u2b1c <b>FIL/USDT</b> \u00b7 Filecoin +6.46% \u00b7 6.9\u00d7\u03c3",
-          "context": "",
-          "form": "row",
-          "hour": 1791597600,
-          "members": {
-            "jump:binance:FIL/USDT:hour:1791597600": [
-              0.06464142473414271,
-              0.009338239937359168
-            ]
-          },
-          "message": 99,
-          "peak": "jump:binance:FIL/USDT:hour:1791597600",
-          "seen": 1791882450,
-          "shown": [
-            "noticeable",
-            6.9,
-            1791597600,
-            6.46
-          ],
-          "size": 6.9222278681803875,
-          "start": 1791601200,
-          "story": [
-            [
-              "noticeable",
-              6.9,
-              1791597600,
-              ""
-            ]
-          ],
-          "tier": "noticeable"
-        },
-        "twelvedata:USD/INR|1791766800": {
-          "asset": "twelvedata:USD/INR",
-          "body": "\ud83d\udfe7 <b>USD/INR</b> \u00b7 Indian rupee -0.95% \u00b7 12.4\u00d7\u03c3\n\ud83d\udcc9 Rarest hour in 5 months (then 17.4\u00d7\u03c3)\n\ud83d\udd50 <b>12.10.2026 00:00 UTC</b> \u00b7 next close 126%\n\u26a0\ufe0f SiftingIO(-0.94%), Yahoo(outage), MarketWatch(outage), Wallstreetcn(outage)",
-          "context": "",
-          "form": "push",
-          "hour": 1791763200,
-          "members": {
-            "jump:twelvedata:USD/INR:hour:1791763200": [
-              -0.009476175054769422,
-              0.0007632135301075938
-            ]
-          },
-          "message": 101,
-          "peak": "jump:twelvedata:USD/INR:hour:1791763200",
-          "seen": 1791882450,
-          "shown": [
-            "major",
-            12.4,
-            1791763200,
-            -0.95
-          ],
-          "size": 12.416151811975242,
-          "start": 1791766800,
-          "story": [
-            [
-              "major",
-              12.4,
-              1791763200,
-              ""
-            ]
-          ],
-          "tier": "major"
-        }
-      },
-      "messages": {
-        "100": {
-          "first": "\u2b1c <b>ATOM/USDT</b> \u00b7 Cosmos -4.63% \u00b7 6.4\u00d7\u03c3",
-          "hash": "b681f9e218298ad1"
-        },
-        "101": {
-          "first": "\ud83d\udfe7 <b>USD/INR</b> \u00b7 Indian rupee -0.95% \u00b7 12.4\u00d7\u03c3",
-          "hash": "c105a143bb10337f"
-        },
-        "99": {
-          "first": "\u2b1c <b>FIL/USDT</b> \u00b7 Filecoin +6.46% \u00b7 6.9\u00d7\u03c3",
-          "hash": "3fb15ff11a806c19"
-        }
-      },
+      "detector": "db7e5a071ef7",
+      "events": {},
+      "messages": {},
       "note": {
         "hashes": [
-          "affe158a72dc3249"
+          "e5afdf2c8dc3c9d0"
         ],
         "ids": [
           98
         ]
       },
       "orphans": [],
-      "since": 1791576300,
+      "since": 1791882417,
       "slot": 1791576300
     }
   },

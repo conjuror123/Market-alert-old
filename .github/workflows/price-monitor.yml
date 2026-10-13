@@ -97,15 +97,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: tools/hot_bars.sh restore
 
-      # One-off, removed once the archive holds them: the October hours of the
-      # Bund, the gilt, TTF and Japan's yield, which MarketWatch serves only
-      # about nine trading days back, laid into their open months where the
-      # store lacks them (tools/carry_open_months.py, data/jump/carry).
-      - name: Carry the new instruments' October hours
-        id: carry
-        if: hashFiles('data/jump/carry/*.csv') != ''
-        run: PYTHONPATH=. python -m tools.carry_open_months
-
       # Three steps feed delivery: backfill brings the bars up to date,
       # pipeline turns them into per-asset metrics (the move and the gap), and
       # jumps scores every instrument's whole history and writes the events.

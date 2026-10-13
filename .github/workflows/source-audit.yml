@@ -63,7 +63,9 @@ jobs:
           SIFTING_API_KEY: ${{ secrets.SIFTING_API_KEY }}
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
-        run: PYTHONPATH=. python -W ignore -m tools.source_audit "$RUNNER_TEMP/audit"
+          # A rerun of a few: their tickers, comma-separated; empty for every instrument.
+          AUDIT_ONLY: "XLK,XLF,XLE,XLV,SPY,IWM,TIP,LQD,HYG,EMB,UNG,REMX,^TWII,^N225,000300.SS,^KS11,^GSPTSE"
+        run: PYTHONPATH=. python -W ignore -m tools.source_audit "$RUNNER_TEMP/audit" --only "$AUDIT_ONLY"
 
       - uses: actions/upload-artifact@v4
         if: always()

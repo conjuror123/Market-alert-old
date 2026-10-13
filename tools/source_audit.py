@@ -255,7 +255,9 @@ def probes(item: Item, session, keys: dict, now: datetime) -> "list[Probe]":
     # Yahoo, where it is not the store's.
     ysyms = list(YAHOO.get(t, []))
     if kind == "us_equity":
-        ysyms.append(t)
+        # The vote's own way: its half hours folded onto the store's hours (an hourly
+        # bar of a US fund starts at :30).
+        add("yahoo", t, lambda: verify.fetch_verifier("yahoo", t, "30min", days, session, now))
     if kind == "fx":
         ysyms.append(t.replace("/", "") + "=X")
     for sym in dict.fromkeys(ysyms):
@@ -426,6 +428,7 @@ def compare(frame: pd.DataFrame, store: pd.DataFrame, tz: str) -> dict:
     if per:
         h = min(per, key=per.get)
         out["weakest_hour"], out["weakest_corr"] = h, round(per[h], 3)
+        out["per_hour"] = " ".join(f"{k:02d}:{v:.2f}" for k, v in sorted(per.items()))
     # The vote's own test on the store's big moves (jump.verify.judge).
     scale = 1.4826 * float((rt - rt.median()).abs().median())
     big = rt.abs() >= BIG * scale if scale > 0 else rt.abs() > 0
@@ -539,7 +542,7 @@ def main(argv: "list[str] | None" = None) -> int:
             time.sleep(0.5)
     cols = ["ticker", "name", "kind", "source", "symbol", "keyed", "voter_today", "verdict",
             "hours", "shared", "corr", "big_moves", "confirmed", "bad_hours", "weakest_hour",
-            "weakest_corr", "gap_bp", "reach_days",
+            "weakest_corr", "per_hour", "gap_bp", "reach_days",
             "delay_min", "answer_s", "error"]
     table = pd.DataFrame(rows).reindex(columns=cols)
     os.makedirs(args.out_dir, exist_ok=True)

@@ -849,5 +849,6 @@ yahoo:ZN=F,1791475200,close,real,yahoo,marketwatch,marketwatch,0.002992,0.002992
 yahoo:ZN=F,1791979200,close,real,yahoo,marketwatch,marketwatch,-0.009130,-0.009130,1792011979
 yahoo:ZT=F,1791979200,close,real,yahoo,marketwatch,marketwatch,-0.003072,-0.003072,1792011979
 yahoo:ZT=F,1791982800,close,real,yahoo,marketwatch,marketwatch,0.000884,0.000884,1792011979
+yahoo:ZT=F,1792015200,close,real,yahoo,marketwatch,marketwatch,0.000729,0.000729,1792019176
 yahoo:ZW=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.031171,"-0.031171,-0.030806",1792004787
 yahoo:^BVSP,1791205200,open,real,yahoo,"marketwatch,ft","marketwatch,ft",0.081274,"0.081274,0.078479",1791925587

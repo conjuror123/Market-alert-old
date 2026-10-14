@@ -91881,9 +91881,12 @@
 {"actual": "", "country": "GBP", "date": "2026-10-14T06:00:00+00:00", "forecast": "", "impact": "Low", "previous": "", "title": "MPC Member Pill Speaks"}
 {"actual": "", "country": "CNY", "date": "2026-10-14T06:02:00+00:00", "forecast": "", "impact": "Low", "previous": "", "title": "Foreign Direct Investment ytd/y"}
 {"actual": "", "country": "CAD", "date": "2026-10-14T06:05:00+00:00", "forecast": "", "impact": "Medium", "previous": "", "title": "BOC Gov Macklem Speaks"}
+{"actual": "", "country": "CNY", "date": "2026-10-14T08:03:00+00:00", "forecast": "7.4%", "impact": "Low", "previous": "7.5%", "title": "M2 Money Supply y/y"}
+{"actual": "", "country": "CNY", "date": "2026-10-14T08:03:00+00:00", "forecast": "1025B", "impact": "Low", "previous": "60B", "title": "New Loans"}
 {"actual": "", "country": "EUR", "date": "2026-10-14T08:30:00+00:00", "forecast": "", "impact": "Medium", "previous": "", "title": "ECB President Lagarde Speaks"}
 {"actual": "", "country": "EUR", "date": "2026-10-14T09:34:00+00:00", "forecast": "", "impact": "Low", "previous": "3.80|1.6", "title": "German 30-y Bond Auction"}
 {"actual": "", "country": "USD", "date": "2026-10-14T09:40:00+00:00", "forecast": "", "impact": "Low", "previous": "", "title": "FOMC Member Bowman Speaks"}
+{"actual": "", "country": "EUR", "date": "2026-10-14T10:15:00+00:00", "forecast": "", "impact": "Medium", "previous": "", "title": "EU Economic Summit"}
 {"actual": "", "country": "GBP", "date": "2026-10-14T10:32:00+00:00", "forecast": "", "impact": "Low", "previous": "", "title": "30-y Bond Auction"}
 {"actual": "", "country": "CAD", "date": "2026-10-14T12:30:00+00:00", "forecast": "2.9%", "impact": "Low", "previous": "-17.3%", "title": "Building Permits m/m"}
 {"actual": "", "country": "USD", "date": "2026-10-14T12:30:00+00:00", "forecast": "0.2%", "impact": "High", "previous": "0.3%", "title": "Core CPI m/m"}
@@ -91923,6 +91926,7 @@
 {"actual": "", "country": "GBP", "date": "2026-10-15T08:45:00+00:00", "forecast": "", "impact": "Low", "previous": "", "title": "MPC Member Breeden Speaks"}
 {"actual": "", "country": "EUR", "date": "2026-10-15T09:00:00+00:00", "forecast": "0.0%", "impact": "Low", "previous": "-0.1%", "title": "Industrial Production m/m"}
 {"actual": "", "country": "CAD", "date": "2026-10-15T09:00:00+00:00", "forecast": "", "impact": "Low", "previous": "", "title": "Gov Council Member Rogers Speaks"}
+{"actual": "", "country": "EUR", "date": "2026-10-15T10:15:00+00:00", "forecast": "", "impact": "Medium", "previous": "", "title": "EU Economic Summit"}
 {"actual": "", "country": "CAD", "date": "2026-10-15T12:30:00+00:00", "forecast": "1.1%", "impact": "Low", "previous": "-0.4%", "title": "Manufacturing Sales m/m"}
 {"actual": "", "country": "CAD", "date": "2026-10-15T12:30:00+00:00", "forecast": "-1.5%", "impact": "Low", "previous": "0.3%", "title": "Wholesale Sales m/m"}
 {"actual": "", "country": "USD", "date": "2026-10-15T12:30:00+00:00", "forecast": "0.3%", "impact": "High", "previous": "0.2%", "title": "Core PPI m/m"}

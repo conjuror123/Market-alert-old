@@ -1,7 +1,7 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1791932792
+    "last_run_utc": 1791936425
   },
   "floor_pending_replies": [],
   "jump_delivery": {
@@ -22,7 +22,7 @@
           },
           "message": 102,
           "peak": "jump:twelvedata:XLV:hour:1791896400",
-          "seen": 1791932792,
+          "seen": 1791936426,
           "shown": [
             "noticeable",
             4.5,
@@ -62,6 +62,6 @@
     }
   },
   "telegram_update_offset": 688283215,
-  "weekly_digest:last_refreshed": "2026-10-13",
+  "weekly_digest:last_refreshed": "2026-10-14",
   "weekly_digest:last_sent_week": "1791576300"
 }

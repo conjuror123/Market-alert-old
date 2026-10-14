@@ -1,7 +1,7 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1792011997
+    "last_run_utc": 1792015598
   },
   "floor_pending_replies": [],
   "jump_delivery": {
@@ -22,7 +22,7 @@
           },
           "message": 104,
           "peak": "jump:twelvedata:AUD/USD:hour:1791979200",
-          "seen": 1792011997,
+          "seen": 1792015598,
           "shown": [
             "noticeable",
             5.9,
@@ -55,7 +55,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:EUR/USD:hour:1791979200",
-          "seen": 1792011997,
+          "seen": 1792015598,
           "shown": [
             "major",
             9.5,
@@ -88,7 +88,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:GBP/USD:hour:1791979200",
-          "seen": 1792011997,
+          "seen": 1792015598,
           "shown": [
             "high",
             7.0,
@@ -121,7 +121,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CAD:hour:1791979200",
-          "seen": 1792011997,
+          "seen": 1792015598,
           "shown": [
             "high",
             6.8,
@@ -154,7 +154,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CHF:hour:1791979200",
-          "seen": 1792011997,
+          "seen": 1792015598,
           "shown": [
             "high",
             6.9,
@@ -187,7 +187,7 @@
           },
           "message": 102,
           "peak": "jump:twelvedata:XLV:hour:1791896400",
-          "seen": 1792011997,
+          "seen": 1792015598,
           "shown": [
             "noticeable",
             4.5,
@@ -220,7 +220,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZB=F:hour:1791979200",
-          "seen": 1792011997,
+          "seen": 1792015598,
           "shown": [
             "major",
             12.1,
@@ -259,7 +259,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZN=F:hour:1791979200",
-          "seen": 1792011997,
+          "seen": 1792015598,
           "shown": [
             "extreme",
             15.9,
@@ -293,23 +293,23 @@
           "members": {
             "jump:yahoo:ZT=F:hour:1791979200": [
               -0.0030723170216804345,
-              0.00016574457888873535
+              0.00016570453052023554
             ],
             "jump:yahoo:ZT=F:hour:1791982800": [
               0.0008842583379275897,
-              0.0001661150520303697
+              0.00016607510733943816
             ]
           },
           "message": 103,
           "peak": "jump:yahoo:ZT=F:hour:1791979200",
-          "seen": 1792011997,
+          "seen": 1792015598,
           "shown": [
             "extreme",
             18.5,
             1791979200,
             -0.31
           ],
-          "size": 18.53645556481752,
+          "size": 18.54093555580394,
           "start": 1791982800,
           "story": [
             [

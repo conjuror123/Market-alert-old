@@ -1,13 +1,178 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1791979603
+    "last_run_utc": 1791983198
   },
   "floor_pending_replies": [],
   "jump_delivery": {
     "week": {
       "detector": "db7e5a071ef7",
       "events": {
+        "twelvedata:AUD/USD|1791982800": {
+          "asset": "twelvedata:AUD/USD",
+          "body": "\u2b1c <b>AUD/USD</b> \u00b7 Australian dollar -0.50% \u00b7 5.9\u00d7\u03c3",
+          "context": "",
+          "form": "row",
+          "hour": 1791979200,
+          "members": {
+            "jump:twelvedata:AUD/USD:hour:1791979200": [
+              -0.004992535887014983,
+              0.0008474976604632554
+            ]
+          },
+          "message": 104,
+          "peak": "jump:twelvedata:AUD/USD:hour:1791979200",
+          "seen": 1791983198,
+          "shown": [
+            "noticeable",
+            5.9,
+            1791979200,
+            -0.5
+          ],
+          "size": 5.890914063746188,
+          "start": 1791982800,
+          "story": [
+            [
+              "noticeable",
+              5.9,
+              1791979200,
+              ""
+            ]
+          ],
+          "tier": "noticeable"
+        },
+        "twelvedata:EUR/USD|1791982800": {
+          "asset": "twelvedata:EUR/USD",
+          "body": "\ud83d\udfe7 <b>EUR/USD</b> \u00b7 Euro -0.57% \u00b7 9.5\u00d7\u03c3\n\ud83d\udcc9 Rarest hour in 27 days (then 9.3\u00d7\u03c3)\n\ud83d\udd50 <b>14.10.2026 12:00 UTC</b> \u00b7 close in 7h",
+          "context": "Nearby economic events (-2h+1h):\n     \ud83d\udfe0 \ud83c\uddea\ud83c\uddfa EUR EU Economic Summit\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI y/y\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI y/y",
+          "form": "push",
+          "hour": 1791979200,
+          "members": {
+            "jump:twelvedata:EUR/USD:hour:1791979200": [
+              -0.0056895461632498305,
+              0.000601876241032034
+            ]
+          },
+          "message": 103,
+          "peak": "jump:twelvedata:EUR/USD:hour:1791979200",
+          "seen": 1791983198,
+          "shown": [
+            "major",
+            9.5,
+            1791979200,
+            -0.57
+          ],
+          "size": 9.453016709039712,
+          "start": 1791982800,
+          "story": [
+            [
+              "major",
+              9.5,
+              1791979200,
+              ""
+            ]
+          ],
+          "tier": "major"
+        },
+        "twelvedata:GBP/USD|1791982800": {
+          "asset": "twelvedata:GBP/USD",
+          "body": "\ud83d\udfe8 <b>GBP/USD</b> \u00b7 Pound -0.47% \u00b7 7.0\u00d7\u03c3\n\ud83d\udcc9 Rarest hour in 27 days (then 6.8\u00d7\u03c3)\n\ud83d\udd50 <b>14.10.2026 12:00 UTC</b> \u00b7 close in 7h",
+          "context": "Nearby economic events (-2h+1h):\n     \ud83d\udfe0 \ud83c\uddea\ud83c\uddfa EUR EU Economic Summit\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI y/y\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI y/y",
+          "form": "push",
+          "hour": 1791979200,
+          "members": {
+            "jump:twelvedata:GBP/USD:hour:1791979200": [
+              -0.004661836982760464,
+              0.0006684433009819542
+            ]
+          },
+          "message": 103,
+          "peak": "jump:twelvedata:GBP/USD:hour:1791979200",
+          "seen": 1791983198,
+          "shown": [
+            "high",
+            7.0,
+            1791979200,
+            -0.47
+          ],
+          "size": 6.974169650458235,
+          "start": 1791982800,
+          "story": [
+            [
+              "high",
+              7.0,
+              1791979200,
+              ""
+            ]
+          ],
+          "tier": "high"
+        },
+        "twelvedata:USD/CAD|1791982800": {
+          "asset": "twelvedata:USD/CAD",
+          "body": "\ud83d\udfe8 <b>USD/CAD</b> \u00b7 Canadian dollar +0.33% \u00b7 6.8\u00d7\u03c3\n\ud83d\udcc8 Rarest hour in 5 days (then 8.0\u00d7\u03c3)\n\ud83d\udd50 <b>14.10.2026 12:00 UTC</b> \u00b7 close in 7h",
+          "context": "Nearby economic events (-2h+1h):\n     \ud83d\udfe0 \ud83c\uddea\ud83c\uddfa EUR EU Economic Summit\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI y/y\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI y/y",
+          "form": "push",
+          "hour": 1791979200,
+          "members": {
+            "jump:twelvedata:USD/CAD:hour:1791979200": [
+              0.003327930278290154,
+              0.0004930139068340387
+            ]
+          },
+          "message": 103,
+          "peak": "jump:twelvedata:USD/CAD:hour:1791979200",
+          "seen": 1791983198,
+          "shown": [
+            "high",
+            6.8,
+            1791979200,
+            0.33
+          ],
+          "size": 6.750175263129894,
+          "start": 1791982800,
+          "story": [
+            [
+              "high",
+              6.8,
+              1791979200,
+              ""
+            ]
+          ],
+          "tier": "high"
+        },
+        "twelvedata:USD/CHF|1791982800": {
+          "asset": "twelvedata:USD/CHF",
+          "body": "\ud83d\udfe8 <b>USD/CHF</b> \u00b7 Franc +0.54% \u00b7 6.9\u00d7\u03c3\n\ud83d\udcc8 Rarest hour in 27 days (then 9.8\u00d7\u03c3)\n\ud83d\udd50 <b>14.10.2026 12:00 UTC</b> \u00b7 close in 7h",
+          "context": "Nearby economic events (-2h+1h):\n     \ud83d\udfe0 \ud83c\uddea\ud83c\uddfa EUR EU Economic Summit\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI y/y\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI y/y",
+          "form": "push",
+          "hour": 1791979200,
+          "members": {
+            "jump:twelvedata:USD/CHF:hour:1791979200": [
+              0.005410659724202074,
+              0.0007835551486551692
+            ]
+          },
+          "message": 103,
+          "peak": "jump:twelvedata:USD/CHF:hour:1791979200",
+          "seen": 1791983198,
+          "shown": [
+            "high",
+            6.9,
+            1791979200,
+            0.54
+          ],
+          "size": 6.905269824961898,
+          "start": 1791982800,
+          "story": [
+            [
+              "high",
+              6.9,
+              1791979200,
+              ""
+            ]
+          ],
+          "tier": "high"
+        },
         "twelvedata:XLV|1791900000": {
           "asset": "twelvedata:XLV",
           "body": "\u2b1c <b>XLV</b> \u00b7 Health care sector -1.41% \u00b7 4.5\u00d7\u03c3",
@@ -22,7 +187,7 @@
           },
           "message": 102,
           "peak": "jump:twelvedata:XLV:hour:1791896400",
-          "seen": 1791979603,
+          "seen": 1791983198,
           "shown": [
             "noticeable",
             4.5,
@@ -40,17 +205,124 @@
             ]
           ],
           "tier": "noticeable"
+        },
+        "yahoo:ZB=F|1791982800": {
+          "asset": "yahoo:ZB=F",
+          "body": "\ud83d\udfe7 <b>ZB=F</b> \u00b7 30-year Treasury bond (CBOT) -1.03% \u00b7 9.8\u00d7\u03c3\n\ud83d\udcc9 Rarest hour in 18 months (then 11.4\u00d7\u03c3)\n\ud83d\udd50 <b>14.10.2026 12:00 UTC</b> \u00b7 close in 7h",
+          "context": "Nearby economic events (-2h+1h):\n     \ud83d\udfe0 \ud83c\uddea\ud83c\uddfa EUR EU Economic Summit\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI y/y\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI y/y",
+          "form": "push",
+          "hour": 1791979200,
+          "members": {
+            "jump:yahoo:ZB=F:hour:1791979200": [
+              -0.010268891203513571,
+              0.001047554725411978
+            ]
+          },
+          "message": 103,
+          "peak": "jump:yahoo:ZB=F:hour:1791979200",
+          "seen": 1791983198,
+          "shown": [
+            "major",
+            9.8,
+            1791979200,
+            -1.03
+          ],
+          "size": 9.802725293874326,
+          "start": 1791982800,
+          "story": [
+            [
+              "major",
+              9.8,
+              1791979200,
+              ""
+            ]
+          ],
+          "tier": "major"
+        },
+        "yahoo:ZN=F|1791982800": {
+          "asset": "yahoo:ZN=F",
+          "body": "\ud83d\udfe5 <b>ZN=F</b> \u00b7 10-year Treasury note (CBOT) -0.81% \u00b7 14.1\u00d7\u03c3\n\ud83d\udcc9 Rarest hour in 2 years of record\n\ud83d\udd50 <b>14.10.2026 12:00 UTC</b> \u00b7 close in 7h",
+          "context": "Nearby economic events (-2h+1h):\n     \ud83d\udfe0 \ud83c\uddea\ud83c\uddfa EUR EU Economic Summit\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI y/y\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI y/y",
+          "form": "push",
+          "hour": 1791979200,
+          "members": {
+            "jump:yahoo:ZN=F:hour:1791979200": [
+              -0.008077830012071819,
+              0.0005742870466608607
+            ]
+          },
+          "message": 103,
+          "peak": "jump:yahoo:ZN=F:hour:1791979200",
+          "seen": 1791983198,
+          "shown": [
+            "extreme",
+            14.1,
+            1791979200,
+            -0.81
+          ],
+          "size": 14.065840521808076,
+          "start": 1791982800,
+          "story": [
+            [
+              "extreme",
+              14.1,
+              1791979200,
+              ""
+            ]
+          ],
+          "tier": "extreme"
+        },
+        "yahoo:ZT=F|1791982800": {
+          "asset": "yahoo:ZT=F",
+          "body": "\ud83d\udfe5 <b>ZT=F</b> \u00b7 2-year Treasury note (CBOT) -0.28% \u00b7 16.7\u00d7\u03c3\n\ud83d\udcc9 Rarest hour in 2 years of record\n\ud83d\udd50 <b>14.10.2026 12:00 UTC</b> \u00b7 close in 7h",
+          "context": "Nearby economic events (-2h+1h):\n     \ud83d\udfe0 \ud83c\uddea\ud83c\uddfa EUR EU Economic Summit\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD Core CPI y/y\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI m/m\n     \ud83d\udd34 \ud83c\uddfa\ud83c\uddf8 USD CPI y/y",
+          "form": "push",
+          "hour": 1791979200,
+          "members": {
+            "jump:yahoo:ZT=F:hour:1791979200": [
+              -0.002764660210423968,
+              0.00016570453052023554
+            ]
+          },
+          "message": 103,
+          "peak": "jump:yahoo:ZT=F:hour:1791979200",
+          "seen": 1791983198,
+          "shown": [
+            "extreme",
+            16.7,
+            1791979200,
+            -0.28
+          ],
+          "size": 16.684276535736316,
+          "start": 1791982800,
+          "story": [
+            [
+              "extreme",
+              16.7,
+              1791979200,
+              ""
+            ]
+          ],
+          "tier": "extreme"
         }
       },
       "messages": {
         "102": {
           "first": "\u2b1c <b>XLV</b> \u00b7 Health care sector -1.41% \u00b7 4.5\u00d7\u03c3",
           "hash": "07909a309babb9e6"
+        },
+        "103": {
+          "first": "\ud83d\udfe5 <b>ZT=F</b> \u00b7 2-year Treasury note (CBOT) -0.28% \u00b7 16.7\u00d7\u03c3",
+          "hash": "5a511198f4149ff0"
+        },
+        "104": {
+          "first": "\u2b1c <b>AUD/USD</b> \u00b7 Australian dollar -0.50% \u00b7 5.9\u00d7\u03c3",
+          "hash": "d7824271a9ad2441"
         }
       },
       "note": {
         "hashes": [
-          "d72ae56b56a44e68"
+          "bb1892798e4233f5"
         ],
         "ids": [
           98

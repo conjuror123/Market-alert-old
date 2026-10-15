@@ -167,6 +167,7 @@ binance:SOL/USDT,1789869600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,b
 binance:SOL/USDT,1789977600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.028230,"0.028235,0.028230,0.027973,0.028717,0.028322,0.028484",1792022770
 binance:SOL/USDT,1791471600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",-0.035736,"-0.035857,-0.035857,-0.035577,-0.036200,-0.036187,-0.035816",1792022770
 binance:SOL/USDT,1791849600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",-0.026443,"-0.026865,-0.026768,-0.026576,-0.027031,-0.026727,-0.026540",1792022770
+binance:SOL/USDT,1792040400,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",-0.023473,"-0.023503,-0.023503,-0.023599,-0.023078,-0.022674,-0.023315",1792044376
 binance:UNI/USDT,1789128000,close,real,binance,"coinbase,kraken","coinbase,kraken",0.037355,"0.033599,0.037748",1791594373
 binance:UNI/USDT,1789131600,close,real,binance,"coinbase,kraken","coinbase,kraken",0.046858,"0.049577,0.045508",1791594373
 binance:UNI/USDT,1789480800,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.036852,"-0.037942,-0.037967",1791853608

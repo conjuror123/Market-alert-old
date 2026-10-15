@@ -1,7 +1,7 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1792019194
+    "last_run_utc": 1792022809
   },
   "floor_pending_replies": [],
   "jump_delivery": {
@@ -22,7 +22,7 @@
           },
           "message": 104,
           "peak": "jump:twelvedata:AUD/USD:hour:1791979200",
-          "seen": 1792019194,
+          "seen": 1792022810,
           "shown": [
             "noticeable",
             5.9,
@@ -55,7 +55,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:EUR/USD:hour:1791979200",
-          "seen": 1792019194,
+          "seen": 1792022810,
           "shown": [
             "major",
             9.5,
@@ -88,7 +88,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:GBP/USD:hour:1791979200",
-          "seen": 1792019194,
+          "seen": 1792022810,
           "shown": [
             "high",
             7.0,
@@ -121,7 +121,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CAD:hour:1791979200",
-          "seen": 1792019194,
+          "seen": 1792022810,
           "shown": [
             "high",
             6.8,
@@ -154,7 +154,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CHF:hour:1791979200",
-          "seen": 1792019194,
+          "seen": 1792022810,
           "shown": [
             "high",
             6.9,
@@ -187,7 +187,7 @@
           },
           "message": 102,
           "peak": "jump:twelvedata:XLV:hour:1791896400",
-          "seen": 1792019194,
+          "seen": 1792022810,
           "shown": [
             "noticeable",
             4.5,
@@ -220,7 +220,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZB=F:hour:1791979200",
-          "seen": 1792019194,
+          "seen": 1792022810,
           "shown": [
             "major",
             12.1,
@@ -259,7 +259,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZN=F:hour:1791979200",
-          "seen": 1792019194,
+          "seen": 1792022810,
           "shown": [
             "extreme",
             15.9,
@@ -302,7 +302,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZT=F:hour:1791979200",
-          "seen": 1792019194,
+          "seen": 1792022810,
           "shown": [
             "extreme",
             18.5,
@@ -356,6 +356,6 @@
     }
   },
   "telegram_update_offset": 688283215,
-  "weekly_digest:last_refreshed": "2026-10-14",
+  "weekly_digest:last_refreshed": "2026-10-15",
   "weekly_digest:last_sent_week": "1791576300"
 }

@@ -1,7 +1,7 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1792069612
+    "last_run_utc": 1792073205
   },
   "floor_pending_replies": [],
   "jump_delivery": {
@@ -22,7 +22,7 @@
           },
           "message": 105,
           "peak": "jump:marketwatch:JP10Y:hour:1792022400",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "noticeable",
             5.8,
@@ -55,7 +55,7 @@
           },
           "message": 104,
           "peak": "jump:twelvedata:AUD/USD:hour:1791979200",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "noticeable",
             5.9,
@@ -88,7 +88,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:EUR/USD:hour:1791979200",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "major",
             9.5,
@@ -121,7 +121,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:GBP/USD:hour:1791979200",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "high",
             7.0,
@@ -140,6 +140,39 @@
           ],
           "tier": "high"
         },
+        "twelvedata:TIP|1792072800": {
+          "asset": "twelvedata:TIP",
+          "body": "\u2b1c <b>TIP</b> \u00b7 Inflation-protected Treasuries +0.69% \u00b7 4.7\u00d7\u03c3",
+          "context": "",
+          "form": "row",
+          "hour": 1792069200,
+          "members": {
+            "jump:twelvedata:TIP:night:1792069200": [
+              0.006939851029795575,
+              0.0014774388737233831
+            ]
+          },
+          "message": 107,
+          "peak": "jump:twelvedata:TIP:night:1792069200",
+          "seen": 1792073205,
+          "shown": [
+            "noticeable",
+            4.7,
+            1792069200,
+            0.69
+          ],
+          "size": 4.697217024150743,
+          "start": 1792072800,
+          "story": [
+            [
+              "noticeable",
+              4.7,
+              1792069200,
+              ""
+            ]
+          ],
+          "tier": "noticeable"
+        },
         "twelvedata:USD/CAD|1791982800": {
           "asset": "twelvedata:USD/CAD",
           "body": "\ud83d\udfe8 <b>USD/CAD</b> \u00b7 Canadian dollar +0.33% \u00b7 6.8\u00d7\u03c3\n\ud83d\udcc8 Rarest hour in 5 days (then 8.0\u00d7\u03c3)\n\ud83d\udd50 <b>14.10.2026 12:00 UTC</b> \u00b7 close 38%",
@@ -154,7 +187,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CAD:hour:1791979200",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "high",
             6.8,
@@ -187,7 +220,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CHF:hour:1791979200",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "high",
             6.9,
@@ -220,7 +253,7 @@
           },
           "message": 102,
           "peak": "jump:twelvedata:XLV:hour:1791896400",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "noticeable",
             4.5,
@@ -253,7 +286,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZB=F:hour:1791979200",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "major",
             12.1,
@@ -280,26 +313,26 @@
         },
         "yahoo:ZB=F|1792069200": {
           "asset": "yahoo:ZB=F",
-          "body": "\u2b1c <b>ZB=F</b> \u00b7 30-year Treasury bond (CBOT) +0.50% \u00b7 4.7\u00d7\u03c3",
+          "body": "\u2b1c <b>ZB=F</b> \u00b7 30-year Treasury bond (CBOT) +0.56% \u00b7 5.2\u00d7\u03c3",
           "context": "",
           "form": "row",
           "hour": 1792065600,
           "members": {
             "jump:yahoo:ZB=F:hour:1792065600": [
-              0.0050243936051634075,
+              0.005613842487541448,
               0.0010796218007435726
             ]
           },
           "message": 106,
           "peak": "jump:yahoo:ZB=F:hour:1792065600",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "noticeable",
-            4.7,
+            5.2,
             1792065600,
-            0.5
+            0.56
           ],
-          "size": 4.653846005798452,
+          "size": 5.19982320074956,
           "start": 1792069200,
           "story": [
             [
@@ -307,6 +340,12 @@
               4.7,
               1792065600,
               ""
+            ],
+            [
+              "noticeable",
+              5.2,
+              1792065600,
+              "price corrected"
             ]
           ],
           "tier": "noticeable"
@@ -325,7 +364,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZN=F:hour:1791979200",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "extreme",
             15.9,
@@ -359,23 +398,23 @@
           "members": {
             "jump:yahoo:ZT=F:hour:1791979200": [
               -0.0030723170216804345,
-              0.00016570453052023554
+              0.00016574457888873535
             ],
             "jump:yahoo:ZT=F:hour:1791982800": [
               0.0008842583379275897,
-              0.00016607510733943816
+              0.0001661150520303697
             ]
           },
           "message": 103,
           "peak": "jump:yahoo:ZT=F:hour:1791979200",
-          "seen": 1792069612,
+          "seen": 1792073205,
           "shown": [
             "extreme",
             18.5,
             1791979200,
             -0.31
           ],
-          "size": 18.54093555580394,
+          "size": 18.53645556481752,
           "start": 1791982800,
           "story": [
             [
@@ -412,13 +451,17 @@
           "hash": "83ab1c0512aa7c51"
         },
         "106": {
-          "first": "\u2b1c <b>ZB=F</b> \u00b7 30-year Treasury bond (CBOT) +0.50% \u00b7 4.7\u00d7\u03c3",
-          "hash": "2f8db2298b85a091"
+          "first": "\u2b1c <b>ZB=F</b> \u00b7 30-year Treasury bond (CBOT) +0.56% \u00b7 5.2\u00d7\u03c3",
+          "hash": "53d000c7a6632ded"
+        },
+        "107": {
+          "first": "\u2b1c <b>TIP</b> \u00b7 Inflation-protected Treasuries +0.69% \u00b7 4.7\u00d7\u03c3",
+          "hash": "20c84c3d0cd7d1a9"
         }
       },
       "note": {
         "hashes": [
-          "8047838fbec939e7"
+          "04e488c35f85e71c"
         ],
         "ids": [
           98

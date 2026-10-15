@@ -483,6 +483,7 @@ twelvedata:TIP,1790258400,close,real,tiingo,yahoo,,-0.002292,-0.002244,179111409
 twelvedata:TIP,1790866800,close,real,tiingo,"yahoo,sina,marketwatch,alpaca_sip","yahoo,sina,marketwatch,alpaca_sip",0.002784,"0.002688,0.002688,0.002688,0.002688",1791576441
 twelvedata:TIP,1790949600,close,real,tiingo,"yahoo,sina,marketwatch,alpaca_sip","yahoo,sina,marketwatch,alpaca_sip",-0.002396,"-0.002491,-0.002491,-0.002491,-0.002491",1791576441
 twelvedata:TIP,1791295200,close,real,tiingo,"yahoo,sina,marketwatch,alpaca_sip","yahoo,sina,marketwatch,alpaca_sip",0.002593,"0.002593,0.002593,0.002593,0.002593",1792008375
+twelvedata:TIP,1792069200,open,real,tiingo,"yahoo,sina,marketwatch","yahoo,sina,marketwatch",0.006940,"0.006940,0.006940,0.006656",1792073185
 twelvedata:TLH,1458565200,close,overnight,tiingo,alpaca,,-0.007149,-0.002430,1791362492
 twelvedata:TLH,1582812000,close,overnight,tiingo,alpaca,,0.009516,0.010970,1791362492
 twelvedata:TLH,1583758800,close,overnight,tiingo,alpaca,,0.037691,0.046599,1791362492
@@ -851,7 +852,9 @@ yahoo:ZC=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.0651
 yahoo:ZN=F,1791295200,close,real,yahoo,marketwatch,marketwatch,0.002393,0.002393,1792011979
 yahoo:ZN=F,1791475200,close,real,yahoo,marketwatch,marketwatch,0.002992,0.002992,1792011979
 yahoo:ZN=F,1791979200,close,real,yahoo,marketwatch,marketwatch,-0.009130,-0.009130,1792011979
+yahoo:ZN=F,1792065600,close,real,yahoo,marketwatch,marketwatch,0.002664,0.002664,1792073185
 yahoo:ZT=F,1791979200,close,real,yahoo,marketwatch,marketwatch,-0.003072,-0.003072,1792011979
 yahoo:ZT=F,1791982800,close,real,yahoo,marketwatch,marketwatch,0.000884,0.000884,1792011979
+yahoo:ZT=F,1792069200,close,real,yahoo,marketwatch,marketwatch,0.000766,0.000728,1792073185
 yahoo:ZW=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.031171,"-0.031171,-0.030806",1792004787
 yahoo:^BVSP,1791205200,open,real,yahoo,"marketwatch,ft","marketwatch,ft",0.081274,"0.081274,0.078479",1791925587

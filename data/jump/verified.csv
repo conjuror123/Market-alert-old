@@ -853,7 +853,7 @@ yahoo:ZB=F,1791475200,close,real,yahoo,marketwatch,marketwatch,0.006403,0.006403
 yahoo:ZB=F,1791853200,close,real,yahoo,marketwatch,marketwatch,0.005124,0.005124,1792011979
 yahoo:ZB=F,1791979200,close,real,yahoo,marketwatch,marketwatch,-0.012701,-0.012701,1792011979
 yahoo:ZB=F,1792065600,close,real,yahoo,marketwatch,marketwatch,0.005024,0.005614,1792069595
-yahoo:ZC=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.065101,"-0.065101,-0.065631",1792004787
+yahoo:ZC=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.065101,"-0.065101,-0.065631",1792091184
 yahoo:ZN=F,1791295200,close,real,yahoo,marketwatch,marketwatch,0.002393,0.002393,1792011979
 yahoo:ZN=F,1791475200,close,real,yahoo,marketwatch,marketwatch,0.002992,0.002992,1792011979
 yahoo:ZN=F,1791979200,close,real,yahoo,marketwatch,marketwatch,-0.009130,-0.009130,1792011979
@@ -862,6 +862,6 @@ yahoo:ZT=F,1791979200,close,real,yahoo,marketwatch,marketwatch,-0.003072,-0.0030
 yahoo:ZT=F,1791982800,close,real,yahoo,marketwatch,marketwatch,0.000884,0.000884,1792011979
 yahoo:ZT=F,1792069200,close,real,yahoo,marketwatch,marketwatch,0.000766,0.000728,1792073185
 yahoo:ZT=F,1792072800,close,real,yahoo,marketwatch,marketwatch,-0.000766,-0.000689,1792076782
-yahoo:ZW=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.031171,"-0.031171,-0.030806",1792004787
+yahoo:ZW=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.031171,"-0.031171,-0.030806",1792091184
 yahoo:^BVSP,1791205200,open,real,yahoo,"marketwatch,ft","marketwatch,ft",0.081274,"0.081274,0.078479",1791925587
 yahoo:^GSPTSE,1792072800,close,real,yahoo,"marketwatch,wallstreetcn",marketwatch,0.010311,"0.009339,",1792076782

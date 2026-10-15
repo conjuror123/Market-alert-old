@@ -1,13 +1,112 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1792073205
+    "last_run_utc": 1792076818
   },
   "floor_pending_replies": [],
   "jump_delivery": {
     "week": {
       "detector": "db7e5a071ef7",
       "events": {
+        "binance:BTC/USDT|1792076400": {
+          "asset": "binance:BTC/USDT",
+          "body": "\u2b1c <b>BTC/USDT</b> \u00b7 Bitcoin +2.05% \u00b7 5.5\u00d7\u03c3",
+          "context": "",
+          "form": "row",
+          "hour": 1792072800,
+          "members": {
+            "jump:binance:BTC/USDT:hour:1792072800": [
+              0.020522084743553683,
+              0.0037628791238412556
+            ]
+          },
+          "message": 108,
+          "peak": "jump:binance:BTC/USDT:hour:1792072800",
+          "seen": 1792076818,
+          "shown": [
+            "noticeable",
+            5.5,
+            1792072800,
+            2.05
+          ],
+          "size": 5.453825134463567,
+          "start": 1792076400,
+          "story": [
+            [
+              "noticeable",
+              5.5,
+              1792072800,
+              ""
+            ]
+          ],
+          "tier": "noticeable"
+        },
+        "binance:ETH/USDT|1792076400": {
+          "asset": "binance:ETH/USDT",
+          "body": "\u2b1c <b>ETH/USDT</b> \u00b7 Ethereum +2.36% \u00b7 4.8\u00d7\u03c3",
+          "context": "",
+          "form": "row",
+          "hour": 1792072800,
+          "members": {
+            "jump:binance:ETH/USDT:hour:1792072800": [
+              0.023560204986795716,
+              0.004866775149546224
+            ]
+          },
+          "message": 108,
+          "peak": "jump:binance:ETH/USDT:hour:1792072800",
+          "seen": 1792076818,
+          "shown": [
+            "noticeable",
+            4.8,
+            1792072800,
+            2.36
+          ],
+          "size": 4.8410300995706494,
+          "start": 1792076400,
+          "story": [
+            [
+              "noticeable",
+              4.8,
+              1792072800,
+              ""
+            ]
+          ],
+          "tier": "noticeable"
+        },
+        "binance:SOL/USDT|1792076400": {
+          "asset": "binance:SOL/USDT",
+          "body": "\u2b1c <b>SOL/USDT</b> \u00b7 Solana +3.18% \u00b7 5.6\u00d7\u03c3",
+          "context": "",
+          "form": "row",
+          "hour": 1792072800,
+          "members": {
+            "jump:binance:SOL/USDT:hour:1792072800": [
+              0.03178870243808765,
+              0.005724377436721179
+            ]
+          },
+          "message": 108,
+          "peak": "jump:binance:SOL/USDT:hour:1792072800",
+          "seen": 1792076818,
+          "shown": [
+            "noticeable",
+            5.6,
+            1792072800,
+            3.18
+          ],
+          "size": 5.553215662225035,
+          "start": 1792076400,
+          "story": [
+            [
+              "noticeable",
+              5.6,
+              1792072800,
+              ""
+            ]
+          ],
+          "tier": "noticeable"
+        },
         "marketwatch:JP10Y|1792026000": {
           "asset": "marketwatch:JP10Y",
           "body": "\u2b1c <b>JGB 10Y</b> \u00b7 Japan 10-year government bond yield -5.8 bp \u00b7 5.8\u00d7\u03c3",
@@ -22,7 +121,7 @@
           },
           "message": 105,
           "peak": "jump:marketwatch:JP10Y:hour:1792022400",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "noticeable",
             5.8,
@@ -55,7 +154,7 @@
           },
           "message": 104,
           "peak": "jump:twelvedata:AUD/USD:hour:1791979200",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "noticeable",
             5.9,
@@ -88,7 +187,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:EUR/USD:hour:1791979200",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "major",
             9.5,
@@ -121,7 +220,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:GBP/USD:hour:1791979200",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "high",
             7.0,
@@ -154,7 +253,7 @@
           },
           "message": 107,
           "peak": "jump:twelvedata:TIP:night:1792069200",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "noticeable",
             4.7,
@@ -187,7 +286,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CAD:hour:1791979200",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "high",
             6.8,
@@ -220,7 +319,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CHF:hour:1791979200",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "high",
             6.9,
@@ -253,7 +352,7 @@
           },
           "message": 102,
           "peak": "jump:twelvedata:XLV:hour:1791896400",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "noticeable",
             4.5,
@@ -286,7 +385,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZB=F:hour:1791979200",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "major",
             12.1,
@@ -325,7 +424,7 @@
           },
           "message": 106,
           "peak": "jump:yahoo:ZB=F:hour:1792065600",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "noticeable",
             5.2,
@@ -364,7 +463,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZN=F:hour:1791979200",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "extreme",
             15.9,
@@ -398,23 +497,23 @@
           "members": {
             "jump:yahoo:ZT=F:hour:1791979200": [
               -0.0030723170216804345,
-              0.00016574457888873535
+              0.00016570453052023554
             ],
             "jump:yahoo:ZT=F:hour:1791982800": [
               0.0008842583379275897,
-              0.0001661150520303697
+              0.00016607510733943816
             ]
           },
           "message": 103,
           "peak": "jump:yahoo:ZT=F:hour:1791979200",
-          "seen": 1792073205,
+          "seen": 1792076818,
           "shown": [
             "extreme",
             18.5,
             1791979200,
             -0.31
           ],
-          "size": 18.53645556481752,
+          "size": 18.54093555580394,
           "start": 1791982800,
           "story": [
             [
@@ -431,6 +530,39 @@
             ]
           ],
           "tier": "extreme"
+        },
+        "yahoo:^GSPTSE|1792076400": {
+          "asset": "yahoo:^GSPTSE",
+          "body": "\u2b1c <b>TSX</b> \u00b7 Canada +1.03% \u00b7 5.8\u00d7\u03c3",
+          "context": "",
+          "form": "row",
+          "hour": 1792072800,
+          "members": {
+            "jump:yahoo:^GSPTSE:hour:1792072800": [
+              0.010311262794765031,
+              0.0017711683894581698
+            ]
+          },
+          "message": 108,
+          "peak": "jump:yahoo:^GSPTSE:hour:1792072800",
+          "seen": 1792076818,
+          "shown": [
+            "noticeable",
+            5.8,
+            1792072800,
+            1.03
+          ],
+          "size": 5.821729235987223,
+          "start": 1792076400,
+          "story": [
+            [
+              "noticeable",
+              5.8,
+              1792072800,
+              ""
+            ]
+          ],
+          "tier": "noticeable"
         }
       },
       "messages": {
@@ -457,11 +589,15 @@
         "107": {
           "first": "\u2b1c <b>TIP</b> \u00b7 Inflation-protected Treasuries +0.69% \u00b7 4.7\u00d7\u03c3",
           "hash": "20c84c3d0cd7d1a9"
+        },
+        "108": {
+          "first": "\u2b1c <b>TSX</b> \u00b7 Canada +1.03% \u00b7 5.8\u00d7\u03c3",
+          "hash": "1a6b186bb6cb46e8"
         }
       },
       "note": {
         "hashes": [
-          "04e488c35f85e71c"
+          "6d0bc5c7917cf36b"
         ],
         "ids": [
           98

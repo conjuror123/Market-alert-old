@@ -73,6 +73,7 @@ binance:BTC/USDT,1789736400,close,real,binance,"yahoo,coinbase,kraken,bitstamp,b
 binance:BTC/USDT,1789977600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.024657,"0.024712,0.024448,0.024688,0.024846,0.023563,0.024608",1792022770
 binance:BTC/USDT,1790769600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.016255,"0.016307,0.016308,0.016351,0.016171,0.015762,0.016387",1792022770
 binance:BTC/USDT,1791471600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",-0.020350,"-0.020163,-0.020508,-0.020377,-0.020508,-0.020740,-0.020451",1792022770
+binance:BTC/USDT,1792072800,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.020522,"0.020944,0.020705,0.020450,0.020641,0.020686,0.020886",1792076782
 binance:DOGE/USDT,1760133600,close,not_real,binance,coinbase,,0.041977,-0.008741,1791316800
 binance:DOGE/USDT,1789131600,close,real,binance,"coinbase,kraken","coinbase,kraken",0.026189,"0.026084,0.025929",1791590777
 binance:DOGE/USDT,1790002800,close,real,binance,"coinbase,kraken","coinbase,kraken",0.024652,"0.024441,0.024260",1791850009
@@ -98,6 +99,7 @@ binance:ETH/USDT,1789128000,close,real,binance,"coinbase,kraken","coinbase,krake
 binance:ETH/USDT,1789131600,close,real,binance,"coinbase,kraken","coinbase,kraken",0.046071,"0.046359,0.046518",1791590777
 binance:ETH/USDT,1789736400,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.020721,"0.020832,0.020860,0.020861,0.021179,0.020419,0.020902",1792022770
 binance:ETH/USDT,1791471600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",-0.038681,"-0.038942,-0.038867,-0.038629,-0.038861,-0.039181,-0.038603",1792022770
+binance:ETH/USDT,1792072800,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.023560,"0.024027,0.023877,0.023861,0.023826,0.023549,0.023918",1792076782
 binance:FIL/USDT,1760130000,close,not_real,binance,coinbase,,-0.293749,-0.020619,1791316800
 binance:FIL/USDT,1760133600,close,not_real,binance,coinbase,,0.041411,0.005797,1791316800
 binance:FIL/USDT,1760137200,close,not_real,binance,coinbase,,0.035028,-0.132156,1791316800
@@ -168,6 +170,7 @@ binance:SOL/USDT,1789977600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,b
 binance:SOL/USDT,1791471600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",-0.035736,"-0.035857,-0.035857,-0.035577,-0.036200,-0.036187,-0.035816",1792022770
 binance:SOL/USDT,1791849600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",-0.026443,"-0.026865,-0.026768,-0.026576,-0.027031,-0.026727,-0.026540",1792022770
 binance:SOL/USDT,1792040400,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",-0.023473,"-0.023503,-0.023503,-0.023599,-0.023078,-0.022674,-0.023315",1792044376
+binance:SOL/USDT,1792072800,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.031789,"0.032017,0.031921,0.032513,0.032304,0.031875,0.031846",1792076782
 binance:UNI/USDT,1789128000,close,real,binance,"coinbase,kraken","coinbase,kraken",0.037355,"0.033599,0.037748",1791594373
 binance:UNI/USDT,1789131600,close,real,binance,"coinbase,kraken","coinbase,kraken",0.046858,"0.049577,0.045508",1791594373
 binance:UNI/USDT,1789480800,close,real,binance,"coinbase,kraken","coinbase,kraken",-0.036852,"-0.037942,-0.037967",1791853608
@@ -193,6 +196,7 @@ binance:XRP/USDT,1790334000,close,real,binance,"yahoo,coinbase,kraken,bitstamp,b
 binance:XRP/USDT,1791471600,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",-0.042389,"-0.042417,-0.042346,-0.042258,-0.042196,-0.042900,-0.043158",1792022770
 binance:XRP/USDT,1791482400,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.024790,"0.025105,0.025031,0.025017,0.025455,0.025405,0.026136",1792022770
 binance:XRP/USDT,1791853200,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.024381,"0.024637,0.024258,0.024432,0.024669,0.024083,0.024230",1792022770
+binance:XRP/USDT,1792072800,close,real,binance,"yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto","yahoo,coinbase,kraken,bitstamp,bitfinex,alpaca_crypto",0.027246,"0.028128,0.027661,0.027557,0.027630,0.027085,0.027873",1792076782
 sina:AHD,1786525200,close,real,sina,wallstreetcn,wallstreetcn,-0.010778,-0.010778,1792001180
 sina:AHD,1789034400,close,real,sina,wallstreetcn,wallstreetcn,-0.016265,-0.016265,1792001180
 sina:AHD,1789603200,open,real,sina,wallstreetcn,wallstreetcn,-0.008572,-0.010112,1792001180
@@ -388,6 +392,7 @@ twelvedata:REMX,1584536400,close,overnight,yahoo,alpaca,,-0.039264,-0.081585,179
 twelvedata:REMX,1604930400,close,overnight,yahoo,alpaca,,0.050906,0.072214,1791362492
 twelvedata:REMX,1606140000,close,overnight,yahoo,alpaca,,0.043634,0.034618,1791362492
 twelvedata:REMX,1609164000,close,overnight,yahoo,alpaca,,0.043069,0.033355,1791362492
+twelvedata:REMX,1792072800,close,real,yahoo,"sina,marketwatch,tiingo","sina,marketwatch,tiingo",0.023006,"0.019435,0.023006,0.026142",1792076782
 twelvedata:RSP,1632142800,close,overnight,alpaca,alpaca,,-0.016404,-0.019331,1791362492
 twelvedata:RSP,1789581600,close,real,alpaca,yahoo,,-0.010080,-0.010080,1791114096
 twelvedata:SCHO,1583330400,close,overnight,yahoo,alpaca,,0.001810,0.001171,1791362492
@@ -856,5 +861,7 @@ yahoo:ZN=F,1792065600,close,real,yahoo,marketwatch,marketwatch,0.002664,0.002664
 yahoo:ZT=F,1791979200,close,real,yahoo,marketwatch,marketwatch,-0.003072,-0.003072,1792011979
 yahoo:ZT=F,1791982800,close,real,yahoo,marketwatch,marketwatch,0.000884,0.000884,1792011979
 yahoo:ZT=F,1792069200,close,real,yahoo,marketwatch,marketwatch,0.000766,0.000728,1792073185
+yahoo:ZT=F,1792072800,close,real,yahoo,marketwatch,marketwatch,-0.000766,-0.000689,1792076782
 yahoo:ZW=F,1791561600,close,real,yahoo,"marketwatch,ft","marketwatch,ft",-0.031171,"-0.031171,-0.030806",1792004787
 yahoo:^BVSP,1791205200,open,real,yahoo,"marketwatch,ft","marketwatch,ft",0.081274,"0.081274,0.078479",1791925587
+yahoo:^GSPTSE,1792072800,close,real,yahoo,"marketwatch,wallstreetcn",marketwatch,0.010311,"0.009339,",1792076782

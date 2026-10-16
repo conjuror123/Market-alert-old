@@ -1,7 +1,7 @@
 {
   "_monitoring_health": {
     "consecutive_failures": 0,
-    "last_run_utc": 1792119995
+    "last_run_utc": 1792123592
   },
   "floor_pending_replies": [],
   "jump_delivery": {
@@ -22,7 +22,7 @@
           },
           "message": 108,
           "peak": "jump:binance:BTC/USDT:hour:1792072800",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             5.5,
@@ -55,7 +55,7 @@
           },
           "message": 108,
           "peak": "jump:binance:ETH/USDT:hour:1792072800",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             4.8,
@@ -88,7 +88,7 @@
           },
           "message": 108,
           "peak": "jump:binance:SOL/USDT:hour:1792072800",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             5.6,
@@ -121,7 +121,7 @@
           },
           "message": 105,
           "peak": "jump:marketwatch:JP10Y:hour:1792022400",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             5.8,
@@ -154,7 +154,7 @@
           },
           "message": 104,
           "peak": "jump:twelvedata:AUD/USD:hour:1791979200",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             5.9,
@@ -187,7 +187,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:EUR/USD:hour:1791979200",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "major",
             9.5,
@@ -220,7 +220,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:GBP/USD:hour:1791979200",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "high",
             7.0,
@@ -253,7 +253,7 @@
           },
           "message": 107,
           "peak": "jump:twelvedata:TIP:night:1792069200",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             4.7,
@@ -286,7 +286,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CAD:hour:1791979200",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "high",
             6.8,
@@ -319,7 +319,7 @@
           },
           "message": 103,
           "peak": "jump:twelvedata:USD/CHF:hour:1791979200",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "high",
             6.9,
@@ -352,7 +352,7 @@
           },
           "message": 102,
           "peak": "jump:twelvedata:XLV:hour:1791896400",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             4.5,
@@ -385,7 +385,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZB=F:hour:1791979200",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "major",
             12.1,
@@ -424,7 +424,7 @@
           },
           "message": 106,
           "peak": "jump:yahoo:ZB=F:hour:1792065600",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             5.2,
@@ -463,7 +463,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZN=F:hour:1791979200",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "extreme",
             15.9,
@@ -506,7 +506,7 @@
           },
           "message": 103,
           "peak": "jump:yahoo:ZT=F:hour:1791979200",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "extreme",
             18.5,
@@ -545,7 +545,7 @@
           },
           "message": 109,
           "peak": "jump:yahoo:ZT=F:hour:1792072800",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             5.3,
@@ -578,7 +578,7 @@
           },
           "message": 108,
           "peak": "jump:yahoo:^GSPTSE:hour:1792072800",
-          "seen": 1792119995,
+          "seen": 1792123592,
           "shown": [
             "noticeable",
             5.8,

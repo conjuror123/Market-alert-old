@@ -7,7 +7,6 @@ moves unusually for itself.
 - `README.md` - what it is, and a map of the files
 - `docs/manual.md` - how each part works; read the section before changing that part
 - `docs/decisions.md` - why things are the way they are, and what was tried
-- `docs/basket-proposal.md` - the basket, its stages and the measured volumes
 
 **Firm**
 - The channel carries alerts only; health and provider failures go to

@@ -33,8 +33,18 @@ rarer to reach than the one below: over the 58's history, 9,604, 3,227, 1,056 an
 events at or above them. The bottom is a volume choice - moves of every size hold at the
 close alike (76–80%), so a higher bottom buys fewer messages, not better ones - set at the
 lowest whose volume is at or below the old basket's: 3.6 pushes and 10.0 note rows a week
-against 4.0 and 10.8, over the year to 2026-10-05 (`docs/basket-proposal.md`, gate D). The
-ladder began at 3.9σ (2026-09-28) and was 6σ for the 172 (2026-10-04).
+against 4.0 and 10.8, over the year to 2026-10-05. The
+ladder began at 3.9σ (2026-09-28) and was 6σ for the 172 (2026-10-04). The ladders measured
+(2026-10-11; the stage report's 24-hour events, pushes at `high` and up, no vote, GLD and
+SLV for the metals), each cell the year to 2026-10-05 / the year to 2025-10-05:
+
+| | pushes a week | note rows a week | busiest week's pushes |
+|---|---|---|---|
+| the 172 at 6 / 8.5 / 12 / 17 | 4.0 / 7.1 | 10.8 / 10.8 | 22 / 151 |
+| stage 1 at 3.9 / 5.5 / 7.8 / 11.0 | 6.5 / 6.6 | 15.4 / 9.3 | 21 / 79 |
+| stage 1 at 4.5 / 6.4 / 9.0 / 12.7 | 3.7 / 4.5 | 9.9 / 6.3 | 14 / 66 |
+| stage 1 at 5 / 7.1 / 10 / 14.1 | 2.4 / 3.4 | 6.8 / 5.0 | 12 / 56 |
+| stage 1 at 6 / 8.5 / 12 / 17 | 1.3 / 2.1 | 3.1 / 3.2 | 6 / 38 |
 
 **Rarity is measured, not read off the bell curve.** Against its own half-year σ, an hour
 of every class reaches 3.9σ about once in 115, not once in 10,000.
@@ -125,7 +135,7 @@ delay.
 ## Data and providers
 
 **The basket of stage 1: each market in its own hours, each story told once** (the user's,
-2026-10-10/11, `docs/basket-proposal.md`). The 172 came from a paper; it saw the world
+2026-10-10/11). The 172 came from a paper; it saw the world
 through 132 New York funds, so the Nikkei's worst day since 1987 reached it at New York's
 open, and it was crowded by coins and look-alikes. Stage 1 holds 58: 16 stock indices in
 their own hours beside SPY and IWM, four sectors, copper beside the LME's other metals,

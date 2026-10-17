@@ -547,6 +547,20 @@ Measured or weighed, and not to be raised again.
 
 Known and left alone on purpose.
 
+**Dates to check** (since the merge of 2026-10-13, every hourly run green to 10-17); no work
+unless one goes wrong:
+- 10-29, TTF's first change of month in the store ("TTF's switch day" below);
+- 10-31 to 11-01, the first month end with 62 instruments: October settles from the open
+  months' archive into git (`tools/hot_bars.sh`, `jump/bars.py`);
+- 11-20, the gilt's roll to RLIH27, and 12-04, the Bund's to FGBLH27: MarketWatch serves
+  both already (14 and 22 hourly bars on 10-17).
+
+**SiftingIO's month.** `jump/usage.py` counts the calendar month; SiftingIO's account page
+showed 181 used on 2026-10-06, so its month may start near the 6th. Since the merge the
+live run asks it about 216 times a weekday (7 pairs and the two metals, hourly): 5,000-6,500
+a month of its 10,000, so the 80% warning is far either way, but may count another month.
+To act: read the account page about 11-06 and set the month's start to its own.
+
 **Repository size**, about 921 MiB as GitHub counts it (2026-10-09), mostly superseded
 Parquet in history; GitHub warns at 1 GB. To act: a history rewrite, which force-pushes the
 live branch irreversibly.

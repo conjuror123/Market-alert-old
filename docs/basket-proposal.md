@@ -3,7 +3,8 @@
 Agreed with the user over 2026-10-10/11, and built in two stages, both in
 `config/basket.yaml` on the development branch: **stage 1** (58 instruments, gold and
 silver round the clock) and **stage 2** (the nine futures in place of the funds that stood
-in for them). Both wait for the user's go. Why each choice holds is in `docs/decisions.md`.
+in for them). Both went live on 2026-10-13 (the user's go), with the Bund, the gilt, TTF and
+Japan's yield: 62 instruments. Why each choice holds is in `docs/decisions.md`.
 
 ## Why change it
 
@@ -63,8 +64,6 @@ history from Dukascopy, Wallstreetcn and Sina as voters.
 
 **Gate B** (the user's): a keyed probe for gold and silver, yes; platinum to stage 2 with
 PPLT standing in, yes; the KOSPI, TAIEX and JSE Top 40 without a voter, fine for now.
-
-**Left**: the user's go.
 
 ## The levels, thought through again (2026-10-11)
 
@@ -150,14 +149,15 @@ days back, no volume), Dukascopy's history of both from 2018, the FT's Bund as a
 the JGB only as MarketWatch's 10-year yield, which the detector would score in basis
 points; TTF only as MarketWatch's ICE Endex series, about 13 days back, no history. The
 user's, 2026-10-13: add everything good, look for what is missing later - all four added
-that day (`docs/decisions.md`); the JGB scored in basis points; TTF and the JGB silent
-until they hold half a year of bars.
+that day (`docs/decisions.md`); the JGB scored in basis points; TTF and the JGB scored
+with a young yardstick until they hold half a year of bars.
 
 **Voters** for every instrument since the source audit of 2026-10-13 (`docs/decisions.md`,
 "Every source on every instrument"): the KOSPI from MarketWatch and Naver, the TAIEX from
 the Taiwan exchange and MarketWatch (not its 13:00 hour), the JSE Top 40 from MarketWatch.
 
-**Left**: the user's go, for stages 1 and 2 together.
+**Live** since 2026-10-13 (0d33a7d), stages 1 and 2 together. What is still open is in
+`docs/decisions.md`, "Open questions".
 
 ## Sources
 

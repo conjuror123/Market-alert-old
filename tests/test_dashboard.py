@@ -37,3 +37,24 @@ def test_a_run_writes_only_its_own_page_and_measurement(tmp_path):
 def test_the_page_has_a_place_for_the_provider_limits():
     page = dashboard.render(_result())
     assert '<table id="t-limits">' in page and "M.limits" in page
+
+
+def _script(page):
+    return page.split('<script id="payload" type="application/json">')[1] \
+        .split("</script>")[1].split("<script>")[1]
+
+
+def test_the_pages_script_parses():
+    # One name declared twice at the top level stops the whole script, and the
+    # page draws nothing: the limits' `pct` beside the votes' (2026-10-12..17).
+    import re
+    import shutil
+    import subprocess
+    script = _script(dashboard.render(_result()))
+    names = re.findall(r"^(?:const|let|var|function)\s+([A-Za-z_$][\w$]*)", script, re.M)
+    assert sorted({n for n in names if names.count(n) > 1}) == []
+    node = shutil.which("node")
+    if node:
+        out = subprocess.run([node, "--check", "-"], input=script, capture_output=True,
+                             text=True, timeout=30)
+        assert out.returncode == 0, out.stderr

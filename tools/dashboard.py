@@ -431,11 +431,11 @@ table($("t-checks"), [["ok","",false,v => v ? '<span class="status ok">✓ held<
 
 // provider limits
 const lim = M.limits || [];
-const pct = (c, l) => c == null || !l ? "–" : `${n0(c)} <span class="dim">(${Math.round(100 * c / l)}%)</span>`;
+const share = (c, l) => c == null || !l ? "–" : `${n0(c)} <span class="dim">(${Math.round(100 * c / l)}%)</span>`;
 if (lim.length) table($("t-limits"), [["provider","Provider"],["window","Window"],["limit","Limit",true,n0],
   ["live","Live",true,n0],["manual","Manual",true,n0],["dashboard","Dashboard",true,n0],["votes","Votes",true,n0],
-  ["latest","Latest",true,(v, r) => r.latestCalls == null ? "–" : `${pct(r.latestCalls, r.limit)} <span class="dim">${esc(r.latestPeriod)}</span>`],
-  ["peak","Peak",true,(v, r) => r.peakCalls == null ? "–" : `${pct(r.peakCalls, r.limit)} <span class="dim">${esc(r.peakPeriod)}</span>`],
+  ["latest","Latest",true,(v, r) => r.latestCalls == null ? "–" : `${share(r.latestCalls, r.limit)} <span class="dim">${esc(r.latestPeriod)}</span>`],
+  ["peak","Peak",true,(v, r) => r.peakCalls == null ? "–" : `${share(r.peakCalls, r.limit)} <span class="dim">${esc(r.peakPeriod)}</span>`],
   ["counted","Counted",true,n0],["note","Note",false,null,"long"]],
   lim.map(l => ({provider: l.provider, window: l.window, limit: l.limit, live: l.live, manual: l.manual,
     dashboard: l.dashboard, votes: l.votes, note: l.note, counted: l.periods_counted,

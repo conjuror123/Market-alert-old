@@ -19,7 +19,7 @@ COFFEE ONLY CONTINUOUS (KC.1:IUS): no contract is found by name. It changes
 contract on its own days - in 2026-09 a week after the store, with no bars
 from 09-15 to 09-18 - and the vote treats it as it treats Sina's (own_rolls).
 On the store's month, 2026-09-21 to 10-09: 3.6 bp apart, hourly moves
-correlated 0.988 (docs/decisions.md, "The FT for live cattle and coffee").
+correlated 0.988 (docs/decisions.md, "Every source on every instrument").
 
 AND THE STANDING RISK. An undocumented endpoint, read without a key as the FT's
 pages read it, under the FT's terms. Should it change or close, it is an

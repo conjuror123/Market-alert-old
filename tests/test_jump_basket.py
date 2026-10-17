@@ -91,7 +91,7 @@ def test_a_one_member_block_does_not_load(tmp_path):
 def test_the_thin_blocks_are_the_ones_we_know_about():
     # A tripwire: the blocks with fewer than six members are named, and this
     # fails when that changes, so a thin block is a decision rather than an
-    # accident. Stage 1 tells each story once (docs/basket-proposal.md).
+    # accident. Stage 1 tells each story once (docs/decisions.md).
     basket = load_basket()
     thin = {b for b, m in basket.by_block().items() if len(m) < 6}
     # Rates has the Bund and the gilt beside the Treasuries since 2026-10-13.
